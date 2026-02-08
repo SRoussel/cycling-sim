@@ -1,8 +1,11 @@
 package main
 
 import (
+	"encoding/csv"
 	"fmt"
 	"os"
+	"path/filepath"
+	"runtime"
 	"strconv"
 	"time"
 
@@ -116,37 +119,14 @@ func cmdSeed(db *database.DB) {
 
 	fmt.Println("Seeding database with WorldTour riders and courses...")
 
-	// WorldTour riders (representative profiles)
-	riderData := []model.Rider{
-		{Name: "Tadej Pogačar", Team: "UAE Team Emirates", Nationality: "SLO", WeightKg: 66, HeightCm: 176, FTPWatts: 415, MaxSprintWatts: 1400, VO2MaxWatts: 490, CdA: 0.32, ClimbingAbility: 97, SprintAbility: 75, TTAbility: 92, DescendingAbility: 88, Endurance: 93, Recovery: 90, Consistency: 95, TacticalAwareness: 92},
-		{Name: "Jonas Vingegaard", Team: "Visma-Lease a Bike", Nationality: "DEN", WeightKg: 60, HeightCm: 175, FTPWatts: 410, MaxSprintWatts: 1200, VO2MaxWatts: 495, CdA: 0.31, ClimbingAbility: 96, SprintAbility: 55, TTAbility: 90, DescendingAbility: 80, Endurance: 95, Recovery: 88, Consistency: 90, TacticalAwareness: 85},
-		{Name: "Remco Evenepoel", Team: "Soudal-QuickStep", Nationality: "BEL", WeightKg: 61, HeightCm: 171, FTPWatts: 412, MaxSprintWatts: 1300, VO2MaxWatts: 485, CdA: 0.30, ClimbingAbility: 90, SprintAbility: 65, TTAbility: 96, DescendingAbility: 72, Endurance: 88, Recovery: 85, Consistency: 88, TacticalAwareness: 82},
-		{Name: "Primož Roglič", Team: "Red Bull-BORA-hansgrohe", Nationality: "SLO", WeightKg: 65, HeightCm: 177, FTPWatts: 408, MaxSprintWatts: 1250, VO2MaxWatts: 475, CdA: 0.31, ClimbingAbility: 93, SprintAbility: 60, TTAbility: 91, DescendingAbility: 75, Endurance: 88, Recovery: 82, Consistency: 82, TacticalAwareness: 88},
-		{Name: "Wout van Aert", Team: "Visma-Lease a Bike", Nationality: "BEL", WeightKg: 78, HeightCm: 187, FTPWatts: 420, MaxSprintWatts: 1750, VO2MaxWatts: 470, CdA: 0.35, ClimbingAbility: 72, SprintAbility: 92, TTAbility: 93, DescendingAbility: 85, Endurance: 90, Recovery: 85, Consistency: 88, TacticalAwareness: 90},
-		{Name: "Mathieu van der Poel", Team: "Alpecin-Deceuninck", Nationality: "NED", WeightKg: 75, HeightCm: 184, FTPWatts: 415, MaxSprintWatts: 1700, VO2MaxWatts: 465, CdA: 0.34, ClimbingAbility: 75, SprintAbility: 90, TTAbility: 78, DescendingAbility: 90, Endurance: 88, Recovery: 82, Consistency: 85, TacticalAwareness: 88},
-		{Name: "Jasper Philipsen", Team: "Alpecin-Deceuninck", Nationality: "BEL", WeightKg: 76, HeightCm: 181, FTPWatts: 385, MaxSprintWatts: 1850, VO2MaxWatts: 440, CdA: 0.34, ClimbingAbility: 45, SprintAbility: 97, TTAbility: 60, DescendingAbility: 70, Endurance: 72, Recovery: 70, Consistency: 78, TacticalAwareness: 75},
-		{Name: "Jonathan Milan", Team: "Lidl-Trek", Nationality: "ITA", WeightKg: 82, HeightCm: 190, FTPWatts: 395, MaxSprintWatts: 1900, VO2MaxWatts: 445, CdA: 0.36, ClimbingAbility: 40, SprintAbility: 95, TTAbility: 72, DescendingAbility: 68, Endurance: 70, Recovery: 68, Consistency: 75, TacticalAwareness: 70},
-		{Name: "Filippo Ganna", Team: "INEOS Grenadiers", Nationality: "ITA", WeightKg: 82, HeightCm: 193, FTPWatts: 425, MaxSprintWatts: 1500, VO2MaxWatts: 460, CdA: 0.35, ClimbingAbility: 50, SprintAbility: 70, TTAbility: 98, DescendingAbility: 75, Endurance: 82, Recovery: 78, Consistency: 88, TacticalAwareness: 72},
-		{Name: "Juan Ayuso", Team: "UAE Team Emirates", Nationality: "ESP", WeightKg: 63, HeightCm: 175, FTPWatts: 400, MaxSprintWatts: 1300, VO2MaxWatts: 470, CdA: 0.31, ClimbingAbility: 88, SprintAbility: 62, TTAbility: 85, DescendingAbility: 78, Endurance: 85, Recovery: 82, Consistency: 80, TacticalAwareness: 78},
-		{Name: "Carlos Rodríguez", Team: "INEOS Grenadiers", Nationality: "ESP", WeightKg: 62, HeightCm: 174, FTPWatts: 398, MaxSprintWatts: 1200, VO2MaxWatts: 468, CdA: 0.30, ClimbingAbility: 90, SprintAbility: 52, TTAbility: 80, DescendingAbility: 82, Endurance: 85, Recovery: 80, Consistency: 82, TacticalAwareness: 80},
-		{Name: "Egan Bernal", Team: "INEOS Grenadiers", Nationality: "COL", WeightKg: 63, HeightCm: 175, FTPWatts: 395, MaxSprintWatts: 1200, VO2MaxWatts: 475, CdA: 0.31, ClimbingAbility: 92, SprintAbility: 55, TTAbility: 78, DescendingAbility: 85, Endurance: 82, Recovery: 75, Consistency: 75, TacticalAwareness: 82},
-		{Name: "Adam Yates", Team: "UAE Team Emirates", Nationality: "GBR", WeightKg: 58, HeightCm: 172, FTPWatts: 390, MaxSprintWatts: 1100, VO2MaxWatts: 465, CdA: 0.30, ClimbingAbility: 90, SprintAbility: 48, TTAbility: 75, DescendingAbility: 80, Endurance: 85, Recovery: 78, Consistency: 82, TacticalAwareness: 82},
-		{Name: "Tom Pidcock", Team: "INEOS Grenadiers", Nationality: "GBR", WeightKg: 58, HeightCm: 170, FTPWatts: 392, MaxSprintWatts: 1350, VO2MaxWatts: 470, CdA: 0.29, ClimbingAbility: 88, SprintAbility: 72, TTAbility: 78, DescendingAbility: 92, Endurance: 82, Recovery: 78, Consistency: 78, TacticalAwareness: 85},
-		{Name: "Biniam Girmay", Team: "Intermarché-Wanty", Nationality: "ERI", WeightKg: 73, HeightCm: 179, FTPWatts: 388, MaxSprintWatts: 1780, VO2MaxWatts: 445, CdA: 0.33, ClimbingAbility: 55, SprintAbility: 93, TTAbility: 62, DescendingAbility: 75, Endurance: 78, Recovery: 72, Consistency: 76, TacticalAwareness: 78},
-		{Name: "Mads Pedersen", Team: "Lidl-Trek", Nationality: "DEN", WeightKg: 76, HeightCm: 183, FTPWatts: 400, MaxSprintWatts: 1700, VO2MaxWatts: 450, CdA: 0.34, ClimbingAbility: 60, SprintAbility: 88, TTAbility: 82, DescendingAbility: 82, Endurance: 82, Recovery: 78, Consistency: 82, TacticalAwareness: 85},
-		{Name: "Richard Carapaz", Team: "EF Education-EasyPost", Nationality: "ECU", WeightKg: 62, HeightCm: 170, FTPWatts: 395, MaxSprintWatts: 1150, VO2MaxWatts: 472, CdA: 0.30, ClimbingAbility: 92, SprintAbility: 50, TTAbility: 72, DescendingAbility: 80, Endurance: 90, Recovery: 82, Consistency: 85, TacticalAwareness: 88},
-		{Name: "Simon Yates", Team: "Team Jayco-AlUla", Nationality: "GBR", WeightKg: 58, HeightCm: 172, FTPWatts: 388, MaxSprintWatts: 1150, VO2MaxWatts: 462, CdA: 0.30, ClimbingAbility: 90, SprintAbility: 50, TTAbility: 70, DescendingAbility: 78, Endurance: 82, Recovery: 75, Consistency: 72, TacticalAwareness: 80},
-		{Name: "Mikel Landa", Team: "Soudal-QuickStep", Nationality: "ESP", WeightKg: 60, HeightCm: 173, FTPWatts: 392, MaxSprintWatts: 1100, VO2MaxWatts: 468, CdA: 0.30, ClimbingAbility: 92, SprintAbility: 48, TTAbility: 68, DescendingAbility: 82, Endurance: 80, Recovery: 75, Consistency: 70, TacticalAwareness: 78},
-		{Name: "Stefan Küng", Team: "Groupama-FDJ", Nationality: "SUI", WeightKg: 80, HeightCm: 189, FTPWatts: 420, MaxSprintWatts: 1450, VO2MaxWatts: 458, CdA: 0.35, ClimbingAbility: 48, SprintAbility: 65, TTAbility: 95, DescendingAbility: 78, Endurance: 80, Recovery: 75, Consistency: 85, TacticalAwareness: 72},
+	// Load riders from CSV
+	csvPath := findDataFile("riders.csv")
+	riderCount, err := loadRidersFromCSV(db, csvPath)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error loading riders: %v\n", err)
+		os.Exit(1)
 	}
-
-	for i := range riderData {
-		if err := db.CreateRider(&riderData[i]); err != nil {
-			fmt.Fprintf(os.Stderr, "Error creating rider %s: %v\n", riderData[i].Name, err)
-			continue
-		}
-	}
-	fmt.Printf("  Created %d riders\n", len(riderData))
+	fmt.Printf("  Created %d riders\n", riderCount)
 
 	// Classic courses
 	courses := []struct {
@@ -508,4 +488,98 @@ func repeat(s string, n int) string {
 		result += s
 	}
 	return result
+}
+
+// findDataFile locates a data file relative to the binary or source directory.
+func findDataFile(name string) string {
+	// Try relative to working directory
+	candidates := []string{
+		filepath.Join("data", name),
+		filepath.Join("..", "..", "data", name),
+	}
+	// Try relative to the source file location
+	_, thisFile, _, ok := runtime.Caller(0)
+	if ok {
+		srcDir := filepath.Dir(thisFile)
+		candidates = append(candidates,
+			filepath.Join(srcDir, "..", "..", "data", name),
+		)
+	}
+	for _, p := range candidates {
+		if _, err := os.Stat(p); err == nil {
+			return p
+		}
+	}
+	return filepath.Join("data", name) // fallback
+}
+
+// loadRidersFromCSV reads riders from a CSV file and inserts them into the database.
+// CSV columns: Id,Name,Team,Nationality,Weight_kg,Height_cm,FTP_watts,Sprint_watts,
+//
+//	Threshold_watts,W_kg,Climbing,Sprint,TT,Classics,Endurance,Recovery,
+//	Acceleration,Consistency
+func loadRidersFromCSV(db *database.DB, path string) (int, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return 0, fmt.Errorf("opening %s: %w", path, err)
+	}
+	defer f.Close()
+
+	reader := csv.NewReader(f)
+	records, err := reader.ReadAll()
+	if err != nil {
+		return 0, fmt.Errorf("reading CSV: %w", err)
+	}
+
+	if len(records) < 2 {
+		return 0, fmt.Errorf("CSV has no data rows")
+	}
+
+	count := 0
+	for _, row := range records[1:] { // skip header
+		if len(row) < 18 {
+			continue
+		}
+		weightKg, _ := strconv.ParseFloat(row[4], 64)
+		heightCm, _ := strconv.ParseFloat(row[5], 64)
+		ftpWatts, _ := strconv.Atoi(row[6])
+		sprintWatts, _ := strconv.Atoi(row[7])
+		vo2maxWatts, _ := strconv.Atoi(row[8])
+		cda, _ := strconv.ParseFloat(row[9], 64)
+		climbing, _ := strconv.Atoi(row[10])
+		sprint, _ := strconv.Atoi(row[11])
+		tt, _ := strconv.Atoi(row[12])
+		classics, _ := strconv.Atoi(row[13])
+		endurance, _ := strconv.Atoi(row[14])
+		recovery, _ := strconv.Atoi(row[15])
+		acceleration, _ := strconv.Atoi(row[16])
+		consistency, _ := strconv.Atoi(row[17])
+
+		rider := model.Rider{
+			Name:              row[1],
+			Team:              row[2],
+			Nationality:       row[3],
+			WeightKg:          weightKg,
+			HeightCm:          heightCm,
+			FTPWatts:          ftpWatts,
+			MaxSprintWatts:    sprintWatts,
+			VO2MaxWatts:       vo2maxWatts,
+			CdA:               cda,
+			ClimbingAbility:   climbing,
+			SprintAbility:     sprint,
+			TTAbility:         tt,
+			DescendingAbility: classics,
+			Endurance:         endurance,
+			Recovery:          recovery,
+			Consistency:       consistency,
+			TacticalAwareness: acceleration,
+		}
+
+		if err := db.CreateRider(&rider); err != nil {
+			fmt.Fprintf(os.Stderr, "  Warning: skipping %s: %v\n", rider.Name, err)
+			continue
+		}
+		count++
+	}
+	return count, nil
 }

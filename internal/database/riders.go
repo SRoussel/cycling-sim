@@ -11,13 +11,13 @@ func (db *DB) CreateRider(r *model.Rider) error {
 		return fmt.Errorf("invalid rider: %w", err)
 	}
 	result, err := db.Exec(`
-		INSERT INTO riders (name, team, nationality, weight_kg, height_cm, ftp_watts,
+		INSERT INTO riders (name, team, nationality, age, weight_kg, height_cm, ftp_watts,
 			max_sprint_watts, vo2max_watts, cda, climbing_ability, sprint_ability,
-			tt_ability, descending_ability, endurance, recovery, consistency, tactical_awareness)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		r.Name, r.Team, r.Nationality, r.WeightKg, r.HeightCm, r.FTPWatts,
+			tt_ability, descending_ability, handling, endurance, recovery, consistency, tactical_awareness)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		r.Name, r.Team, r.Nationality, r.Age, r.WeightKg, r.HeightCm, r.FTPWatts,
 		r.MaxSprintWatts, r.VO2MaxWatts, r.CdA, r.ClimbingAbility, r.SprintAbility,
-		r.TTAbility, r.DescendingAbility, r.Endurance, r.Recovery, r.Consistency, r.TacticalAwareness,
+		r.TTAbility, r.DescendingAbility, r.Handling, r.Endurance, r.Recovery, r.Consistency, r.TacticalAwareness,
 	)
 	if err != nil {
 		return fmt.Errorf("inserting rider: %w", err)
@@ -32,28 +32,23 @@ func (db *DB) CreateRider(r *model.Rider) error {
 
 // GetRider retrieves a rider by ID.
 func (db *DB) GetRider(id int64) (*model.Rider, error) {
-	r := &model.Rider{}
-	err := db.QueryRow(`
-		SELECT id, name, team, nationality, weight_kg, height_cm, ftp_watts,
+	r, err := scanRider(db.QueryRow(`
+		SELECT id, name, team, nationality, age, weight_kg, height_cm, ftp_watts,
 			max_sprint_watts, vo2max_watts, cda, climbing_ability, sprint_ability,
-			tt_ability, descending_ability, endurance, recovery, consistency, tactical_awareness
-		FROM riders WHERE id = ?`, id).Scan(
-		&r.ID, &r.Name, &r.Team, &r.Nationality, &r.WeightKg, &r.HeightCm, &r.FTPWatts,
-		&r.MaxSprintWatts, &r.VO2MaxWatts, &r.CdA, &r.ClimbingAbility, &r.SprintAbility,
-		&r.TTAbility, &r.DescendingAbility, &r.Endurance, &r.Recovery, &r.Consistency, &r.TacticalAwareness,
-	)
+			tt_ability, descending_ability, handling, endurance, recovery, consistency, tactical_awareness
+		FROM riders WHERE id = ?`, id))
 	if err != nil {
 		return nil, fmt.Errorf("getting rider %d: %w", id, err)
 	}
-	return r, nil
+	return &r, nil
 }
 
 // ListRiders returns all riders.
 func (db *DB) ListRiders() ([]model.Rider, error) {
 	rows, err := db.Query(`
-		SELECT id, name, team, nationality, weight_kg, height_cm, ftp_watts,
+		SELECT id, name, team, nationality, age, weight_kg, height_cm, ftp_watts,
 			max_sprint_watts, vo2max_watts, cda, climbing_ability, sprint_ability,
-			tt_ability, descending_ability, endurance, recovery, consistency, tactical_awareness
+			tt_ability, descending_ability, handling, endurance, recovery, consistency, tactical_awareness
 		FROM riders ORDER BY id`)
 	if err != nil {
 		return nil, fmt.Errorf("listing riders: %w", err)
@@ -62,17 +57,25 @@ func (db *DB) ListRiders() ([]model.Rider, error) {
 
 	var riders []model.Rider
 	for rows.Next() {
-		var r model.Rider
-		if err := rows.Scan(
-			&r.ID, &r.Name, &r.Team, &r.Nationality, &r.WeightKg, &r.HeightCm, &r.FTPWatts,
-			&r.MaxSprintWatts, &r.VO2MaxWatts, &r.CdA, &r.ClimbingAbility, &r.SprintAbility,
-			&r.TTAbility, &r.DescendingAbility, &r.Endurance, &r.Recovery, &r.Consistency, &r.TacticalAwareness,
-		); err != nil {
+		r, err := scanRider(rows)
+		if err != nil {
 			return nil, fmt.Errorf("scanning rider: %w", err)
 		}
 		riders = append(riders, r)
 	}
 	return riders, rows.Err()
+}
+
+func scanRider(scanner rowScanner) (model.Rider, error) {
+	var r model.Rider
+	if err := scanner.Scan(
+		&r.ID, &r.Name, &r.Team, &r.Nationality, &r.Age, &r.WeightKg, &r.HeightCm, &r.FTPWatts,
+		&r.MaxSprintWatts, &r.VO2MaxWatts, &r.CdA, &r.ClimbingAbility, &r.SprintAbility,
+		&r.TTAbility, &r.DescendingAbility, &r.Handling, &r.Endurance, &r.Recovery, &r.Consistency, &r.TacticalAwareness,
+	); err != nil {
+		return model.Rider{}, err
+	}
+	return r, nil
 }
 
 // DeleteRider removes a rider by ID.

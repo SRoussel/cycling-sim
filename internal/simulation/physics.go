@@ -10,9 +10,13 @@ const (
 	gravity     = 9.8067 // m/s²
 	airDensity  = 1.225  // kg/m³ at sea level, 15°C
 	crr         = 0.004  // rolling resistance coefficient (road)
-	crrCobbles  = 0.008  // rolling resistance coefficient (cobbles)
+	crrCobbles  = 0.012  // rolling resistance coefficient (cobbles) — 3x road
 	bikeWeight  = 8.0    // kg
 	minSpeedMPS = 1.0    // minimum speed 1 m/s (~3.6 km/h) to avoid stalling
+	// HandlingEffectPerPoint controls how much each handling point (1-100)
+	// changes the effective rolling resistance on cobbles.
+	// At 0.022: H=70 → 1.0x, H=93 → 0.494x, H=55 → 1.33x
+	HandlingEffectPerPoint = 0.022
 )
 
 // DraftFactor returns the aerodynamic drag reduction based on position in group.
@@ -39,13 +43,47 @@ func ForceGravity(totalMassKg float64, gradientPct float64) float64 {
 }
 
 // ForceRolling returns the rolling resistance force.
-func ForceRolling(totalMassKg float64, gradientPct float64, surface model.SurfaceType) float64 {
+func ForceRolling(totalMassKg float64, gradientPct float64, surface model.SurfaceType, handling int) float64 {
 	angle := math.Atan(gradientPct / 100.0)
 	c := crr
+
 	if surface == model.SurfaceCobbles {
-		c = crrCobbles
+		// Apply handling-based rolling resistance on cobbles
+		c = crrCobbles * HandlingFactor(handling)
 	}
+
 	return c * totalMassKg * gravity * math.Cos(angle)
+}
+
+// HandlingFactor returns a multiplier to apply to cobbles rolling resistance
+// based on a rider's handling skill (1-100). Higher handling reduces the
+// effective crr on cobbles, giving a physics-plausible speed advantage.
+// H=70 → 1.0, H=93 → 0.586 (eff crr ~0.007), H=55 → 1.27 (eff crr ~0.015).
+func HandlingFactor(handling int) float64 {
+	f := 1.0 - float64(handling-70)*HandlingEffectPerPoint
+	if f < 0.5 {
+		f = 0.5
+	}
+	if f > 1.5 {
+		f = 1.5
+	}
+	return f
+}
+
+// CobbleWPrimeDrain returns extra W' depletion rate (watts) on cobbles
+// based on handling skill. Poor handlers waste energy on corrections,
+// braking, and fighting the bike. This is the attrition mechanism —
+// over many cobble sectors, poor handlers deplete their W' and crack.
+// H=93: -20W (saves energy), H=70: 0W, H=55: +30W extra drain.
+func CobbleWPrimeDrain(handling int) float64 {
+	drain := float64(70-handling) * 2.5
+	if drain < -35 {
+		drain = -35
+	}
+	if drain > 45 {
+		drain = 45
+	}
+	return drain
 }
 
 // ForceAero returns the aerodynamic drag force at a given speed.
@@ -59,9 +97,9 @@ func ForceAero(cda float64, speedMPS float64) float64 {
 //	P = v * (Fgrav + Froll + Faero)
 //
 // Returns speed in m/s.
-func SpeedFromPower(powerWatts float64, totalMassKg float64, cda float64, gradientPct float64, surface model.SurfaceType) float64 {
+func SpeedFromPower(powerWatts float64, totalMassKg float64, cda float64, gradientPct float64, surface model.SurfaceType, handling int) float64 {
 	fGrav := ForceGravity(totalMassKg, gradientPct)
-	fRoll := ForceRolling(totalMassKg, gradientPct, surface)
+	fRoll := ForceRolling(totalMassKg, gradientPct, surface, handling)
 
 	// f(v) = 0.5 * cda * rho * v³ + (fGrav + fRoll) * v - P = 0
 	// f'(v) = 1.5 * cda * rho * v² + (fGrav + fRoll)
@@ -102,10 +140,10 @@ func SpeedFromPower(powerWatts float64, totalMassKg float64, cda float64, gradie
 // DescentSpeed calculates speed on a descent, capped by descending ability and
 // technical difficulty. On descents, gravity assists, so the rider may be
 // going faster than their power alone would suggest.
-func DescentSpeed(powerWatts float64, totalMassKg float64, cda float64, gradientPct float64, surface model.SurfaceType, descendingAbility int, isTechnical bool) float64 {
+func DescentSpeed(powerWatts float64, totalMassKg float64, cda float64, gradientPct float64, surface model.SurfaceType, handling int, descendingAbility int, isTechnical bool) float64 {
 	// For descents, calculate the terminal velocity where drag = gravity - rolling - braking
 	// First get the powered speed
-	speed := SpeedFromPower(powerWatts, totalMassKg, cda, gradientPct, surface)
+	speed := SpeedFromPower(powerWatts, totalMassKg, cda, gradientPct, surface, handling)
 
 	// Maximum descent speed based on ability (km/h)
 	// Ability 70 (average WT) → ~80 km/h max on non-technical
@@ -131,7 +169,8 @@ func ModifierFactor(ability int) float64 {
 }
 
 // EffectivePower calculates a rider's effective power output for a segment,
-// applying the relevant ability modifier.
+// applying the relevant ability modifier. Handling does NOT affect power —
+// it affects rolling resistance via HandlingFactor in ForceRolling.
 func EffectivePower(rider *model.Rider, basePower float64, segment *model.Segment, isTT bool) float64 {
 	var modifier int
 	switch {
@@ -140,9 +179,21 @@ func EffectivePower(rider *model.Rider, basePower float64, segment *model.Segmen
 	case segment.GradientPct > 4.0:
 		modifier = rider.ClimbingAbility
 	default:
-		modifier = 70 // no modifier on flat/rolling terrain for sustained power
+		modifier = 70
 	}
-	return basePower * ModifierFactor(modifier)
+	power := basePower * ModifierFactor(modifier)
+	if !isTT && segment.SurfaceType == model.SurfaceCobbles {
+		// Reduce effective power for poor handlers on cobbles.
+		handlingFactor := 1.0 + float64(rider.Handling-70)*0.006
+		if handlingFactor < 0.7 {
+			handlingFactor = 0.7
+		}
+		if handlingFactor > 1.06 {
+			handlingFactor = 1.06
+		}
+		power *= handlingFactor
+	}
+	return power
 }
 
 // SprintPower calculates a rider's sprint power output.

@@ -4,24 +4,26 @@ import "fmt"
 
 // Rider represents a professional cyclist with physical and ability attributes.
 type Rider struct {
-	ID               int64
-	Name             string
-	Team             string
-	Nationality      string
-	WeightKg         float64
-	HeightCm         float64
-	FTPWatts         int
-	MaxSprintWatts   int
-	VO2MaxWatts      int
-	CdA              float64
-	ClimbingAbility  int
-	SprintAbility    int
-	TTAbility        int
+	ID                int64
+	Name              string
+	Team              string
+	Nationality       string
+	Age               int
+	WeightKg          float64
+	HeightCm          float64
+	FTPWatts          int
+	MaxSprintWatts    int
+	VO2MaxWatts       int
+	CdA               float64
+	ClimbingAbility   int
+	SprintAbility     int
+	TTAbility         int
 	DescendingAbility int
-	Endurance        int
-	Recovery         int
-	Consistency      int
+	Endurance         int
+	Recovery          int
+	Consistency       int
 	TacticalAwareness int
+	Handling          int
 }
 
 // Validate checks that all rider fields are within acceptable ranges.
@@ -50,6 +52,19 @@ func (r *Rider) Validate() error {
 	if r.CdA < 0.2 || r.CdA > 0.5 {
 		return fmt.Errorf("CdA must be between 0.2 and 0.5, got %.3f", r.CdA)
 	}
+
+	// Backwards-compat: if Age not set, assume a prime-age pro.
+	if r.Age == 0 {
+		r.Age = 28
+	}
+	if r.Age < 16 || r.Age > 50 {
+		return fmt.Errorf("age must be between 16 and 50, got %d", r.Age)
+	}
+
+	// Backwards-compat: if Handling not set, default to 70 (average)
+	if r.Handling == 0 {
+		r.Handling = 70
+	}
 	abilities := map[string]int{
 		"ClimbingAbility":   r.ClimbingAbility,
 		"SprintAbility":     r.SprintAbility,
@@ -59,6 +74,7 @@ func (r *Rider) Validate() error {
 		"Recovery":          r.Recovery,
 		"Consistency":       r.Consistency,
 		"TacticalAwareness": r.TacticalAwareness,
+		"Handling":          r.Handling,
 	}
 	for name, val := range abilities {
 		if val < 1 || val > 100 {

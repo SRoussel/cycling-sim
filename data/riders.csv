@@ -1,251 +1,522 @@
-Id,Name,Team,Nationality,Weight_kg,Height_cm,FTP_watts,Sprint_watts,Threshold_watts,W_kg,Climbing,Sprint,TT,Classics,Endurance,Recovery,Acceleration,Consistency
-,Tadej Pogačar,UAE Team Emirates,SLO,66,176,440,1400,490,0.32,97,75,92,88,93,90,95,92
-,Jonas Vingegaard,Visma-Lease a Bike,DEN,60,175,410,1200,495,0.31,96,55,90,80,95,88,90,85
-,Remco Evenepoel,Soudal-QuickStep,BEL,61,171,412,1300,485,0.3,90,65,96,72,88,85,88,82
-,Primož Roglič,Red Bull-BORA-hansgrohe,SLO,65,177,408,1250,475,0.31,93,60,91,75,88,82,82,88
-,Wout van Aert,Visma-Lease a Bike,BEL,78,187,420,1750,470,0.35,72,92,93,85,90,85,88,90
-,Mathieu van der Poel,Alpecin-Deceuninck,NED,75,184,415,1700,465,0.34,75,90,78,90,88,82,85,88
-,Jasper Philipsen,Alpecin-Deceuninck,BEL,76,181,385,1850,440,0.34,45,97,60,70,72,70,78,75
-,Jonathan Milan,Lidl-Trek,ITA,82,190,395,1900,445,0.36,40,95,72,68,70,68,75,70
-,Filippo Ganna,INEOS Grenadiers,ITA,82,193,425,1500,460,0.35,50,70,98,75,82,78,88,72
-,Juan Ayuso,UAE Team Emirates,ESP,63,175,400,1300,470,0.31,88,62,85,78,85,82,80,78
-,Carlos Rodríguez,INEOS Grenadiers,ESP,62,174,398,1200,468,0.3,90,52,80,82,85,80,82,80
-,Egan Bernal,INEOS Grenadiers,COL,63,175,395,1200,475,0.31,92,55,78,85,82,75,75,82
-,Adam Yates,UAE Team Emirates,GBR,58,172,390,1100,465,0.3,90,48,75,80,85,78,82,82
-,Tom Pidcock,INEOS Grenadiers,GBR,58,170,392,1350,470,0.29,88,72,78,92,82,78,78,85
-,Biniam Girmay,Intermarché-Wanty,ERI,73,179,388,1780,445,0.33,55,93,62,75,78,72,76,78
-,Mads Pedersen,Lidl-Trek,DEN,76,183,400,1700,450,0.34,60,88,82,82,82,78,82,85
-,Richard Carapaz,EF Education-EasyPost,ECU,62,170,395,1150,472,0.3,92,50,72,80,90,82,85,88
-,Simon Yates,Team Jayco-AlUla,GBR,58,172,388,1150,462,0.3,90,50,70,78,82,75,72,80
-,Mikel Landa,Soudal-QuickStep,ESP,60,173,392,1100,468,0.3,92,48,68,82,80,75,70,78
-,Stefan Küng,Groupama-FDJ,SUI,80,189,420,1450,458,0.35,48,65,95,78,80,75,85,72
-,Marc Soler,UAE Team Emirates,ESP,64,175,385,1200,460,0.31,85,55,75,78,85,80,75,75
-,Pavel Sivakov,UAE Team Emirates,FRA,62,176,388,1150,465,0.3,87,48,78,75,82,78,78,78
-,João Almeida,UAE Team Emirates,POR,60,173,395,1180,468,0.3,90,50,82,75,88,80,80,82
-,Felix Gall,Decathlon-AG2R,AUT,59,174,390,1100,467,0.3,91,45,70,72,80,75,72,78
-,Ben O'Connor,Decathlon-AG2R,AUS,63,179,388,1150,465,0.31,88,52,68,75,85,78,75,80
-,Bob Jungels,Red Bull-BORA-hansgrohe,LUX,70,186,395,1350,460,0.33,78,62,85,82,85,80,78,82
-,Aleksandr Vlasov,Red Bull-BORA-hansgrohe,RUS,64,176,392,1200,468,0.31,88,50,82,72,82,78,75,80
-,Jai Hindley,Red Bull-BORA-hansgrohe,AUS,60,172,388,1150,465,0.3,89,48,72,75,85,80,72,78
-,Daniel Martínez,Red Bull-BORA-hansgrohe,COL,60,170,390,1180,468,0.3,90,52,70,78,82,78,78,80
-,Matteo Jorgenson,Visma-Lease a Bike,USA,65,183,385,1250,462,0.32,82,58,80,85,85,82,80,82
-,Sepp Kuss,Visma-Lease a Bike,USA,59,173,385,1100,470,0.3,92,45,68,72,88,82,70,80
-,Wilco Kelderman,Visma-Lease a Bike,NED,65,176,382,1150,460,0.31,85,48,78,75,82,78,75,78
-,Christophe Laporte,Visma-Lease a Bike,FRA,75,180,390,1650,455,0.33,58,85,82,88,85,80,82,85
-,Dylan van Baarle,Visma-Lease a Bike,NED,74,183,385,1500,450,0.33,60,75,80,88,88,82,78,82
-,Tiesj Benoot,Visma-Lease a Bike,BEL,70,181,380,1400,455,0.32,65,70,78,85,85,80,75,80
-,Mikel Landa,Soudal-QuickStep,ESP,60,173,392,1100,468,0.3,92,48,68,82,80,75,70,78
-,Ilan Van Wilder,Soudal-QuickStep,BEL,62,178,378,1180,458,0.31,82,52,72,75,80,78,72,75
-,Louis Vervaeke,Soudal-QuickStep,BEL,67,181,375,1250,452,0.32,75,58,75,80,82,78,75,78
-,Julian Alaphilippe,Soudal-QuickStep,FRA,61,173,385,1450,462,0.3,80,78,70,92,82,75,88,80
-,Kasper Asgreen,Soudal-QuickStep,DEN,74,185,388,1550,455,0.33,62,72,85,90,85,80,80,82
-,Tim Merlier,Soudal-QuickStep,BEL,77,183,370,1850,435,0.34,40,95,58,68,70,68,80,72
-,Laurens De Plus,INEOS Grenadiers,BEL,64,177,380,1200,458,0.31,82,50,75,75,82,78,72,78
-,Thymen Arensman,INEOS Grenadiers,NED,62,180,388,1180,465,0.31,87,50,78,75,85,80,75,80
-,Ben Turner,INEOS Grenadiers,GBR,59,174,378,1150,460,0.3,85,48,70,72,82,78,70,75
-,Geraint Thomas,INEOS Grenadiers,GBR,69,183,390,1250,465,0.32,82,52,88,80,90,85,78,88
-,Michał Kwiatkowski,INEOS Grenadiers,POL,68,176,385,1380,458,0.32,75,65,80,88,88,82,78,85
-,Jonathan Castroviejo,INEOS Grenadiers,ESP,70,180,382,1200,455,0.32,70,48,92,75,85,80,72,80
-,Magnus Sheffield,INEOS Grenadiers,USA,64,182,380,1250,460,0.31,80,58,82,78,82,78,75,78
-,Joshua Tarling,INEOS Grenadiers,GBR,73,185,395,1400,462,0.34,65,62,96,78,82,78,82,75
-,Pello Bilbao,Bahrain-Victorious,ESP,61,175,385,1150,462,0.31,88,48,72,78,85,80,72,80
-,Santiago Buitrago,Bahrain-Victorious,COL,58,168,382,1100,465,0.3,90,45,68,70,82,78,70,78
-,Damiano Caruso,Bahrain-Victorious,ITA,64,176,380,1150,458,0.31,85,48,75,75,85,80,72,78
-,Jack Haig,Bahrain-Victorious,AUS,63,178,378,1180,455,0.31,82,50,72,75,82,78,70,75
-,Matej Mohorič,Bahrain-Victorious,SLO,76,187,385,1600,450,0.34,60,80,88,90,85,80,85,82
-,Phil Bauhaus,Bahrain-Victorious,GER,78,186,375,1800,440,0.34,45,92,65,72,75,70,78,75
-,Fred Wright,Bahrain-Victorious,GBR,68,180,378,1400,452,0.32,70,72,75,85,82,78,78,80
-,Romain Bardet,Team dsm-firmenich,FRA,65,184,388,1150,465,0.31,87,48,70,78,88,82,72,82
-,Warren Barguil,Team dsm-firmenich,FRA,62,180,380,1150,460,0.31,85,50,68,75,82,78,75,78
-,Chris Hamilton,Team dsm-firmenich,AUS,64,179,372,1180,450,0.31,78,50,70,75,80,75,70,75
-,John Degenkolb,Team dsm-firmenich,GER,77,184,380,1700,445,0.34,52,88,75,88,82,78,82,82
-,Max Poole,Team dsm-firmenich,GBR,68,182,375,1250,452,0.32,75,58,72,78,80,78,72,75
-,Oscar Onley,Team dsm-firmenich,GBR,58,172,378,1100,462,0.3,88,45,68,70,82,78,68,75
-,Simon Geschke,Cofidis,GER,66,186,375,1200,450,0.32,80,52,68,78,82,78,70,78
-,Axel Zingle,Cofidis,FRA,63,178,370,1150,448,0.31,82,48,65,72,80,75,68,75
-,Guillaume Martin,Cofidis,FRA,58,173,380,1080,462,0.3,90,42,65,68,85,80,65,78
-,Ion Izagirre,Cofidis,ESP,65,177,378,1150,455,0.31,82,48,72,75,82,78,70,78
-,Piet Allegaert,Cofidis,BEL,75,181,365,1750,435,0.33,45,90,62,70,72,68,75,72
-,Bryan Coquard,Cofidis,FRA,73,176,370,1720,440,0.33,48,88,65,75,75,70,80,75
-,Hugh Carthy,EF Education-EasyPost,GBR,57,175,385,1050,468,0.3,92,40,65,68,85,78,65,78
-,Neilson Powless,EF Education-EasyPost,USA,60,174,380,1150,460,0.31,85,50,70,78,82,78,72,78
-,Magnus Cort,EF Education-EasyPost,DEN,73,183,385,1500,455,0.33,68,75,78,88,85,80,80,82
-,Alberto Bettiol,EF Education-EasyPost,ITA,74,185,382,1450,452,0.33,65,70,75,88,85,80,78,82
-,Stefan Bissegger,EF Education-EasyPost,SUI,77,188,390,1400,458,0.34,58,65,92,78,82,78,80,75
-,Marijn van den Berg,EF Education-EasyPost,NED,71,179,372,1650,445,0.33,52,85,70,78,78,75,82,78
-,Sean Quinn,EF Education-EasyPost,USA,66,180,370,1280,448,0.32,72,60,72,78,80,75,72,75
-,Aurélien Paret-Peintre,Decathlon-AG2R,FRA,62,176,375,1180,452,0.31,82,52,68,75,80,78,70,75
-,Clément Champoussin,Decathlon-AG2R,FRA,59,175,372,1100,455,0.3,88,45,65,70,80,75,68,75
-,Lilian Calmejane,Decathlon-AG2R,FRA,67,182,370,1250,448,0.32,75,58,68,78,80,75,72,75
-,Andrea Vendrame,Decathlon-AG2R,ITA,70,183,368,1300,445,0.32,68,62,70,80,78,75,75,78
-,Bruno Armirail,Decathlon-AG2R,FRA,67,180,375,1200,450,0.32,75,52,75,75,82,78,70,75
-,Tobias Johannessen,Uno-X Mobility,NOR,60,176,378,1150,460,0.31,85,48,70,72,82,78,70,78
-,Johannes Kulset,Uno-X Mobility,NOR,63,178,370,1180,448,0.31,80,52,68,75,80,75,70,75
-,Alexander Kristoff,Uno-X Mobility,NOR,77,183,375,1750,445,0.34,48,90,68,85,80,75,82,80
-,Søren Wærenskjold,Uno-X Mobility,NOR,74,186,385,1350,455,0.33,62,62,90,80,82,78,78,75
-,Jonas Abrahamsen,Uno-X Mobility,NOR,69,181,372,1250,448,0.32,70,58,72,78,80,75,72,75
-,Jay Vine,UAE Team Emirates,AUS,60,178,388,1120,465,0.31,89,45,70,72,85,80,68,78
-,George Bennett,UAE Team Emirates,NZL,60,176,375,1100,455,0.31,85,45,68,72,85,82,68,80
-,Mikkel Bjerg,UAE Team Emirates,DEN,75,184,385,1350,455,0.33,60,60,90,78,82,78,78,75
-,Tim Wellens,UAE Team Emirates,BEL,62,175,378,1200,455,0.31,82,55,70,82,82,78,75,78
-,Igor Arrieta,UAE Team Emirates,ESP,60,173,372,1100,452,0.3,85,45,65,70,80,75,68,75
-,Santiago Umba,Astana Qazaqstan,COL,58,169,375,1050,458,0.3,88,42,62,68,82,78,65,75
-,Harold Tejada,Astana Qazaqstan,COL,59,171,372,1080,455,0.3,86,44,65,70,80,75,68,75
-,Alexey Lutsenko,Astana Qazaqstan,KAZ,67,182,380,1280,455,0.32,75,58,75,82,82,78,75,78
-,Yevgeniy Fedorov,Astana Qazaqstan,KAZ,68,178,372,1250,448,0.32,70,58,70,78,80,75,72,75
-,Cees Bol,Astana Qazaqstan,NED,76,183,368,1750,438,0.34,42,90,62,70,72,68,78,72
-,Michele Gazzoli,Astana Qazaqstan,ITA,71,181,370,1300,445,0.32,65,62,68,75,78,75,72,75
-,David Gaudu,Groupama-FDJ,FRA,60,174,385,1150,465,0.31,88,48,70,75,85,80,72,80
-,Romain Grégoire,Groupama-FDJ,FRA,63,179,375,1180,452,0.31,80,52,68,75,80,78,70,75
-,Lenny Martinez,Groupama-FDJ,FRA,59,173,378,1120,458,0.3,87,45,68,72,82,78,68,75
-,Valentin Madouas,Groupama-FDJ,FRA,65,178,378,1250,452,0.32,75,58,72,82,82,78,75,78
-,Arnaud Démare,Groupama-FDJ,FRA,77,181,370,1820,438,0.34,40,95,60,72,72,68,80,75
-,Kevin Geniets,Groupama-FDJ,LUX,68,180,372,1200,448,0.32,72,52,70,78,80,75,70,75
-,Jake Stewart,Groupama-FDJ,GBR,69,182,370,1300,445,0.32,65,62,68,75,78,75,72,75
-,Tobias Halland Johannessen,Uno-X Mobility,NOR,61,178,375,1150,455,0.31,82,48,68,72,80,78,70,75
-,Odd Christian Eiking,Uno-X Mobility,NOR,66,183,375,1200,450,0.32,75,52,70,78,82,78,72,78
-,Jordi Meeus,Red Bull-BORA-hansgrohe,BEL,77,184,372,1780,440,0.34,45,93,65,72,75,70,80,75
-,Danny van Poppel,Red Bull-BORA-hansgrohe,NED,75,182,370,1720,440,0.33,48,88,68,75,75,72,78,75
-,Ryan Gibbons,Lidl-Trek,RSA,71,185,378,1300,450,0.33,68,60,78,82,82,78,75,78
-,Giulio Ciccone,Lidl-Trek,ITA,59,176,380,1100,460,0.31,88,45,68,75,85,80,68,78
-,Tao Geoghegan Hart,Lidl-Trek,GBR,62,177,385,1150,462,0.31,86,48,75,75,85,80,72,80
-,Alex Kirsch,Lidl-Trek,LUX,70,183,372,1250,448,0.32,70,55,72,78,80,75,72,75
-,Simone Consonni,Lidl-Trek,ITA,76,182,368,1750,438,0.34,42,90,65,70,72,68,78,72
-,Gianni Moscon,Soudal-QuickStep,ITA,72,186,380,1350,450,0.33,65,62,80,85,82,78,75,78
-,Davide Ballerini,Astana Qazaqstan,ITA,74,181,372,1600,445,0.33,52,82,70,85,80,75,80,78
-,Fabio Jakobsen,Team dsm-firmenich,NED,75,180,368,1800,438,0.34,42,94,62,68,72,68,78,72
-,Sam Welsford,Red Bull-BORA-hansgrohe,AUS,76,183,370,1780,440,0.34,45,92,65,70,74,70,80,74
-,Kaden Groves,Alpecin-Deceuninck,AUS,74,179,372,1820,442,0.34,46,94,64,72,74,70,82,75
-,Arnaud De Lie,Lotto-Dstny,BEL,76,185,378,1750,448,0.34,52,90,68,82,78,75,82,78
-,Caleb Ewan,Team Jayco-AlUla,AUS,67,165,360,1880,430,0.33,38,96,58,65,70,65,85,70
-,Olav Kooij,Visma-Lease a Bike,NED,75,181,370,1800,440,0.34,44,93,64,70,74,70,80,74
-,Sam Bennett,Decathlon-AG2R,IRL,76,182,368,1780,438,0.34,42,91,62,72,72,68,78,74
-,Fernando Gaviria,Movistar,COL,73,177,365,1820,435,0.33,40,94,60,68,70,68,80,72
-,Dylan Groenewegen,Team Jayco-AlUla,NED,76,181,368,1800,438,0.34,42,93,62,70,72,68,80,74
-,Gerben Thijssen,Intermarché-Wanty,BEL,75,183,365,1750,435,0.34,44,88,60,68,70,68,76,72
-,Tim Declercq,Lidl-Trek,BEL,78,191,385,1250,450,0.35,55,50,88,75,88,82,70,78
-,Michael Mørkøv,Astana Qazaqstan,DEN,73,181,372,1400,445,0.33,50,72,75,78,85,80,75,80
-,Gianni Vermeersch,Alpecin-Deceuninck,BEL,74,185,378,1400,450,0.33,62,68,75,88,85,80,75,80
-,Jasper Stuyven,Lidl-Trek,BEL,73,183,380,1450,452,0.33,62,72,78,88,85,80,78,82
-,Florian Sénéchal,Soudal-QuickStep,FRA,73,180,375,1500,448,0.33,55,78,72,85,82,78,80,78
-,Michael Matthews,Team Jayco-AlUla,AUS,72,178,380,1600,452,0.33,60,82,75,88,85,82,82,85
-,Søren Kragh Andersen,Alpecin-Deceuninck,DEN,72,186,382,1450,455,0.33,65,68,82,88,85,80,78,82
-,Elisa Longo Borghini,Lidl-Trek,ITA,56,168,350,1050,435,0.3,85,45,65,75,82,78,68,78
-,Alberto Dainese,Tudor Pro Cycling,ITA,75,181,368,1780,438,0.34,42,91,62,68,72,68,78,72
-,Clément Venturini,Cofidis,FRA,64,177,368,1180,445,0.31,75,52,65,72,78,75,68,72
-,Aurélien Paret-Peintre,Decathlon-AG2R,FRA,62,176,375,1180,452,0.31,82,52,68,75,80,78,70,75
-,Alex Aranburu,Movistar,ESP,71,182,378,1450,450,0.33,62,72,72,85,82,78,78,78
-,Iván García Cortina,Movistar,ESP,73,183,375,1500,445,0.33,55,75,70,82,80,75,78,78
-,Matteo Trentin,Tudor Pro Cycling,ITA,72,181,378,1500,450,0.33,58,75,75,88,85,80,78,82
-,Vincenzo Albanese,Arkéa-B&B Hotels,ITA,68,178,370,1300,445,0.32,68,62,68,78,80,75,72,75
-,Thibaut Pinot,Groupama-FDJ,FRA,62,180,385,1150,465,0.31,90,48,70,75,82,78,72,82
-,Enric Mas,Movistar,ESP,62,175,388,1180,465,0.31,88,50,72,75,85,80,75,80
-,Nairo Quintana,Movistar,COL,58,167,380,1050,462,0.3,92,42,65,70,85,80,68,80
-,Alejandro Valverde,Movistar,ESP,62,173,375,1200,450,0.31,82,62,70,85,88,85,75,88
-,Marc Hirschi,UAE Team Emirates,SUI,68,178,380,1350,455,0.32,75,68,75,85,82,78,80,80
-,Sergio Higuita,Red Bull-BORA-hansgrohe,COL,56,169,375,1050,458,0.3,90,45,65,72,82,78,70,78
-,Ruben Guerreiro,Movistar,POR,58,172,378,1100,458,0.3,88,45,68,72,82,78,68,78
-,Nelson Oliveira,Movistar,POR,67,179,375,1200,450,0.32,72,52,80,75,82,78,72,78
-,Imanol Erviti,Movistar,ESP,70,178,368,1250,442,0.32,65,55,72,80,85,82,70,80
-,Jorge Arcas,Movistar,ESP,69,179,370,1200,445,0.32,68,50,75,78,82,78,72,78
-,Matteo Sobrero,Red Bull-BORA-hansgrohe,ITA,74,185,385,1350,455,0.34,60,62,90,75,82,78,75,75
-,Brandon McNulty,UAE Team Emirates,USA,65,178,385,1250,460,0.32,80,58,85,78,85,80,78,80
-,Rafał Majka,UAE Team Emirates,POL,61,173,378,1150,455,0.31,86,48,70,75,85,82,72,80
-,Gianluca Brambilla,Trek-Segafredo,ITA,67,179,372,1200,448,0.32,75,50,72,75,82,78,70,75
-,Bauke Mollema,Lidl-Trek,NED,64,178,380,1200,455,0.31,82,52,75,80,85,82,75,82
-,Richie Porte,INEOS Grenadiers,AUS,60,172,378,1100,455,0.31,88,45,78,72,85,82,70,82
-,Lawson Craddock,Team Jayco-AlUla,USA,67,180,372,1200,448,0.32,72,52,72,78,82,78,72,78
-,Chris Juul-Jensen,Team Jayco-AlUla,DEN,70,186,375,1200,450,0.32,70,50,75,78,82,78,72,78
-,Luka Mezgec,Team Jayco-AlUla,SLO,75,180,368,1700,440,0.34,45,85,65,75,75,72,78,75
-,Luke Durbridge,Team Jayco-AlUla,AUS,75,186,380,1300,450,0.33,58,55,85,80,85,80,72,78
-,Eddie Dunbar,Team Jayco-AlUla,IRL,60,175,378,1150,455,0.31,85,48,68,72,82,78,68,75
-,Daan Hoole,Lidl-Trek,NED,72,184,375,1300,448,0.33,65,58,78,78,80,75,72,75
-,Alex Dowsett,Israel-Premier Tech,GBR,70,183,380,1200,452,0.32,68,50,90,72,82,78,70,75
-,Michael Woods,Israel-Premier Tech,CAN,59,172,385,1150,465,0.31,90,48,68,78,82,78,75,80
-,Jakob Fuglsang,Israel-Premier Tech,DEN,63,181,380,1180,458,0.31,85,48,75,78,85,82,72,82
-,Hugo Houle,Israel-Premier Tech,CAN,65,178,375,1200,452,0.32,78,52,72,80,82,78,72,78
-,Krists Neilands,Israel-Premier Tech,LAT,71,184,372,1300,448,0.33,65,58,72,80,80,75,72,75
-,Jenthe Biermans,Israel-Premier Tech,BEL,69,180,370,1250,445,0.32,68,55,70,78,80,75,70,75
-,Guillaume Boivin,Israel-Premier Tech,CAN,72,182,372,1350,448,0.33,62,62,75,80,82,78,72,75
-,Dylan Teuns,Israel-Premier Tech,BEL,64,176,380,1200,455,0.31,82,55,72,82,82,78,75,78
-,Derek Gee,Israel-Premier Tech,CAN,68,183,375,1250,450,0.32,72,55,75,78,82,78,72,75
-,Maxim Van Gils,Lotto-Dstny,BEL,64,179,378,1200,455,0.31,80,55,72,80,82,78,75,78
-,Andreas Kron,Lotto-Dstny,DEN,68,182,375,1280,450,0.32,72,58,72,82,82,78,75,78
-,Jarrad Drizners,Lotto-Dstny,AUS,66,180,372,1200,448,0.32,75,52,70,75,80,75,70,75
-,Victor Campenaerts,Lotto-Dstny,BEL,73,187,385,1300,455,0.34,60,55,92,75,85,80,72,75
-,Brent Van Moer,Lotto-Dstny,BEL,68,183,372,1250,448,0.32,70,55,72,80,82,78,72,75
-,Sylvain Moniquet,Lotto-Dstny,BEL,66,179,368,1180,445,0.31,75,50,68,75,80,75,68,72
-,Florian Vermeersch,Lotto-Dstny,BEL,76,188,380,1450,450,0.33,58,70,75,88,85,80,75,80
-,Maxim Van Gils,Lotto-Dstny,BEL,64,179,378,1200,455,0.31,80,55,72,80,82,78,75,78
-,Rémi Cavagna,Movistar,FRA,72,184,380,1350,452,0.33,62,60,88,78,82,78,75,75
-,Mathias Norsgaard,Movistar,DEN,74,183,372,1550,445,0.33,52,78,72,82,80,75,78,78
-,Gregor Mühlberger,Movistar,AUT,68,182,372,1200,448,0.32,72,50,72,75,82,78,70,75
-,Oier Lazkano,Movistar,ESP,64,176,375,1180,450,0.31,78,52,68,78,80,75,72,75
-,Einer Rubio,Movistar,COL,59,171,375,1080,455,0.3,85,44,65,70,82,78,68,75
-,Albert Torres,Movistar,ESP,66,178,368,1200,442,0.31,72,52,68,75,80,75,68,72
-,Juri Hollmann,Alpecin-Deceuninck,GER,70,181,372,1300,445,0.32,65,60,70,78,80,75,72,75
-,Robbe Ghys,Alpecin-Deceuninck,BEL,72,183,370,1350,442,0.33,58,65,72,80,82,78,75,75
-,Soren Kragh Andersen,Alpecin-Deceuninck,DEN,72,186,382,1450,455,0.33,65,68,82,88,85,80,78,82
-,Xandro Meurisse,Alpecin-Deceuninck,BEL,67,181,370,1200,445,0.32,72,52,68,78,80,75,70,75
-,Silvan Dillier,Alpecin-Deceuninck,SUI,76,188,378,1350,448,0.34,58,62,78,82,85,80,72,78
-,Oscar Riesebeek,Alpecin-Deceuninck,NED,69,182,368,1250,442,0.32,68,55,70,78,80,75,70,75
-,Georg Zimmermann,Intermarché-Wanty,GER,68,182,372,1250,448,0.32,70,55,72,78,82,78,72,75
-,Taco van der Hoorn,Intermarché-Wanty,NED,74,186,375,1500,445,0.33,55,75,72,85,82,78,78,78
-,Hugo Page,Intermarché-Wanty,FRA,68,180,368,1300,442,0.32,65,62,68,78,78,75,72,75
-,Gerben Thijssen,Intermarché-Wanty,BEL,75,183,365,1750,435,0.34,44,88,60,68,70,68,76,72
-,Boy van Poppel,Intermarché-Wanty,NED,76,184,368,1550,440,0.34,48,78,65,75,75,72,75,75
-,Louis Meintjes,Intermarché-Wanty,RSA,58,174,378,1080,458,0.3,88,42,65,70,82,78,68,78
-,Rui Costa,Intermarché-Wanty,POR,65,175,375,1200,450,0.31,78,55,72,80,85,82,72,82
-,Jan Hirt,Soudal-QuickStep,CZE,62,178,378,1150,455,0.31,85,48,70,75,82,78,70,78
-,Josef Černý,Soudal-QuickStep,CZE,70,186,378,1200,450,0.32,70,50,80,75,82,78,72,75
-,Andrea Bagioli,Soudal-QuickStep,ITA,66,178,372,1350,445,0.32,68,65,68,82,80,75,78,75
-,Stan Van Tricht,Soudal-QuickStep,BEL,69,181,368,1280,442,0.32,65,58,68,78,80,75,72,72
-,Martin Svrček,Soudal-QuickStep,SVK,64,177,370,1180,445,0.31,75,52,68,75,80,75,70,72
-,Ethan Vernon,Soudal-QuickStep,GBR,75,182,370,1700,440,0.34,45,88,68,72,75,70,80,75
-,Paul Magnier,Soudal-QuickStep,FRA,73,179,365,1750,435,0.33,42,90,62,68,72,68,78,72
-,Ben Healy,EF Education-EasyPost,IRL,60,175,378,1150,458,0.31,85,48,68,75,82,78,72,75
-,Rigoberto Urán,EF Education-EasyPost,COL,61,174,375,1100,452,0.31,85,48,68,78,85,82,70,82
-,Michael Valgren,EF Education-EasyPost,DEN,71,182,378,1350,450,0.33,65,62,75,85,85,80,75,80
-,Owain Doull,EF Education-EasyPost,GBR,75,186,375,1300,448,0.33,60,58,78,80,85,80,72,78
-,Jefferson Cepeda,EF Education-EasyPost,ECU,60,172,372,1100,450,0.31,82,45,65,72,80,75,68,75
-,Esteban Chaves,EF Education-EasyPost,COL,58,167,372,1050,452,0.3,88,42,62,70,82,78,65,78
-,James Shaw,EF Education-EasyPost,GBR,67,181,370,1200,445,0.32,70,52,70,75,80,75,70,72
-,Georg Steinhauser,EF Education-EasyPost,GER,69,182,368,1250,442,0.32,68,55,68,75,78,75,68,72
-,Andrey Amador,EF Education-EasyPost,CRC,65,177,372,1150,448,0.31,78,48,68,75,85,82,68,78
-,Jonas Rutsch,EF Education-EasyPost,GER,73,185,375,1400,448,0.33,58,65,75,82,82,78,75,75
-,Simon Carr,EF Education-EasyPost,GBR,62,177,370,1150,445,0.31,78,50,65,72,80,75,68,72
-,Roger Adrià,Red Bull-BORA-hansgrohe,ESP,63,175,372,1150,448,0.31,78,50,68,75,80,75,68,72
-,Marco Haller,Red Bull-BORA-hansgrohe,AUT,76,188,378,1350,448,0.34,58,60,80,82,85,80,72,75
-,Anton Palzer,Red Bull-BORA-hansgrohe,GER,62,178,370,1150,445,0.31,80,48,65,72,80,75,68,72
-,Patrick Gamper,Red Bull-BORA-hansgrohe,AUT,66,180,368,1200,442,0.32,72,52,68,75,80,75,68,72
-,Giovanni Aleotti,Red Bull-BORA-hansgrohe,ITA,61,176,375,1150,452,0.31,82,48,68,72,82,78,70,75
-,Emanuel Buchmann,Red Bull-BORA-hansgrohe,GER,60,176,378,1100,455,0.31,88,45,70,72,85,80,68,78
-,Florian Lipowitz,Red Bull-BORA-hansgrohe,GER,60,177,375,1120,452,0.31,85,46,68,72,82,78,68,75
-,Paul Double,Polti-Kometa,GBR,64,178,368,1180,442,0.31,75,50,65,72,78,75,68,72
-,Axel Laurance,Alpecin-Deceuninck,FRA,62,176,372,1150,448,0.31,78,52,68,75,80,75,70,72
-,Jack Bauer,Team Jayco-AlUla,NZL,73,185,375,1250,448,0.33,62,52,78,78,85,80,70,75
-,Davide Formolo,Movistar,ITA,64,178,375,1180,450,0.31,80,50,70,78,82,78,70,75
-,Brandon Rivera,INEOS Grenadiers,COL,58,170,372,1080,450,0.3,85,44,65,70,80,75,68,72
-,Kim Heiduk,INEOS Grenadiers,GER,67,181,368,1200,442,0.32,70,52,68,75,80,75,68,72
-,Connor Swift,INEOS Grenadiers,GBR,71,183,372,1350,445,0.33,60,65,72,82,82,78,75,75
-,Salvatore Puccio,INEOS Grenadiers,ITA,70,180,368,1250,440,0.32,62,52,72,78,85,82,70,78
-,Lucas Plapp,Team Jayco-AlUla,AUS,74,186,380,1350,452,0.34,62,60,88,78,82,78,75,75
-,Kelland O'Brien,Team Jayco-AlUla,AUS,72,184,372,1300,445,0.33,62,58,75,78,80,75,72,72
-,Blake Quick,Team Jayco-AlUla,AUS,70,182,368,1250,442,0.32,65,55,70,75,78,75,70,72
-,Jensen Plowright,Team Jayco-AlUla,AUS,68,180,365,1200,438,0.32,68,52,68,72,78,75,68,70
-,Filippo Zana,Team Jayco-AlUla,ITA,64,177,372,1180,448,0.31,78,52,68,75,80,75,70,72
-,Kobe Goossens,Intermarché-Wanty,BEL,65,178,368,1180,442,0.31,75,50,65,75,80,75,68,72
-,Samuele Battistella,Astana Qazaqstan,ITA,68,180,368,1250,442,0.32,68,55,68,75,78,75,70,72
-,Aleksandr Riabushenko,Astana Qazaqstan,BLR,66,179,365,1200,438,0.32,70,52,68,72,78,75,68,70
-,Vadim Pronskiy,Astana Qazaqstan,KAZ,68,181,365,1200,438,0.32,68,50,65,72,78,75,68,70
-,Davide Ballerini,Astana Qazaqstan,ITA,74,181,372,1600,445,0.33,52,82,70,85,80,75,80,78
-,Simone Velasco,Astana Qazaqstan,ITA,67,179,368,1200,442,0.32,70,55,68,75,78,75,70,72
-,Christian Scaroni,Astana Qazaqstan,ITA,64,176,365,1150,438,0.31,72,48,65,72,78,75,68,70
-,Luca Wackermann,Team Jayco-AlUla,ITA,71,183,370,1300,442,0.33,62,58,70,78,80,75,72,72
-,Tobias Bayer,Alpecin-Deceuninck,AUT,69,181,368,1250,440,0.32,65,55,68,75,78,75,70,70
-,Dries De Bondt,Decathlon-AG2R,BEL,68,180,368,1200,440,0.32,68,52,68,78,80,75,70,72
-,Gijs Leemreize,Team dsm-firmenich,NED,66,179,365,1180,438,0.31,72,50,65,72,78,75,68,70
-,Bram Welten,Team dsm-firmenich,NED,70,182,368,1200,440,0.32,65,52,68,75,80,75,68,72
-,Kevin Vermaerke,Team dsm-firmenich,USA,66,180,368,1180,440,0.31,72,50,68,75,78,75,68,70
-,Martijn Tusveld,Team dsm-firmenich,NED,69,181,365,1200,438,0.32,68,50,68,75,80,75,68,70
-,Casper Pedersen,Soudal-QuickStep,DEN,73,184,370,1400,442,0.33,55,68,72,82,80,75,75,72
+Id,Name,Team,Nationality,Weight_kg,Height_cm,FTP_watts,Sprint_watts,Threshold_watts,W_kg,Climbing,Sprint,TT,Classics,Endurance,Recovery,Acceleration,Consistency,Handling
+1,Maurice Ballerstedt,Alpecin-Premier Tech,GER,72,180,385,1650,440,0.32,65,80,75,72,78,75,78,78,72
+2,Tobias Bayer,Alpecin-Premier Tech,AUT,71,180,390,1700,445,0.33,68,82,78,75,80,76,80,80,75
+3,Lennert Belmans,Alpecin-Premier Tech,BEL,70,179,388,1720,442,0.32,60,85,72,78,75,72,82,78,70
+4,Francesco Busatto,Alpecin-Premier Tech,ITA,68,177,382,1680,435,0.31,55,88,70,75,72,70,80,75,68
+5,Lindsay De Vylder,Alpecin-Premier Tech,BEL,72,181,395,1750,448,0.33,65,88,80,82,80,78,82,82,75
+6,Ramses Debruyne,Alpecin-Premier Tech,BEL,69,178,385,1700,440,0.32,58,86,75,78,75,72,80,78,70
+7,Simon Dehairs,Alpecin-Premier Tech,BEL,71,180,390,1680,445,0.33,62,82,78,80,78,75,80,80,72
+8,Tibor Del Grosso,Alpecin-Premier Tech,NED,68,176,380,1650,435,0.30,52,82,72,75,72,68,78,75,68
+9,Silvan Dillier,Alpecin-Premier Tech,SUI,73,183,405,1600,460,0.35,72,75,85,88,88,82,85,85,80
+10,Aaron Dockx,Alpecin-Premier Tech,BEL,67,175,375,1620,430,0.29,50,80,70,72,70,65,76,72,65
+11,Jonas Geens,Alpecin-Premier Tech,BEL,72,182,392,1700,440,0.33,60,85,75,78,76,72,80,78,70
+12,Gal Glivar,Alpecin-Premier Tech,SLO,69,179,385,1680,435,0.31,58,84,73,75,74,70,78,76,68
+13,Michael Gogl,Alpecin-Premier Tech,AUT,75,185,408,1650,465,0.36,75,78,88,85,90,85,85,88,78
+14,Kaden Groves,Alpecin-Premier Tech,AUS,74,183,400,1850,455,0.35,55,92,80,80,82,78,88,82,75
+15,Hugo Houle,Alpecin-Premier Tech,CAN,76,186,410,1700,470,0.37,70,82,90,88,92,88,88,90,82
+16,Tim Marsman,Alpecin-Premier Tech,NED,71,180,388,1720,442,0.32,60,84,76,78,76,74,80,78,70
+17,Jasper Philipsen,Alpecin-Premier Tech,BEL,76,181,385,1850,440,0.34,45,97,60,70,72,70,78,75,74
+18,Edward Planckaert,Alpecin-Premier Tech,BEL,72,181,395,1750,448,0.33,65,88,80,82,80,78,82,82,75
+19,Jensen Plowright,Alpecin-Premier Tech,AUS,73,182,398,1800,450,0.34,58,90,78,80,80,76,84,80,72
+20,Johan Price-Pejtersen,Alpecin-Premier Tech,DEN,71,180,390,1700,445,0.33,62,86,76,78,78,74,80,78,70
+21,Senna Remijn,Alpecin-Premier Tech,NED,68,176,375,1600,430,0.29,48,78,68,70,68,64,74,70,62
+22,Jonas Rickaert,Alpecin-Premier Tech,BEL,74,184,405,1650,465,0.36,72,78,85,85,88,84,82,86,78
+23,Oscar Riesebeek,Alpecin-Premier Tech,NED,75,185,408,1600,465,0.37,75,75,88,88,90,86,85,88,80
+24,Florian Sénéchal,Alpecin-Premier Tech,FRA,75,183,405,1650,465,0.36,70,78,85,90,88,82,85,88,82
+25,Sente Sentjens,Alpecin-Premier Tech,BEL,67,175,378,1640,432,0.30,52,82,72,74,72,68,76,74,66
+26,Gerben Thijssen,Alpecin-Premier Tech,BEL,74,183,402,1820,452,0.35,58,92,78,80,80,76,84,80,72
+27,Henri Uhlig,Alpecin-Premier Tech,GER,72,180,388,1700,442,0.32,62,84,76,76,78,74,80,78,70
+28,Mathieu van der Poel,Alpecin-Premier Tech,NED,75,184,415,1700,465,0.34,75,90,78,90,88,82,85,88,99
+29,Luca Vergallito,Alpecin-Premier Tech,ITA,71,180,392,1680,445,0.33,65,82,78,80,78,74,80,80,72
+30,Emiel Verstrynge,Alpecin-Premier Tech,BEL,69,178,385,1700,440,0.32,58,86,75,78,75,72,80,78,70
+31,Nikias Arndt,Team Bahrain Victorious,GER,76,186,410,1700,470,0.37,72,80,90,88,92,88,88,90,82
+32,Phil Bauhaus,Team Bahrain Victorious,GER,75,185,408,1850,460,0.36,55,95,85,85,85,80,88,85,75
+33,Pello Bilbao,Team Bahrain Victorious,ESP,73,182,405,1650,465,0.36,80,75,85,88,90,85,85,90,80
+34,Alessandro Borgo,Team Bahrain Victorious,ITA,68,177,378,1620,432,0.30,58,80,72,78,74,70,78,75,68
+35,Alberto Bruttomesso,Team Bahrain Victorious,ITA,69,178,382,1680,435,0.31,62,84,75,76,76,72,80,76,70
+36,Santiago Buitrago,Team Bahrain Victorious,COL,62,172,385,1200,440,0.29,88,55,75,80,92,90,85,88,55
+37,Damiano Caruso,Team Bahrain Victorious,ITA,68,176,395,1300,458,0.31,85,60,80,88,90,82,80,88,55
+38,Roman Ermakov,Team Bahrain Victorious,RUS,69,178,380,1620,432,0.30,56,80,70,75,72,68,76,74,66
+39,Žak Eržen,Team Bahrain Victorious,SLO,67,175,375,1600,430,0.29,52,80,70,74,72,66,76,72,64
+40,Afonso Eulálio,Team Bahrain Victorious,POR,70,179,388,1680,440,0.32,65,82,78,80,78,74,80,78,70
+41,Matevž Govekar,Team Bahrain Victorious,SLO,71,180,390,1700,445,0.33,68,84,78,82,80,76,82,80,72
+42,Kamil Gradek,Team Bahrain Victorious,POL,74,183,405,1200,465,0.36,78,60,90,88,92,88,85,90,55
+43,Rainer Kepplinger,Team Bahrain Victorious,AUT,72,181,392,1700,445,0.33,70,82,85,85,85,80,82,85,75
+44,Lenny Martinez,Team Bahrain Victorious,FRA,69,178,385,1700,435,0.31,82,84,75,80,82,78,82,85,70
+45,Fran Miholjević,Team Bahrain Victorious,CRO,70,179,388,1680,440,0.32,65,82,78,80,78,74,80,78,70
+46,Pau Miquel,Team Bahrain Victorious,ESP,72,181,395,1700,448,0.33,70,84,82,82,82,78,82,82,72
+47,Matej Mohorič,Team Bahrain Victorious,SLO,71,180,405,1400,465,0.36,78,72,85,90,92,85,85,90,85
+48,Jakob Omrzel,Team Bahrain Victorious,SLO,68,177,378,1640,432,0.30,55,82,72,76,74,70,78,74,68
+49,Mathijs Paasschens,Team Bahrain Victorious,NED,73,182,398,1700,452,0.34,68,86,80,82,82,78,82,80,72
+50,Alec Segaert,Team Bahrain Victorious,BEL,69,178,382,1680,435,0.31,60,84,74,76,76,72,80,76,70
+51,Daniel Skerl,Team Bahrain Victorious,ITA,69,178,385,1700,440,0.32,62,86,76,78,78,74,80,78,70
+52,Robert Stannard,Team Bahrain Victorious,AUS,74,183,402,1800,452,0.35,65,90,80,82,82,78,84,82,72
+53,Oliver Stockwell,Team Bahrain Victorious,GBR,70,179,388,1680,440,0.32,65,82,78,80,78,74,80,78,70
+54,Antonio Tiberi,Team Bahrain Victorious,ITA,68,177,385,1700,435,0.31,80,84,75,80,82,78,82,82,70
+55,Attila Valter,Team Bahrain Victorious,HUN,72,181,398,1750,450,0.34,72,88,82,82,85,80,84,85,72
+56,Max van der Meulen,Team Bahrain Victorious,NED,69,178,382,1680,435,0.31,60,84,74,76,76,72,80,76,70
+57,Vlad Van Mechelen,Team Bahrain Victorious,BEL,69,178,380,1660,432,0.30,58,82,72,76,74,70,78,74,68
+58,Edoardo Zambanini,Team Bahrain Victorious,ITA,70,179,388,1680,440,0.32,65,82,78,80,78,74,80,78,70
+59,Tobias Lund Andresen,Decathlon-CMA CGM,DEN,71,180,388,1700,442,0.32,62,84,76,78,78,74,80,78,70
+60,Tiesj Benoot,Decathlon-CMA CGM,BEL,74,183,405,1200,465,0.36,82,60,85,88,90,85,85,90,55
+61,Léo Bisiaux,Decathlon-CMA CGM,FRA,68,177,375,1600,430,0.29,55,80,70,74,72,68,76,74,66
+62,Stefan Bissegger,Decathlon-CMA CGM,SUI,71,180,395,1550,455,0.34,72,75,95,85,88,85,88,88,86
+63,Cees Bol,Decathlon-CMA CGM,NED,76,186,400,1800,450,0.34,60,90,80,80,82,78,84,82,72
+64,Oscar Chamberlain,Decathlon-CMA CGM,AUS,68,177,375,1620,430,0.29,55,82,70,74,72,68,76,74,66
+65,Sander De Pestel,Decathlon-CMA CGM,BEL,71,180,390,1700,445,0.33,65,86,78,80,80,76,82,80,72
+66,Stan Dewulf,Decathlon-CMA CGM,BEL,72,181,392,1700,445,0.33,68,84,80,82,82,78,82,82,72
+67,Felix Gall,Decathlon-CMA CGM,AUT,70,179,388,1650,440,0.32,75,80,85,88,90,85,85,90,80
+68,Pierre Gautherat,Decathlon-CMA CGM,FRA,69,178,382,1680,432,0.31,62,84,75,76,76,72,80,76,70
+69,Robbe Ghys,Decathlon-CMA CGM,BEL,71,180,390,1700,445,0.33,65,84,78,82,80,76,80,80,72
+70,Tord Gudmestad,Decathlon-CMA CGM,NOR,72,181,392,1700,445,0.33,70,82,85,85,85,80,82,85,75
+71,Daan Hoole,Decathlon-CMA CGM,NED,73,182,398,1700,452,0.34,68,86,80,82,82,78,82,80,72
+72,Noa Isidore,Decathlon-CMA CGM,FRA,68,176,375,1620,430,0.29,55,82,70,74,72,68,76,74,66
+73,Olav Kooij,Decathlon-CMA CGM,NED,72,181,395,1800,448,0.33,60,90,78,80,82,76,84,80,72
+74,Antoine L'Hote,Decathlon-CMA CGM,FRA,67,175,375,1600,430,0.29,52,80,70,72,72,66,74,72,64
+75,Jordan Labrosse,Decathlon-CMA CGM,FRA,70,179,385,1680,435,0.31,60,84,75,78,76,72,80,78,70
+76,Paul Lapeira,Decathlon-CMA CGM,FRA,71,180,388,1700,440,0.32,62,84,76,78,78,74,80,78,70
+77,Gregor Mühlberger,Decathlon-CMA CGM,AUT,73,182,405,1200,465,0.36,85,55,88,88,92,88,85,92,55
+78,Oliver Naesen,Decathlon-CMA CGM,BEL,74,183,405,1650,465,0.36,75,78,85,92,90,85,85,92,80
+79,Aurélien Paret-Peintre,Decathlon-CMA CGM,FRA,72,181,392,1700,445,0.33,72,84,85,88,85,80,85,88,78
+80,Rasmus Søjberg Pedersen,Decathlon-CMA CGM,DEN,70,179,385,1680,435,0.31,62,84,75,78,76,72,80,78,78
+81,Gianluca Pollefliet,Decathlon-CMA CGM,BEL,69,178,382,1680,432,0.31,62,84,75,76,76,72,80,76,70
+82,Nicolas Prodhomme,Decathlon-CMA CGM,FRA,72,181,395,1700,448,0.33,72,84,85,88,88,80,85,88,78
+83,Matthew Riccitello,Decathlon-CMA CGM,USA,70,179,385,1680,435,0.31,62,84,75,78,76,72,80,78,70
+84,Callum Scotson,Decathlon-CMA CGM,AUS,73,182,398,1700,452,0.34,70,86,80,82,82,78,82,80,72
+85,Paul Seixas,Decathlon-CMA CGM,FRA,67,175,372,1600,428,0.28,52,80,68,72,70,64,74,70,62
+86,Johannes Staune-Mittet,Decathlon-CMA CGM,NOR,71,180,388,1700,442,0.32,65,84,78,80,78,74,80,78,70
+87,Mattia Agostinacchio,EF Education-EasyPost,ITA,68,177,375,1600,430,0.29,55,82,70,74,72,68,76,74,66
+88,Vincenzo Albanese,EF Education-EasyPost,ITA,72,181,392,1700,445,0.33,70,84,82,82,82,78,82,82,72
+,Kasper Asgreen,EF Education-EasyPost,DEN,73,182,405,1200,465,0.36,78,55,85,92,88,82,85,90,82
+90,Samuele Battistella,EF Education-EasyPost,ITA,71,180,390,1700,445,0.33,72,86,80,82,82,78,82,84,72
+91,Alex Baudin,EF Education-EasyPost,FRA,70,179,385,1680,435,0.31,68,82,78,80,78,74,80,80,70
+92,Markel Beloki,EF Education-EasyPost,ESP,67,175,375,1600,430,0.29,62,80,72,76,74,70,76,74,68
+93,Richard Carapaz,EF Education-EasyPost,ECU,62,170,395,1150,472,0.30,92,50,72,80,90,82,85,88,55
+94,Jefferson Alexander Cepeda,EF Education-EasyPost,ECU,70,179,388,1680,440,0.32,80,82,78,82,85,80,82,85,70
+95,Ben Healy,EF Education-EasyPost,IRL,71,180,390,1700,445,0.33,75,84,80,82,82,78,82,84,72
+96,Noah Hobbs,EF Education-EasyPost,GBR,68,177,375,1620,430,0.29,62,82,72,76,74,70,76,74,68
+97,Mikkel Frølich Honoré,EF Education-EasyPost,DEN,70,179,388,1680,440,0.32,72,82,82,85,82,78,82,85,72
+98,Luke Lamperti,EF Education-EasyPost,USA,70,179,385,1680,435,0.31,68,82,78,80,78,74,80,80,70
+99,Michael Leonard,EF Education-EasyPost,CAN,69,178,382,1680,432,0.31,65,82,75,78,76,72,80,76,68
+100,Alastair Mackellar,EF Education-EasyPost,AUS,71,180,390,1700,445,0.33,72,84,80,82,82,78,82,84,72
+101,Madis Mihkels,EF Education-EasyPost,EST,70,179,385,1680,435,0.31,68,82,78,80,78,74,80,80,70
+102,Lukas Nerurkar,EF Education-EasyPost,GBR,69,178,382,1680,432,0.31,62,84,75,76,76,72,80,76,70
+103,Neilson Powless,EF Education-EasyPost,USA,70,179,390,1300,440,0.32,88,65,80,88,88,82,85,88,75
+104,Sean Quinn,EF Education-EasyPost,USA,71,180,388,1680,440,0.32,70,82,80,80,80,76,80,82,70
+105,Darren Rafferty,EF Education-EasyPost,IRL,70,179,385,1680,435,0.31,70,82,78,80,78,74,80,80,70
+106,Archie Ryan,EF Education-EasyPost,IRL,71,180,390,1700,445,0.33,72,84,80,82,82,78,82,84,72
+107,Matthias Schwarzbacher,EF Education-EasyPost,SVK,69,178,380,1660,432,0.30,65,82,76,78,76,72,80,76,68
+108,James Shaw,EF Education-EasyPost,GBR,72,181,392,1700,445,0.33,72,84,80,82,82,78,82,84,72
+109,Colby Simmons,EF Education-EasyPost,USA,70,179,385,1680,435,0.31,68,82,78,80,78,74,80,80,70
+110,Georg Steinhauser,EF Education-EasyPost,GER,71,180,388,1700,440,0.32,70,82,80,80,80,76,80,82,70
+111,Harry Sweeny,EF Education-EasyPost,AUS,72,181,392,1700,445,0.33,72,84,80,82,82,78,82,84,72
+112,Michael Valgren,EF Education-EasyPost,DEN,73,182,405,1200,465,0.36,80,55,85,90,88,82,85,90,75
+113,Marijn van den Berg,EF Education-EasyPost,NED,71,180,390,1700,445,0.33,72,84,80,82,82,78,82,84,72
+114,Jardi Christiaan van der Lee,EF Education-EasyPost,NED,71,180,388,1700,440,0.32,70,82,80,80,80,76,80,82,70
+115,Max Walker,EF Education-EasyPost,GBR,71,180,390,1700,445,0.33,72,84,80,82,82,78,82,84,72
+116,Cyril Barthe,Groupama-FDJ,FRA,72,181,392,1700,445,0.33,70,84,80,82,82,78,82,84,72
+117,Clément Berthet,Groupama-FDJ,FRA,71,180,390,1700,445,0.33,70,84,80,82,82,78,82,84,72
+118,Lewis Bower,Groupama-FDJ,NZL,68,177,375,1600,430,0.29,62,80,72,76,74,70,76,74,68
+119,Clément Braz Afonso,Groupama-FDJ,FRA,71,180,390,1700,445,0.33,72,84,80,82,82,78,82,84,72
+120,Rémi Cavagna,Groupama-FDJ,FRA,72,181,395,1550,450,0.34,70,75,95,85,88,85,88,88,80
+121,Ewen Costiou,Groupama-FDJ,FRA,70,179,385,1680,435,0.31,65,82,78,80,78,74,80,80,70
+122,Maxime Decomble,Groupama-FDJ,FRA,67,175,375,1600,430,0.29,58,80,72,74,72,68,76,74,66
+123,Tom Donnenwirth,Groupama-FDJ,FRA,72,181,392,1700,445,0.33,70,84,80,82,82,78,82,84,72
+124,Titouan Fontaine,Groupama-FDJ,FRA,68,177,378,1620,432,0.30,62,82,72,76,74,70,78,74,68
+125,David Gaudu,Groupama-FDJ,FRA,68,176,390,1200,445,0.32,85,55,80,85,88,82,85,88,55
+126,Kevin Geniets,Groupama-FDJ,LUX,71,180,388,1680,440,0.32,72,82,80,82,82,78,82,84,70
+127,Lorenzo Germani,Groupama-FDJ,ITA,70,179,385,1680,435,0.31,70,82,78,80,78,74,80,80,70
+128,Romain Grégoire,Groupama-FDJ,FRA,70,179,385,1680,435,0.31,68,82,78,80,78,74,80,80,70
+129,Thibaud Gruel,Groupama-FDJ,FRA,68,177,375,1620,430,0.29,62,80,72,76,74,70,76,74,68
+130,Axel Huens,Groupama-FDJ,FRA,71,180,388,1680,440,0.32,70,82,80,80,80,76,80,82,70
+131,Johan Jacobs,Groupama-FDJ,SUI,72,181,392,1700,445,0.33,72,84,80,82,82,78,82,84,72
+132,Josh Kench,Groupama-FDJ,NZL,71,180,390,1700,445,0.33,72,84,80,82,82,78,82,84,72
+133,Olivier Le Gac,Groupama-FDJ,FRA,73,182,405,1200,465,0.36,80,55,85,88,90,85,85,90,55
+134,Valentin Madouas,Groupama-FDJ,FRA,72,181,395,1650,450,0.34,75,78,85,88,88,82,85,88,80
+135,Guillaume Martin,Groupama-FDJ,FRA,68,176,388,1200,445,0.32,85,55,80,85,88,82,85,88,55
+136,Matteo Milan,Groupama-FDJ,ITA,70,179,385,1680,435,0.31,70,82,78,80,78,74,80,80,70
+137,Rudy Molard,Groupama-FDJ,FRA,72,181,395,1650,450,0.34,75,78,85,88,88,82,85,88,80
+138,Quentin Pacher,Groupama-FDJ,FRA,73,182,405,1200,465,0.36,82,55,85,88,90,85,85,90,55
+139,Enzo Paleni,Groupama-FDJ,FRA,70,179,385,1680,435,0.31,68,82,78,80,78,74,80,80,70
+140,Paul Penhoët,Groupama-FDJ,FRA,71,180,388,1700,440,0.32,70,82,80,80,80,76,80,82,70
+141,Rémy Rochas,Groupama-FDJ,FRA,72,181,392,1700,445,0.33,70,84,80,82,82,78,82,84,72
+142,Brieuc Rolland,Groupama-FDJ,FRA,70,179,385,1680,435,0.31,68,82,78,80,78,74,80,80,70
+143,Clément Russo,Groupama-FDJ,FRA,72,181,395,1650,450,0.34,75,78,85,88,88,82,85,88,80
+144,Bastien Tronchon,Groupama-FDJ,FRA,70,179,385,1680,435,0.31,68,82,78,80,78,74,80,80,70
+145,Thymen Arensman,INEOS Grenadiers,NED,71,180,390,1700,445,0.33,82,84,78,80,85,80,82,85,72
+146,Andrew August,INEOS Grenadiers,USA,68,177,375,1600,430,0.29,58,80,70,74,72,68,76,74,66
+147,Egan Bernal,INEOS Grenadiers,COL,63,175,395,1200,475,0.31,92,55,78,85,82,75,75,82,55
+148,Laurens De Plus,INEOS Grenadiers,BEL,71,180,390,1700,445,0.33,82,84,80,82,85,80,82,85,72
+149,Tobias Foss,INEOS Grenadiers,NOR,71,180,390,1700,445,0.33,80,84,80,80,85,80,82,85,72
+150,Filippo Ganna,INEOS Grenadiers,ITA,82,193,425,1500,460,0.35,50,70,98,75,82,78,88,72,55
+151,Dorian Godon,INEOS Grenadiers,FRA,72,181,392,1700,445,0.33,70,84,80,82,82,78,82,84,72
+152,Jack Haig,INEOS Grenadiers,AUS,67,175,385,1200,435,0.29,88,55,75,88,85,78,82,88,55
+153,Lucas Hamilton,INEOS Grenadiers,AUS,72,181,392,1700,445,0.33,72,84,82,82,82,78,82,84,72
+154,Kim Heiduk,INEOS Grenadiers,GER,71,180,388,1700,440,0.32,65,84,78,80,80,76,80,82,70
+155,Bob Jungels,INEOS Grenadiers,LUX,73,182,405,1200,465,0.36,80,55,85,88,90,85,85,90,55
+156,Michał Kwiatkowski,INEOS Grenadiers,POL,74,183,408,1650,465,0.36,75,78,85,92,90,85,85,92,80
+157,Victor Langellotti,INEOS Grenadiers,MON,72,181,392,1700,445,0.33,72,84,80,82,82,78,82,84,72
+158,Axel Laurance,INEOS Grenadiers,FRA,71,180,388,1700,440,0.32,75,82,80,82,82,78,82,84,72
+159,Oscar Onley,INEOS Grenadiers,GBR,70,179,385,1680,435,0.31,70,82,78,80,78,74,80,80,70
+160,Brandon Rivera,INEOS Grenadiers,COL,72,181,392,1700,445,0.33,72,84,80,82,82,78,82,84,72
+161,Carlos Rodríguez,INEOS Grenadiers,ESP,62,174,398,1200,468,0.30,90,52,80,82,85,80,82,80,55
+162,Óscar Rodríguez,INEOS Grenadiers,ESP,73,182,405,1200,465,0.36,82,55,85,88,90,85,85,90,55
+163,Magnus Sheffield,INEOS Grenadiers,USA,70,179,385,1680,435,0.31,68,82,78,80,78,74,80,80,70
+164,Artem Shmidt,INEOS Grenadiers,USA,69,178,382,1680,432,0.31,65,82,76,78,78,74,80,78,68
+165,Embret Svestad-Bårdseng,INEOS Grenadiers,NOR,70,179,385,1680,435,0.31,68,82,78,80,78,74,80,80,70
+166,Ben Swift,INEOS Grenadiers,GBR,76,186,410,1700,470,0.37,70,80,88,88,88,82,85,88,80
+167,Connor Swift,INEOS Grenadiers,GBR,73,182,405,1200,465,0.36,80,55,85,88,90,85,85,90,55
+168,Joshua Tarling,INEOS Grenadiers,GBR,69,178,380,1660,432,0.30,65,82,76,78,76,72,80,76,68
+169,Ben Turner,INEOS Grenadiers,GBR,71,180,390,1700,445,0.33,78,84,80,82,85,80,82,85,72
+170,Kévin Vauquelin,INEOS Grenadiers,FRA,71,180,388,1700,440,0.32,75,82,80,82,82,78,82,84,72
+171,Samuel Watson,INEOS Grenadiers,GBR,71,180,388,1700,440,0.32,70,82,80,80,80,76,80,82,70
+172,Sam Welsford,INEOS Grenadiers,AUS,71,180,390,1700,445,0.33,72,84,80,82,82,78,82,84,72
+173,Peter Øxenberg,INEOS Grenadiers,DEN,68,177,375,1600,430,0.29,58,80,70,74,72,68,76,74,66
+174,Juan Ayuso,Lidl-Trek,ESP,63,175,400,1300,470,0.31,88,62,85,78,85,82,80,78,55
+175,Andrea Bagioli,Lidl-Trek,ITA,70,179,388,1680,440,0.32,72,82,80,82,82,78,82,84,70
+176,Julien Bernard,Lidl-Trek,FRA,74,183,405,1200,465,0.36,85,55,85,90,92,88,85,92,55
+177,Giulio Ciccone,Lidl-Trek,ITA,60,170,385,1200,440,0.29,92,55,75,82,88,82,85,88,55
+178,Simone Consonni,Lidl-Trek,ITA,71,180,390,1700,445,0.33,72,84,80,82,82,78,82,84,72
+179,Tao Geoghegan Hart,Lidl-Trek,GBR,65,173,390,1200,445,0.30,88,55,80,85,88,82,85,88,55
+180,Amanuel Ghebreigzabhier,Lidl-Trek,ERI,73,182,402,1700,450,0.34,85,86,80,85,88,82,85,88,75
+181,Lennard Kämna,Lidl-Trek,GER,70,179,390,1700,445,0.33,75,84,82,85,85,80,82,85,72
+182,Patrick Konrad,Lidl-Trek,AUT,68,176,385,1200,440,0.29,88,55,75,82,88,82,85,88,55
+183,Søren Kragh Andersen,Lidl-Trek,DEN,73,182,402,1700,450,0.34,78,86,82,85,88,82,85,88,75
+184,Jonathan Milan,Lidl-Trek,ITA,82,190,395,1900,445,0.36,40,95,72,68,70,68,75,70,48
+185,Bauke Mollema,Lidl-Trek,NED,74,183,405,1200,465,0.36,85,55,85,88,92,88,85,92,55
+186,Jacopo Mosca,Lidl-Trek,ITA,73,182,405,1200,465,0.36,80,55,85,88,90,85,85,90,55
+187,Mathias Norsgaard,Lidl-Trek,DEN,70,179,388,1680,440,0.32,75,82,82,85,82,78,82,85,72
+188,Thibau Nys,Lidl-Trek,BEL,69,178,385,1700,435,0.31,80,84,75,80,82,78,82,82,70
+189,Sam Oomen,Lidl-Trek,NED,72,181,395,1650,450,0.34,78,78,85,88,88,82,85,88,80
+190,Mads Pedersen,Lidl-Trek,DEN,76,183,400,1700,450,0.34,60,88,82,82,82,78,82,85,90
+191,Quinn Simmons,Lidl-Trek,USA,70,179,388,1680,440,0.32,70,82,80,80,80,76,80,82,70
+192,Mattias Skjelmose,Lidl-Trek,DEN,71,180,390,1700,445,0.33,72,84,80,82,82,78,82,84,72
+193,Toms Skujiņš,Lidl-Trek,LAT,73,182,405,1200,465,0.36,82,55,85,88,90,85,85,90,55
+194,Matteo Sobrero,Lidl-Trek,ITA,72,181,395,1650,450,0.34,78,78,85,88,88,82,85,88,80
+195,Jakob Söderqvist,Lidl-Trek,SWE,70,179,388,1680,440,0.32,70,82,80,80,80,76,80,82,70
+196,Tim Torn Teutenberg,Lidl-Trek,GER,71,180,388,1700,440,0.32,70,82,80,80,80,76,80,82,70
+197,Edward Theuns,Lidl-Trek,BEL,75,184,408,1650,465,0.36,75,78,85,90,88,82,85,88,80
+198,Mathias Vacek,Lidl-Trek,CZE,70,179,385,1680,435,0.31,68,82,78,80,78,74,80,80,70
+199,Otto Vergaerde,Lidl-Trek,BEL,72,181,395,1700,448,0.33,70,84,82,82,82,78,82,84,72
+200,Carlos Verona,Lidl-Trek,ESP,73,182,405,1200,465,0.36,82,55,85,88,90,85,85,90,55
+201,Max Walscheid,Lidl-Trek,GER,74,183,405,1650,465,0.36,70,78,85,88,88,82,85,88,80
+202,Albert Withen Philipsen,Lidl-Trek,DEN,67,175,375,1600,430,0.29,52,80,70,72,72,66,74,72,64
+203,Toon Aerts,Lotto-Intermarché,BEL,73,182,402,1700,450,0.34,75,86,82,85,85,80,82,85,75
+204,Huub Artz,Lotto-Intermarché,NED,70,179,385,1680,435,0.31,62,84,75,78,76,72,80,78,70
+205,Jenno Berckmoes,Lotto-Intermarché,BEL,71,180,388,1700,440,0.32,65,84,78,80,78,74,80,80,70
+206,Cedric Beullens,Lotto-Intermarché,BEL,72,181,392,1700,445,0.33,72,84,80,82,82,78,82,84,72
+207,Vito Braet,Lotto-Intermarché,BEL,71,180,388,1700,440,0.32,62,84,78,80,78,74,80,80,70
+208,Lars Craps,Lotto-Intermarché,BEL,71,180,388,1700,440,0.32,62,84,78,80,78,74,80,80,70
+209,Jasper De Buyst,Lotto-Intermarché,BEL,73,182,402,1700,450,0.34,72,86,82,85,85,80,82,85,75
+210,Arnaud De Lie,Lotto-Intermarché,BEL,70,179,388,1680,440,0.32,60,84,78,80,78,74,80,80,70
+211,Steffen De Schuyteneer,Lotto-Intermarché,BEL,68,177,378,1620,432,0.30,55,82,72,76,74,70,78,74,68
+212,Matthew Fox,Lotto-Intermarché,AUS,71,180,388,1700,440,0.32,65,84,78,80,78,74,80,80,70
+213,Joshua Giddings,Lotto-Intermarché,GBR,69,178,382,1680,432,0.31,62,84,75,76,76,72,80,76,70
+214,Sébastien Grignard,Lotto-Intermarché,BEL,72,181,392,1700,445,0.33,68,84,80,82,82,78,82,84,72
+215,Matys Grisel,Lotto-Intermarché,FRA,68,177,375,1620,430,0.29,58,82,70,74,72,68,76,74,66
+216,Simone Gualdi,Lotto-Intermarché,ITA,67,175,372,1600,428,0.28,55,80,68,72,70,64,74,70,62
+217,Mathieu Kockelmann,Lotto-Intermarché,LUX,69,178,382,1680,432,0.31,62,84,75,76,76,72,80,76,70
+218,Milan Menten,Lotto-Intermarché,BEL,72,181,392,1700,445,0.33,72,84,80,82,82,78,82,84,72
+219,Robin Orins,Lotto-Intermarché,BEL,70,179,385,1680,435,0.31,62,84,75,78,76,72,80,78,70
+220,Lorenzo Rota,Lotto-Intermarché,ITA,71,180,390,1700,445,0.33,78,84,80,82,85,80,82,85,72
+221,Jonas Rutsch,Lotto-Intermarché,GER,71,180,390,1700,445,0.33,72,84,80,82,82,78,82,84,82
+222,Liam Slock,Lotto-Intermarché,BEL,70,179,388,1680,440,0.32,65,82,78,80,78,74,80,80,70
+223,Lionel Taminiaux,Lotto-Intermarché,BEL,72,181,392,1700,445,0.33,70,84,80,82,82,78,82,84,72
+224,Reuben Thompson,Lotto-Intermarché,NZL,71,180,388,1700,440,0.32,68,82,80,80,80,76,80,82,70
+225,Luca Van Boven,Lotto-Intermarché,BEL,70,179,388,1680,440,0.32,65,82,78,80,78,74,80,80,70
+226,Taco van der Hoorn,Lotto-Intermarché,NED,74,183,405,1200,465,0.36,78,55,85,88,90,85,85,90,55
+227,Lennert Van Eetvelt,Lotto-Intermarché,BEL,71,180,388,1700,440,0.32,68,82,80,80,80,76,80,82,70
+228,Roel van Sintmaartensdijk,Lotto-Intermarché,NED,71,180,388,1700,440,0.32,70,82,80,80,80,76,80,82,70
+229,Baptiste Veistroffer,Lotto-Intermarché,FRA,70,179,388,1680,440,0.32,70,82,80,80,80,76,80,82,70
+230,Jarno Widar,Lotto-Intermarché,BEL,68,177,378,1620,432,0.30,58,82,72,76,74,70,78,74,68
+231,Georg Zimmermann,Lotto-Intermarché,GER,71,180,390,1700,445,0.33,72,84,80,82,82,78,82,84,72
+232,Felix Ørn-Kristoff,Lotto-Intermarché,NOR,67,175,372,1600,428,0.28,55,80,68,72,70,64,74,70,62
+233,Roger Adrià,Movistar Team,ESP,71,180,390,1700,445,0.33,70,84,80,82,82,78,82,84,72
+234,Jorge Arcas,Movistar Team,ESP,73,182,402,1700,450,0.34,78,86,82,85,85,80,82,85,75
+235,Orluis Aular,Movistar Team,VEN,72,181,392,1700,445,0.33,72,84,80,82,82,78,82,84,72
+236,Jon Barrenetxea,Movistar Team,ESP,71,180,390,1700,445,0.33,75,84,80,82,85,80,82,85,72
+237,Carlos Canal,Movistar Team,ESP,71,180,388,1700,440,0.32,70,82,80,80,80,76,80,82,70
+238,Pablo Castrillo,Movistar Team,ESP,70,179,385,1680,435,0.31,72,82,78,80,78,74,80,80,70
+239,Jefferson Alveiro Cepeda,Movistar Team,ECU,70,179,388,1680,440,0.32,82,82,78,82,85,80,82,85,70
+240,Davide Formolo,Movistar Team,ITA,74,183,405,1200,465,0.36,82,55,85,88,90,85,85,90,55
+241,Iván García Cortina,Movistar Team,ESP,72,181,395,1650,450,0.34,78,78,85,88,88,82,85,88,80
+242,Raúl García Pierna,Movistar Team,ESP,71,180,388,1700,440,0.32,72,82,80,82,82,78,82,84,72
+243,Michel Hessmann,Movistar Team,GER,71,180,388,1700,440,0.32,70,82,80,80,80,76,80,82,70
+244,Juan Pedro López,Movistar Team,ESP,72,181,392,1700,445,0.33,75,84,82,85,85,80,82,85,72
+245,Enric Mas,Movistar Team,ESP,60,170,385,1200,440,0.29,92,55,75,85,92,88,88,92,55
+246,Lorenzo Milesi,Movistar Team,ITA,70,179,385,1680,435,0.31,70,82,78,80,78,74,80,80,70
+247,Manlio Moro,Movistar Team,ITA,70,179,385,1680,435,0.31,70,82,78,80,78,74,80,80,70
+248,Pavel Novák,Movistar Team,CZE,69,178,380,1660,432,0.30,65,82,76,78,76,72,80,76,68
+249,Nelson Oliveira,Movistar Team,POR,75,184,408,1650,465,0.36,80,78,88,90,92,85,85,92,80
+250,Diego Pescador,Movistar Team,COL,69,178,380,1660,432,0.30,68,82,76,78,78,74,80,78,68
+251,Nairo Quintana,Movistar Team,COL,60,170,390,1200,450,0.30,92,55,80,88,92,88,88,92,55
+252,Iván Romeo,Movistar Team,ESP,70,179,385,1680,435,0.31,70,82,78,80,78,74,80,80,70
+253,Javier Romo,Movistar Team,ESP,71,180,390,1700,445,0.33,68,84,80,82,82,78,82,84,72
+254,Einer Rubio,Movistar Team,COL,62,172,385,1200,440,0.29,88,55,75,80,88,82,85,88,55
+255,Pelayo Sánchez,Movistar Team,ESP,71,180,388,1700,440,0.32,70,82,80,80,80,76,80,82,70
+256,Gonzalo Serrano,Movistar Team,ESP,73,182,402,1700,450,0.34,75,86,82,85,85,80,82,85,75
+257,Natnael Tesfatsion,Movistar Team,ERI,72,181,390,1700,445,0.33,70,84,80,82,82,78,82,84,72
+258,Albert Torres,Movistar Team,ESP,74,183,405,1200,465,0.36,85,55,85,88,92,88,85,92,55
+259,Cian Uijtdebroeks,Movistar Team,BEL,65,173,385,1200,440,0.29,88,55,75,82,88,82,85,88,55
+260,Lewis Askey,NSN Cycling Team,GBR,71,180,388,1700,440,0.32,70,82,80,80,80,76,80,82,70
+261,George Bennett,NSN Cycling Team,NZL,74,183,405,1200,465,0.36,85,55,85,88,90,85,85,90,55
+262,Joseph Blackmore,NSN Cycling Team,GBR,69,178,382,1680,432,0.31,62,84,75,76,76,72,80,76,70
+263,Guillaume Boivin,NSN Cycling Team,CAN,73,182,402,1700,450,0.34,80,86,82,85,88,82,82,85,75
+264,Simon Clarke,NSN Cycling Team,AUS,74,183,405,1200,465,0.36,85,55,85,88,90,85,85,90,55
+265,Pier-André Côté,NSN Cycling Team,CAN,72,181,392,1700,445,0.33,72,84,80,82,82,78,82,84,72
+266,Itamar Einhorn,NSN Cycling Team,ISR,72,181,392,1700,445,0.33,72,84,80,82,82,78,82,84,72
+267,Marco Frigo,NSN Cycling Team,ITA,71,180,390,1700,445,0.33,70,84,80,82,82,78,82,84,72
+268,Brady Gilmore,NSN Cycling Team,AUS,71,180,388,1700,440,0.32,70,82,80,80,80,76,80,82,70
+269,Biniam Girmay,NSN Cycling Team,ERI,73,179,388,1780,445,0.33,55,93,62,75,78,72,76,78,65
+270,Jan Hirt,NSN Cycling Team,CZE,65,173,385,1200,440,0.29,88,55,75,82,88,82,85,88,55
+271,Hugo Hofstetter,NSN Cycling Team,FRA,73,182,402,1700,450,0.34,75,86,82,85,85,80,82,85,75
+272,Oded Kogut,NSN Cycling Team,ISR,71,180,388,1700,440,0.32,70,82,80,80,80,76,80,82,70
+273,Matis Louvel,NSN Cycling Team,FRA,71,180,390,1700,445,0.33,68,84,80,82,82,78,82,84,72
+274,Alexey Lutsenko,NSN Cycling Team,KAZ,72,181,392,1700,445,0.33,80,84,82,85,85,80,82,85,72
+275,Pau Martí,NSN Cycling Team,ESP,69,178,380,1660,432,0.30,62,82,75,78,76,72,80,76,68
+276,Ryan Mullen,NSN Cycling Team,IRL,71,180,390,1700,445,0.33,75,84,80,82,85,80,82,85,72
+277,Krists Neilands,NSN Cycling Team,LAT,72,181,392,1700,445,0.33,75,84,82,85,85,80,82,85,72
+278,Alessandro Pinarello,NSN Cycling Team,ITA,70,179,385,1680,435,0.31,70,82,78,80,78,74,80,80,70
+279,Nadav Raisberg,NSN Cycling Team,ISR,71,180,388,1700,440,0.32,70,82,80,80,80,76,80,82,70
+280,Nick Schultz,NSN Cycling Team,AUS,72,181,392,1700,445,0.33,72,84,80,82,82,78,82,84,72
+281,Riley Sheehan,NSN Cycling Team,USA,70,179,385,1680,435,0.31,65,82,78,80,78,74,80,80,70
+282,Jake Stewart,NSN Cycling Team,GBR,72,181,392,1700,445,0.33,72,84,80,82,82,78,82,84,72
+283,Corbin Strong,NSN Cycling Team,NZL,70,179,388,1680,440,0.32,70,82,80,80,80,76,80,82,70
+284,Tom Van Asbroeck,NSN Cycling Team,BEL,74,183,405,1200,465,0.36,82,55,85,88,90,85,85,90,55
+285,Floris Van Tricht,NSN Cycling Team,BEL,71,180,388,1700,440,0.32,70,82,80,80,80,76,80,82,70
+286,Ethan Vernon,NSN Cycling Team,GBR,72,181,392,1700,445,0.33,72,84,80,82,82,78,82,84,72
+287,Stephen Williams,NSN Cycling Team,GBR,72,181,392,1700,445,0.33,72,84,80,82,82,78,82,84,72
+288,Giovanni Aleotti,Red Bull-BORA-Hansgrohe,ITA,71,180,390,1700,445,0.33,70,84,80,82,82,78,82,84,72
+289,Adrien Boichis,Red Bull-BORA-Hansgrohe,FRA,70,179,385,1680,435,0.31,68,82,78,80,78,74,80,80,70
+290,Mattia Cattaneo,Red Bull-BORA-Hansgrohe,ITA,74,183,405,1200,465,0.36,82,55,85,88,90,85,85,90,55
+291,Nico Denz,Red Bull-BORA-Hansgrohe,GER,72,181,392,1700,445,0.33,72,84,80,82,82,78,82,84,72
+292,Jarrad Drizners,Red Bull-BORA-Hansgrohe,AUS,71,180,390,1700,445,0.33,70,84,80,82,82,78,82,84,72
+293,Haimar Etxeberria,Red Bull-BORA-Hansgrohe,ESP,70,179,385,1680,435,0.31,70,82,78,80,78,74,80,80,70
+294,Remco Evenepoel,Red Bull-BORA-Hansgrohe,BEL,61,171,412,1300,485,0.30,90,65,96,72,88,85,88,82,55
+295,Finn Fisher-Black,Red Bull-BORA-Hansgrohe,NZL,72,181,392,1700,445,0.33,75,84,80,82,82,78,82,84,72
+296,Alexander Hajek,Red Bull-BORA-Hansgrohe,AUT,70,179,385,1680,435,0.31,68,82,78,80,78,74,80,80,70
+297,Emil Herzog,Red Bull-BORA-Hansgrohe,GER,68,177,378,1620,432,0.30,62,82,72,76,74,70,78,74,68
+298,Jai Hindley,Red Bull-BORA-Hansgrohe,AUS,65,173,388,1200,445,0.30,90,55,80,88,92,88,85,92,55
+299,Florian Lipowitz,Red Bull-BORA-Hansgrohe,GER,71,180,390,1700,445,0.33,82,84,78,80,85,80,82,85,72
+300,Arne Marit,Red Bull-BORA-Hansgrohe,BEL,71,180,390,1700,445,0.33,70,84,80,82,82,78,82,84,72
+301,Daniel Martínez,Red Bull-BORA-Hansgrohe,COL,70,179,390,1300,445,0.32,85,65,80,85,88,82,85,88,55
+302,Jordi Meeus,Red Bull-BORA-Hansgrohe,BEL,74,183,402,1820,452,0.35,58,92,78,80,80,76,84,80,72
+303,Gianni Moscon,Red Bull-BORA-Hansgrohe,ITA,73,182,402,1700,450,0.34,70,86,82,85,85,80,82,85,75
+304,Giulio Pellizzari,Red Bull-BORA-Hansgrohe,ITA,70,179,385,1680,435,0.31,68,82,78,80,78,74,80,80,70
+305,Laurence Pithie,Red Bull-BORA-Hansgrohe,NZL,70,179,388,1680,440,0.32,75,82,80,82,82,78,82,84,72
+306,Primož Roglič,Red Bull-BORA-Hansgrohe,SLO,65,177,408,1250,475,0.31,93,60,91,75,88,82,82,88,55
+307,Callum Thornley,Red Bull-BORA-Hansgrohe,GBR,70,179,385,1680,435,0.31,68,82,78,80,78,74,80,80,70
+308,Jan Tratnik,Red Bull-BORA-Hansgrohe,SLO,74,183,405,1200,465,0.36,82,55,85,88,90,85,85,90,55
+309,Luke Tuckwell,Red Bull-BORA-Hansgrohe,AUS,69,178,382,1680,432,0.31,65,82,76,78,78,74,80,78,68
+310,Mick van Dijke,Red Bull-BORA-Hansgrohe,NED,71,180,390,1700,445,0.33,70,84,80,82,82,78,82,84,72
+311,Tim van Dijke,Red Bull-BORA-Hansgrohe,NED,71,180,390,1700,445,0.33,70,84,80,82,82,78,82,84,72
+312,Maxim Van Gils,Red Bull-BORA-Hansgrohe,BEL,71,180,390,1700,445,0.33,70,84,80,82,82,78,82,84,72
+313,Danny van Poppel,Red Bull-BORA-Hansgrohe,NED,73,182,402,1700,450,0.34,70,86,82,85,85,80,82,85,75
+314,Gianni Vermeersch,Red Bull-BORA-Hansgrohe,BEL,72,181,392,1700,445,0.33,72,84,80,82,82,78,82,84,72
+315,Aleksandr Vlasov,Red Bull-BORA-Hansgrohe,RUS,70,179,388,1680,440,0.32,80,82,80,82,82,78,82,84,70
+316,Frederik Wandahl,Red Bull-BORA-Hansgrohe,DEN,71,180,388,1700,440,0.32,70,82,80,80,80,76,80,82,70
+317,Ben Zwiehoff,Red Bull-BORA-Hansgrohe,GER,72,181,392,1700,445,0.33,72,84,80,82,82,78,82,84,72
+318,Ayco Bastiaens,Soudal-QuickStep,BEL,72,181,392,1700,445,0.33,70,84,80,82,82,78,82,84,72
+319,Steff Cras,Soudal-QuickStep,BEL,72,181,392,1700,445,0.33,72,84,80,82,82,78,82,84,72
+320,Alberto Dainese,Soudal-QuickStep,ITA,71,180,388,1700,440,0.32,65,84,78,80,80,76,80,82,70
+321,Pascal Eenkhoorn,Soudal-QuickStep,NED,72,181,392,1700,445,0.33,72,84,80,82,82,78,82,84,72
+322,Gianmarco Garofoli,Soudal-QuickStep,ITA,70,179,385,1680,435,0.31,68,82,78,80,78,74,80,80,70
+323,Gil Gelders,Soudal-QuickStep,BEL,70,179,385,1680,435,0.31,68,82,78,80,78,74,80,80,70
+324,Ethan Hayter,Soudal-QuickStep,GBR,71,180,388,1700,440,0.32,72,82,80,82,82,78,82,84,70
+325,Yves Lampaert,Soudal-QuickStep,BEL,73,182,405,1200,465,0.36,78,55,85,92,90,85,85,92,82
+326,Mikel Landa,Soudal-QuickStep,ESP,60,173,392,1100,468,0.30,92,48,68,82,80,75,70,78,55
+327,Junior Lecerf,Soudal-QuickStep,BEL,70,179,385,1680,435,0.31,68,82,78,80,78,74,80,80,70
+328,Paul Magnier,Soudal-QuickStep,FRA,67,175,372,1600,428,0.28,55,80,68,72,70,64,74,70,62
+329,Tim Merlier,Soudal-QuickStep,BEL,74,183,402,1820,452,0.35,58,92,78,80,80,76,84,80,80
+330,Valentin Paret-Peintre,Soudal-QuickStep,FRA,71,180,388,1700,440,0.32,70,82,80,80,80,76,80,82,70
+331,Casper Pedersen,Soudal-QuickStep,DEN,72,181,392,1700,445,0.33,70,84,80,82,82,78,82,84,72
+332,Andrea Raccagni Noviero,Soudal-QuickStep,ITA,68,177,378,1620,432,0.30,58,82,72,76,74,70,78,74,68
+333,Pepijn Reinderink,Soudal-QuickStep,BEL,70,179,385,1680,435,0.31,68,82,78,80,78,74,80,80,70
+334,Laurenz Rex,Soudal-QuickStep,BEL,71,180,390,1700,445,0.33,68,84,80,82,82,78,82,84,72
+335,Maximilian Schachmann,Soudal-QuickStep,GER,73,182,405,1200,465,0.36,85,55,88,88,92,88,85,92,55
+336,Jasper Stuyven,Soudal-QuickStep,BEL,74,183,405,1650,465,0.36,75,78,85,90,88,82,85,88,80
+337,Martin Svrček,Soudal-QuickStep,SVK,70,179,385,1680,435,0.31,70,82,78,80,78,74,80,80,70
+338,Dylan van Baarle,Soudal-QuickStep,NED,73,182,405,1200,465,0.36,82,55,85,88,90,85,85,90,55
+339,Fabio Van den Bossche,Soudal-QuickStep,BEL,71,180,388,1700,440,0.32,65,82,78,80,80,76,80,82,70
+340,Dries Van Gestel,Soudal-QuickStep,BEL,72,181,392,1700,445,0.33,72,84,80,82,82,78,82,84,72
+341,Bert Van Lerberghe,Soudal-QuickStep,BEL,73,182,402,1700,450,0.34,75,86,82,85,85,80,82,85,75
+342,Ilan Van Wilder,Soudal-QuickStep,BEL,70,179,388,1680,440,0.32,72,82,80,82,82,78,82,84,70
+343,Warre Vangheluwe,Soudal-QuickStep,BEL,71,180,388,1700,440,0.32,70,82,80,80,80,76,80,82,70
+344,Mauri Vansevenant,Soudal-QuickStep,BEL,71,180,390,1700,445,0.33,72,84,80,82,82,78,82,84,72
+345,Louis Vervaeke,Soudal-QuickStep,BEL,72,181,392,1700,445,0.33,72,84,80,82,82,78,82,84,72
+346,Jonathan Vervenne,Soudal-QuickStep,BEL,70,179,385,1680,435,0.31,68,82,78,80,78,74,80,80,70
+347,Filippo Zana,Soudal-QuickStep,ITA,71,180,390,1700,445,0.33,72,84,80,82,82,78,82,84,72
+348,Pascal Ackermann,Team Jayco-AlUla,GER,73,182,402,1700,450,0.34,75,86,82,85,85,80,82,85,75
+349,Koen Bouwman,Team Jayco-AlUla,NED,73,182,402,1700,450,0.34,85,86,80,85,90,85,85,90,75
+350,Amaury Capiot,Team Jayco-AlUla,BEL,73,182,402,1700,450,0.34,75,86,82,85,85,80,82,85,75
+351,Filippo Conca,Team Jayco-AlUla,ITA,71,180,390,1700,445,0.33,70,84,80,82,82,78,82,84,72
+352,Alessandro Covi,Team Jayco-AlUla,ITA,65,173,390,1300,445,0.30,88,65,80,85,92,88,85,92,55
+353,Dries De Bondt,Team Jayco-AlUla,BEL,74,183,405,1200,465,0.36,85,55,85,88,92,88,85,92,55
+354,Dries De Pooter,Team Jayco-AlUla,BEL,70,179,385,1680,435,0.31,68,82,78,80,78,74,80,80,70
+355,Davide De Pretto,Team Jayco-AlUla,ITA,70,179,385,1680,435,0.31,70,82,78,80,78,74,80,80,70
+356,Robert Donaldson,Team Jayco-AlUla,GBR,70,179,388,1680,440,0.32,70,82,80,80,80,76,80,82,70
+357,Paul Double,Team Jayco-AlUla,GBR,72,181,392,1700,445,0.33,72,84,80,82,82,78,82,84,72
+358,Luke Durbridge,Team Jayco-AlUla,AUS,73,182,402,1700,450,0.34,75,86,82,85,85,80,82,85,75
+359,Felix Engelhardt,Team Jayco-AlUla,GER,71,180,390,1700,445,0.33,68,84,80,82,82,78,82,84,72
+360,Anders Foldager,Team Jayco-AlUla,DEN,71,180,388,1700,440,0.32,65,82,78,80,80,76,80,82,70
+361,Patrick Gamper,Team Jayco-AlUla,AUT,72,181,392,1700,445,0.33,70,84,80,82,82,78,82,84,72
+362,Alan Hatherly,Team Jayco-AlUla,RSA,71,180,390,1700,445,0.33,78,84,82,88,82,78,82,85,80
+363,Asbjørn Hellemose,Team Jayco-AlUla,DEN,71,180,390,1700,445,0.33,70,84,80,82,82,78,82,84,72
+364,Christopher Juul-Jensen,Team Jayco-AlUla,DEN,74,183,405,1200,465,0.36,80,55,85,88,92,88,85,92,55
+365,Jelte Krijnsen,Team Jayco-AlUla,NED,71,180,388,1700,440,0.32,70,82,80,80,80,76,80,82,70
+366,Michael Matthews,Team Jayco-AlUla,AUS,74,183,405,1650,465,0.36,75,78,85,88,88,82,85,88,80
+367,Hamish McKenzie,Team Jayco-AlUla,AUS,68,177,375,1600,430,0.29,62,80,72,76,74,70,76,74,68
+368,Luka Mezgec,Team Jayco-AlUla,SLO,74,183,405,1200,465,0.36,78,55,85,88,90,85,85,90,55
+369,Kelland O'Brien,Team Jayco-AlUla,AUS,71,180,390,1700,445,0.33,70,84,80,82,82,78,82,84,72
+370,Ben O'Connor,Team Jayco-AlUla,AUS,67,175,385,1200,440,0.29,88,55,75,88,90,85,85,90,55
+371,Finlay Pickering,Team Jayco-AlUla,GBR,69,178,382,1680,432,0.31,62,84,75,76,76,72,80,76,70
+372,Luke Plapp,Team Jayco-AlUla,AUS,71,180,390,1700,445,0.33,72,84,80,82,82,78,82,84,72
+373,Rudy Porter,Team Jayco-AlUla,AUS,71,180,390,1700,445,0.33,70,84,80,82,82,78,82,84,72
+374,Mauro Schmid,Team Jayco-AlUla,SUI,71,180,390,1700,445,0.33,70,84,80,82,82,78,82,84,72
+375,Jasha Sütterlin,Team Jayco-AlUla,GER,72,181,392,1700,445,0.33,72,84,80,82,82,78,82,84,72
+376,Andrea Vendrame,Team Jayco-AlUla,ITA,73,182,402,1700,450,0.34,75,86,82,85,85,80,82,85,75
+377,Warren Barguil,Team Picnic-PostNL,FRA,71,180,390,1200,445,0.33,88,55,80,88,92,88,88,92,55
+378,Frits Biesterbos,Team Picnic-PostNL,NED,70,179,385,1680,435,0.31,68,82,78,80,78,74,80,80,70
+379,Pavel Bittner,Team Picnic-PostNL,CZE,70,179,385,1680,435,0.31,70,82,78,80,78,74,80,80,70
+380,Dillon Corkery,Team Picnic-PostNL,IRL,71,180,390,1700,445,0.33,70,84,80,82,82,78,82,84,72
+381,Timo de Jong,Team Picnic-PostNL,NED,71,180,390,1700,445,0.33,70,84,80,82,82,78,82,84,72
+382,John Degenkolb,Team Picnic-PostNL,GER,74,183,405,1200,465,0.36,80,55,85,88,90,85,85,90,55
+383,Robbe Dhondt,Team Picnic-PostNL,BEL,68,177,378,1620,432,0.30,58,82,72,76,74,70,78,74,68
+384,Matthew Dinham,Team Picnic-PostNL,AUS,70,179,388,1680,440,0.32,70,82,80,80,80,76,80,82,70
+385,Nils Eekhoff,Team Picnic-PostNL,NED,71,180,390,1700,445,0.33,70,84,80,82,82,78,82,84,72
+386,Alexy Faure Prost,Team Picnic-PostNL,FRA,68,177,378,1620,432,0.30,62,82,72,76,74,70,78,74,68
+387,Sean Flynn,Team Picnic-PostNL,GBR,70,179,388,1680,440,0.32,70,82,80,80,80,76,80,82,70
+388,Mattia Gaffuri,Team Picnic-PostNL,ITA,71,180,390,1700,445,0.33,70,84,80,82,82,78,82,84,72
+389,Chris Hamilton,Team Picnic-PostNL,AUS,71,180,390,1700,445,0.33,72,84,80,82,82,78,82,84,72
+390,Fabio Jakobsen,Team Picnic-PostNL,NED,76,186,400,1800,450,0.34,60,90,80,80,82,78,84,82,72
+391,James Knox,Team Picnic-PostNL,GBR,72,181,395,1650,450,0.34,75,78,85,88,88,82,85,88,80
+392,Bjoern Koerdt,Team Picnic-PostNL,GBR,68,177,378,1620,432,0.30,58,82,72,76,74,70,78,74,68
+393,Gijs Leemreize,Team Picnic-PostNL,NED,71,180,390,1700,445,0.33,70,84,80,82,82,78,82,84,72
+394,Niklas Märkl,Team Picnic-PostNL,GER,71,180,390,1700,445,0.33,70,84,80,82,82,78,82,84,72
+395,Juan Guillermo Martínez,Team Picnic-PostNL,COL,69,178,382,1680,432,0.31,62,84,75,76,76,72,80,76,70
+396,Tim Naberman,Team Picnic-PostNL,NED,71,180,390,1700,445,0.33,70,84,80,82,82,78,82,84,72
+397,Oliver Peace,Team Picnic-PostNL,GBR,67,175,372,1600,428,0.28,52,80,68,72,70,64,74,70,62
+398,Max Poole,Team Picnic-PostNL,GBR,69,178,382,1680,432,0.31,62,84,75,76,76,72,80,76,70
+399,Henri-François Renard-Haquin,Team Picnic-PostNL,FRA,70,179,385,1680,435,0.31,68,82,78,80,78,74,80,80,70
+400,Timo Roosen,Team Picnic-PostNL,NED,73,182,402,1200,450,0.34,80,55,85,88,90,85,85,90,55
+401,Julius van den Berg,Team Picnic-PostNL,NED,72,181,392,1700,445,0.33,70,84,80,82,82,78,82,84,72
+402,Frank van den Broek,Team Picnic-PostNL,NED,70,179,388,1680,440,0.32,70,82,80,80,80,76,80,82,70
+403,Casper van Uden,Team Picnic-PostNL,NED,71,180,388,1700,440,0.32,70,82,80,80,80,76,80,82,70
+404,Bram Welten,Team Picnic-PostNL,NED,72,181,392,1700,445,0.33,70,84,80,82,82,78,82,84,72
+405,Edoardo Affini,Visma-Lease a Bike,ITA,72,181,392,1700,445,0.33,72,84,80,82,82,78,82,84,72
+406,Bruno Armirail,Visma-Lease a Bike,FRA,71,180,390,1700,445,0.33,75,84,80,82,85,80,82,85,72
+407,Louis Barré,Visma-Lease a Bike,FRA,71,180,390,1700,445,0.33,72,84,80,82,82,78,82,84,72
+408,Niklas Behrens,Visma-Lease a Bike,GER,70,179,385,1680,435,0.31,68,82,78,80,78,74,80,80,70
+409,Matthew Brennan,Visma-Lease a Bike,GBR,68,177,375,1600,430,0.29,62,80,72,76,74,70,76,74,68
+410,Victor Campenaerts,Visma-Lease a Bike,BEL,73,182,405,1200,465,0.36,80,55,95,88,90,85,88,90,80
+411,Owain Doull,Visma-Lease a Bike,GBR,72,181,392,1700,445,0.33,75,84,80,82,82,78,82,84,72
+412,Filippo Fiorelli,Visma-Lease a Bike,ITA,71,180,390,1700,445,0.33,72,84,80,82,82,78,82,84,72
+413,Tijmen Graat,Visma-Lease a Bike,NED,70,179,385,1680,435,0.31,70,82,78,80,78,74,80,80,70
+414,Per Strand Hagenes,Visma-Lease a Bike,NOR,70,179,385,1680,435,0.31,70,82,78,80,78,74,80,80,70
+415,Menno Huising,Visma-Lease a Bike,NED,69,178,382,1680,432,0.31,65,82,76,78,78,74,80,78,68
+416,Matteo Jorgenson,Visma-Lease a Bike,USA,71,180,390,1700,445,0.33,78,84,80,82,85,80,82,85,72
+417,Wilco Kelderman,Visma-Lease a Bike,NED,72,181,392,1700,445,0.33,82,84,80,82,85,80,82,85,72
+418,Timo Kielich,Visma-Lease a Bike,BEL,71,180,390,1700,445,0.33,70,84,80,82,82,78,82,84,72
+419,Steven Kruijswijk,Visma-Lease a Bike,NED,74,183,405,1200,465,0.36,85,55,85,88,92,88,85,92,55
+420,Sepp Kuss,Visma-Lease a Bike,USA,67,175,385,1200,440,0.29,88,55,75,80,88,82,85,88,55
+421,Christophe Laporte,Visma-Lease a Bike,FRA,73,182,405,1200,465,0.36,82,55,85,88,90,85,85,90,55
+422,Bart Lemmen,Visma-Lease a Bike,NED,72,181,395,1650,450,0.34,78,78,85,88,88,82,85,88,80
+423,Pietro Mattio,Visma-Lease a Bike,ITA,68,177,378,1620,432,0.30,62,82,72,76,74,70,78,74,68
+424,Jørgen Nordhagen,Visma-Lease a Bike,NOR,68,177,375,1600,430,0.29,62,80,72,76,74,70,76,74,68
+425,Davide Piganzoli,Visma-Lease a Bike,ITA,70,179,385,1680,435,0.31,70,82,78,80,78,74,80,80,70
+426,Tim Rex,Visma-Lease a Bike,BEL,68,177,378,1620,432,0.30,62,82,72,76,74,70,78,74,68
+427,Anton Schiffer,Visma-Lease a Bike,GER,71,180,390,1700,445,0.33,70,84,80,82,82,78,82,84,72
+428,Ben Tulett,Visma-Lease a Bike,GBR,71,180,388,1700,440,0.32,70,82,80,80,80,76,80,82,70
+429,Wout van Aert,Visma-Lease a Bike,BEL,78,187,420,1750,470,0.35,72,92,93,85,90,85,88,90,96
+430,Loe van Belle,Visma-Lease a Bike,NED,70,179,385,1680,435,0.31,70,82,78,80,78,74,80,80,70
+431,Jonas Vingegaard,Visma-Lease a Bike,DEN,60,175,410,1200,495,0.31,96,55,90,80,95,88,90,85,55
+432,Axel Zingle,Visma-Lease a Bike,FRA,72,181,392,1700,445,0.33,72,84,80,82,82,78,82,84,72
+433,João Almeida,UAE Team Emirates,POR,65,173,395,1300,455,0.31,85,62,85,85,88,82,82,85,55
+434,Igor Arrieta,UAE Team Emirates,ESP,70,179,385,1680,435,0.31,70,82,78,80,78,74,80,80,70
+435,Filippo Baroncini,UAE Team Emirates,ITA,71,180,390,1700,445,0.33,70,84,80,82,82,78,82,84,72
+436,Mikkel Bjerg,UAE Team Emirates,DEN,71,180,390,1700,445,0.33,72,84,80,82,82,78,82,84,72
+437,Jan Christen,UAE Team Emirates,SUI,68,177,378,1620,432,0.30,62,82,72,76,74,70,78,74,68
+438,Benoît Cosnefroy,UAE Team Emirates,FRA,72,181,395,1650,450,0.34,75,78,85,88,88,82,85,88,80
+439,Isaac del Toro,UAE Team Emirates,MEX,69,178,385,1700,435,0.31,85,84,75,80,82,78,82,82,70
+440,Felix Großschartner,UAE Team Emirates,AUT,74,183,405,1200,465,0.36,85,55,85,88,92,88,85,92,55
+441,Rune Herregodts,UAE Team Emirates,BEL,70,179,388,1680,440,0.32,70,82,80,82,82,78,82,84,70
+442,Julius Johansen,UAE Team Emirates,DEN,71,180,390,1700,445,0.33,70,84,80,82,82,78,82,84,72
+443,Vegard Stake Laengen,UAE Team Emirates,NOR,74,183,405,1200,465,0.36,85,55,85,88,92,88,85,92,55
+444,Brandon McNulty,UAE Team Emirates,USA,70,179,388,1680,440,0.32,80,82,80,82,82,78,82,84,70
+445,Juan Sebastián Molano,UAE Team Emirates,COL,74,183,405,1650,465,0.36,75,78,85,88,88,82,85,88,80
+446,António Morgado,UAE Team Emirates,POR,68,177,378,1620,432,0.30,62,82,72,76,74,70,78,74,68
+447,Jhonatan Narváez,UAE Team Emirates,ECU,72,181,392,1700,445,0.33,78,84,80,85,85,80,82,85,72
+448,Domen Novak,UAE Team Emirates,SLO,72,181,395,1650,450,0.34,80,78,85,88,90,85,85,90,80
+449,Ivo Oliveira,UAE Team Emirates,POR,72,181,392,1700,445,0.33,78,84,80,82,82,78,82,84,72
+450,Rui Oliveira,UAE Team Emirates,POR,72,181,392,1700,445,0.33,78,84,80,82,82,78,82,84,72
+451,Adrià Pericas,UAE Team Emirates,ESP,67,175,375,1600,430,0.29,62,80,72,76,74,70,76,74,68
+452,Tadej Pogačar,UAE Team Emirates,SLO,66,176,425,1400,490,0.32,97,75,92,88,93,90,95,92,90
+453,Nils Politt,UAE Team Emirates,GER,73,182,402,1700,450,0.34,75,86,82,85,85,80,82,85,82
+454,Pavel Sivakov,UAE Team Emirates,FRA,72,181,392,1700,445,0.33,82,84,80,82,85,80,82,85,72
+455,Marc Soler,UAE Team Emirates,ESP,73,182,402,1700,450,0.34,80,86,82,85,88,82,82,88,72
+456,Pablo Torres,UAE Team Emirates,ESP,67,175,375,1600,430,0.29,62,80,72,76,74,70,76,74,68
+457,Kevin Vermaerke,UAE Team Emirates,USA,71,180,388,1700,440,0.32,75,82,80,82,82,78,82,84,72
+458,Florian Vermeersch,UAE Team Emirates,BEL,71,180,390,1700,445,0.33,70,84,80,82,82,78,82,84,82
+459,Jay Vine,UAE Team Emirates,AUS,72,181,395,1700,450,0.34,82,82,85,88,88,82,85,88,72
+460,Tim Wellens,UAE Team Emirates,BEL,74,183,405,1200,465,0.36,85,55,85,88,92,88,85,92,55
+461,Adam Yates,UAE Team Emirates,GBR,58,172,390,1100,465,0.30,90,48,75,80,85,78,82,82,55
+462,Jonas Abrahamsen,Uno-X Mobility,NOR,71,180,390,1700,445,0.33,80,84,80,82,85,80,82,85,72
+463,Carl-Frederik Bévort,Uno-X Mobility,DEN,70,179,385,1680,435,0.31,68,82,78,80,78,74,80,80,70
+464,Erlend Blikra,Uno-X Mobility,NOR,72,181,392,1700,445,0.33,75,84,80,82,82,78,82,84,72
+465,William Blume Levy,Uno-X Mobility,DEN,71,180,388,1700,440,0.32,70,82,80,80,80,76,80,82,70
+466,Sven Erik Bystrøm,Uno-X Mobility,NOR,72,181,392,1700,445,0.33,75,84,82,85,85,80,82,85,72
+467,Anthon Charmig,Uno-X Mobility,DEN,71,180,390,1700,445,0.33,70,84,80,82,82,78,82,84,72
+468,Magnus Cort,Uno-X Mobility,DEN,73,182,402,1700,450,0.34,75,86,82,85,85,80,82,85,75
+469,Simon Dalby,Uno-X Mobility,DEN,70,179,385,1680,435,0.31,68,82,78,80,78,74,80,80,70
+470,Fredrik Dversnes,Uno-X Mobility,NOR,72,181,392,1700,445,0.33,75,84,80,82,82,78,82,84,72
+471,Stian Fredheim,Uno-X Mobility,NOR,70,179,385,1680,435,0.31,70,82,78,80,78,74,80,80,70
+472,Markus Hoelgaard,Uno-X Mobility,NOR,72,181,392,1700,445,0.33,78,84,80,82,82,78,82,84,84
+473,Ådne Holter,Uno-X Mobility,NOR,71,180,390,1700,445,0.33,72,84,80,82,82,78,82,84,72
+474,Jonas Iversby Hvideberg,Uno-X Mobility,NOR,71,180,390,1700,445,0.33,72,84,80,82,82,78,82,84,72
+475,Storm Ingebrigtsen,Uno-X Mobility,NOR,68,177,378,1620,432,0.30,62,82,72,76,74,70,78,74,68
+476,Anders Halland Johannessen,Uno-X Mobility,NOR,71,180,390,1700,445,0.33,70,84,80,82,82,78,82,84,72
+477,Tobias Halland Johannessen,Uno-X Mobility,NOR,71,180,390,1700,445,0.33,70,84,80,82,82,78,82,84,72
+478,Alexander Kamp,Uno-X Mobility,DEN,73,182,402,1700,450,0.34,75,86,82,85,85,80,82,85,75
+479,Andreas Kron,Uno-X Mobility,DEN,71,180,390,1700,445,0.33,70,84,80,82,82,78,82,84,72
+480,Johannes Kulset,Uno-X Mobility,NOR,69,178,382,1680,432,0.31,68,84,76,78,78,74,80,78,70
+481,Andreas Leknessund,Uno-X Mobility,NOR,71,180,390,1700,445,0.33,80,84,78,80,85,80,82,85,72
+482,Sakarias Koller Løland,Uno-X Mobility,NOR,71,180,388,1700,440,0.32,72,82,80,82,82,78,82,84,70
+483,Henrik Pedersen,Uno-X Mobility,DEN,69,178,382,1680,432,0.31,62,84,75,76,76,72,80,76,70
+484,Erik Nordsæter Resell,Uno-X Mobility,NOR,72,181,392,1700,445,0.33,75,84,80,82,82,78,82,84,72
+485,Anders Skaarseth,Uno-X Mobility,NOR,71,180,390,1700,445,0.33,80,84,80,82,85,80,82,85,72
+486,Tobias Svarre,Uno-X Mobility,DEN,70,179,385,1680,435,0.31,68,82,78,80,78,74,80,80,70
+487,Rasmus Tiller,Uno-X Mobility,NOR,72,181,392,1700,445,0.33,75,84,80,82,82,78,82,84,72
+488,Martin Tjøtta,Uno-X Mobility,NOR,71,180,388,1700,440,0.32,72,82,80,82,82,78,82,84,72
+489,Torstein Træen,Uno-X Mobility,NOR,71,180,390,1700,445,0.33,80,84,80,82,85,80,82,85,72
+490,Martin Urianstad,Uno-X Mobility,NOR,71,180,390,1700,445,0.33,70,84,80,82,82,78,82,84,72
+491,Søren Wærenskjold,Uno-X Mobility,DEN,70,179,388,1680,440,0.32,70,82,80,80,80,76,80,82,70
+492,Davide Ballerini,XDS Astana Team,ITA,72,181,392,1700,445,0.33,75,84,82,85,85,80,82,85,72
+493,Alberto Bettiol,XDS Astana Team,ITA,73,182,405,1200,465,0.36,85,55,85,88,90,85,85,90,55
+494,Clément Champoussin,XDS Astana Team,FRA,70,179,388,1680,440,0.32,75,82,80,82,82,78,82,84,72
+495,Nicola Conci,XDS Astana Team,ITA,72,181,392,1700,445,0.33,75,84,82,85,85,80,82,85,72
+496,Yevgeniy Fedorov,XDS Astana Team,KAZ,71,180,390,1700,445,0.33,70,84,80,82,82,78,82,84,72
+497,Lorenzo Fortunato,XDS Astana Team,ITA,65,173,388,1200,445,0.30,88,55,80,85,88,82,85,88,55
+498,Aaron Gate,XDS Astana Team,NZL,74,183,405,1200,465,0.36,85,55,85,88,90,85,85,90,55
+499,Lev Gonov,XDS Astana Team,RUS,71,180,390,1700,445,0.33,70,84,80,82,82,78,82,84,72
+500,Sergio Higuita,XDS Astana Team,COL,65,173,388,1200,445,0.30,88,55,80,88,88,82,85,88,55
+501,Florian Samuel Kajamini,XDS Astana Team,ITA,70,179,385,1680,435,0.31,70,82,78,80,78,74,80,80,70
+502,Max Kanter,XDS Astana Team,GER,72,181,392,1700,445,0.33,75,84,80,82,82,78,82,84,72
+503,Anton Kuzmin,XDS Astana Team,KAZ,72,181,392,1700,445,0.33,75,84,80,82,82,78,82,84,72
+504,Arjen Livyns,XDS Astana Team,BEL,72,181,392,1700,445,0.33,72,84,80,82,82,78,82,84,72
+505,Harold Martín López,XDS Astana Team,ECU,71,180,390,1700,445,0.33,80,84,80,82,85,80,82,85,72
+506,Matteo Malucelli,XDS Astana Team,ITA,73,182,402,1700,450,0.34,75,86,82,85,85,80,82,85,75
+507,Henok Mulubrhan,XDS Astana Team,ERI,71,180,390,1700,445,0.33,70,84,80,82,82,78,82,84,72
+508,Cristián Rodríguez,XDS Astana Team,ESP,72,181,395,1650,450,0.34,80,78,85,88,88,82,85,88,80
+509,Alessandro Romele,XDS Astana Team,ITA,70,179,385,1680,435,0.31,70,82,78,80,78,74,80,80,70
+510,Christian Scaroni,XDS Astana Team,ITA,72,181,392,1700,445,0.33,75,84,80,82,82,78,82,84,72
+511,Marco Schrettl,XDS Astana Team,AUT,70,179,385,1680,435,0.31,70,82,78,80,78,74,80,80,70
+512,Guillermo Thomas Silva,XDS Astana Team,URU,71,180,388,1700,440,0.32,72,82,80,82,82,78,82,84,72
+513,Su Haoyu,XDS Astana Team,CHN,71,180,390,1700,445,0.33,72,84,80,82,82,78,82,84,72
+514,Gleb Syritsa,XDS Astana Team,RUS,71,180,390,1700,445,0.33,72,84,80,82,82,78,82,84,72
+515,Harold Tejada,XDS Astana Team,COL,72,181,392,1700,445,0.33,80,84,80,82,85,80,82,85,72
+516,Mike Teunissen,XDS Astana Team,NED,73,182,402,1700,450,0.34,70,86,82,85,85,80,82,85,75
+517,Davide Toneatti,XDS Astana Team,ITA,71,180,388,1700,440,0.32,70,82,80,80,80,76,80,82,70
+518,Diego Ulissi,XDS Astana Team,ITA,74,183,405,1200,465,0.36,85,55,85,88,92,88,85,92,55
+519,Darren van Bekkum,XDS Astana Team,NED,70,179,385,1680,435,0.31,68,82,78,80,78,74,80,80,70
+520,Simone Velasco,XDS Astana Team,ITA,72,181,395,1650,450,0.34,75,78,85,88,88,82,85,88,80
+521,Nicolas Vinokurov,XDS Astana Team,KAZ,70,179,385,1680,435,0.31,68,82,78,80,78,74,80,80,70

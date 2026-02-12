@@ -59,6 +59,20 @@ func (w *WPrimeState) Update(powerWatts float64, ftpWatts int, durationSeconds f
 	}
 }
 
+// UpdateWithHandling applies W' balance changes with extra cobble fatigue.
+// On cobbles, poor handlers waste energy fighting the bike (extra W' drain),
+// while skilled handlers ride more efficiently (W' preservation).
+// This is the attrition mechanism that makes P-R a race of elimination.
+func (w *WPrimeState) UpdateWithHandling(powerWatts float64, ftpWatts int, durationSeconds float64, handlingValue int, isOnCobbles bool) {
+	if isOnCobbles {
+		// Add extra metabolic cost from bike handling on cobbles
+		extraDrain := CobbleWPrimeDrain(handlingValue)
+		w.Update(powerWatts+extraDrain, ftpWatts, durationSeconds)
+	} else {
+		w.Update(powerWatts, ftpWatts, durationSeconds)
+	}
+}
+
 // AvailablePowerAboveFTP returns the maximum sustainable above-FTP effort
 // given current W' balance and desired duration.
 func (w *WPrimeState) AvailablePowerAboveFTP(durationSeconds float64) float64 {
@@ -102,11 +116,63 @@ func (f *StageFatigueState) ApplyRestDay() {
 }
 
 // EffectiveFTP returns the FTP adjusted for cumulative fatigue.
-// effectiveFTP = baseFTP * (1 - cumulativeFatigue * 0.001)
+// effectiveFTP = baseFTP * (1 - cumulativeFatigue * 0.01)
 func (f *StageFatigueState) EffectiveFTP(baseFTP int) int {
-	factor := 1.0 - f.CumulativeFatigue*0.001
-	if factor < 0.85 { // floor at 85% of base FTP
-		factor = 0.85
+	factor := 1.0 - f.CumulativeFatigue*0.01
+	if factor < 0.78 { // floor at 78% of base FTP
+		factor = 0.78
 	}
 	return int(math.Round(float64(baseFTP) * factor))
+}
+
+func stageDifficulty(course *model.Course, raceType model.RaceType) float64 {
+	if course == nil {
+		return 1.0
+	}
+
+	distanceKm := course.TotalDistanceKm
+	if distanceKm <= 0 {
+		for _, seg := range course.Segments {
+			distanceKm += seg.DistanceKm
+		}
+	}
+
+	totalClimbM := 0.0
+	cobblesKm := 0.0
+	for _, seg := range course.Segments {
+		if seg.GradientPct > 0 {
+			totalClimbM += seg.DistanceKm * 1000.0 * seg.GradientPct / 100.0
+		}
+		if seg.SurfaceType == model.SurfaceCobbles {
+			cobblesKm += seg.DistanceKm
+		}
+	}
+
+	// Rough difficulty index in a typical 0.7–2.0 range.
+	// ~200km flat road: ~1.5
+	// Grand tour mountain stage: ~1.8–2.0
+	difficulty := 0.55 + (distanceKm / 220.0) + (totalClimbM / 4500.0) + (cobblesKm / 45.0)
+	if raceType == model.RaceTypeTT {
+		difficulty += 0.15
+	}
+	if difficulty < 0.7 {
+		difficulty = 0.7
+	}
+	if difficulty > 2.0 {
+		difficulty = 2.0
+	}
+	return difficulty
+}
+
+func stageEffortFactor(timeGapSeconds float64) float64 {
+	if timeGapSeconds < 0 {
+		timeGapSeconds = 0
+	}
+	// Near the front = high stress; far back = can ride easier.
+	// gap=0s -> 1.20, gap~10min -> ~0.95, very large gaps -> ~0.80
+	return 0.8 + 0.4*math.Exp(-timeGapSeconds/600.0)
+}
+
+func StageStress(course *model.Course, raceType model.RaceType, timeGapSeconds float64) float64 {
+	return stageDifficulty(course, raceType) * stageEffortFactor(timeGapSeconds)
 }

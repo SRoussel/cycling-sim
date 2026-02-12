@@ -1,0 +1,186 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Source+Serif+4:wght@400;600&display=swap');
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --color-bg: #0f1216;
+  --color-surface: #171b22;
+  --color-primary: #e86f37;
+  --color-secondary: #243041;
+  --color-text: #f2f4f8;
+  --color-text-muted: #b6c0cc;
+  --color-success: #16a34a;
+  --color-warning: #fbbf24;
+  --color-danger: #ef4444;
+  --color-cobbles: #3b82f6;
+  --color-climb: #f97316;
+  --color-hilly: #22c55e;
+  --color-tdf: #f4d03f;
+  --color-giro: #f06aa6;
+  --color-vuelta: #e63946;
+  --color-stage: #d9c76a;
+  --shadow-soft: 0 16px 32px rgba(0, 0, 0, 0.35);
+}
+
+body {
+  font-family: 'Space Grotesk', 'Segoe UI', system-ui, sans-serif;
+  background: radial-gradient(circle at top left, #1a2330 0%, var(--color-bg) 55%, #0a0c10 100%);
+  color: var(--color-text);
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+.container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  border-radius: 4px;
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
+  transition: all 0.2s;
+}
+
+button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+button.primary {
+  background-color: var(--color-primary);
+  color: white;
+}
+
+button.primary:hover {
+  background-color: #d85e29;
+  transform: translateY(-1px);
+}
+
+button.secondary {
+  background-color: var(--color-secondary);
+  color: var(--color-text);
+}
+
+button.secondary:hover {
+  background-color: #2a3b50;
+  transform: translateY(-1px);
+}
+
+.card {
+  background-color: var(--color-surface);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  box-shadow: var(--shadow-soft);
+}
+
+.card h2 {
+  margin-bottom: 1rem;
+  font-size: 1.25rem;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th, td {
+  text-align: left;
+  padding: 0.75rem;
+  border-bottom: 1px solid var(--color-secondary);
+}
+
+tbody tr:nth-child(even) {
+  background-color: rgba(255, 255, 255, 0.02);
+}
+
+th {
+  color: var(--color-text-muted);
+  font-weight: 500;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.page-enter {
+  animation: pageFade 0.35s ease-out;
+}
+
+@keyframes pageFade {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.empty-state {
+  padding: 1.5rem;
+  border-radius: 8px;
+  border: 1px dashed rgba(255, 255, 255, 0.18);
+  background: rgba(15, 18, 22, 0.35);
+  color: var(--color-text-muted);
+  text-align: center;
+  font-size: 0.95rem;
+}
+
+.badge.cobbles {
+  background-color: var(--color-cobbles);
+}
+
+.badge.climb {
+  background-color: var(--color-climb);
+}
+
+.badge.sprint {
+  background-color: var(--color-success);
+}
+
+.badge.flat {
+  background-color: var(--color-secondary);
+  color: var(--color-text);
+}
+
+.badge.hilly {
+  background-color: var(--color-hilly);
+  color: #0b1a0f;
+}
+
+.badge.stage.tdf {
+  background-color: var(--color-tdf);
+  color: #1a1a1a;
+}
+
+.badge.stage.giro {
+  background-color: var(--color-giro);
+  color: #1a1a1a;
+}
+
+.badge.stage.vuelta {
+  background-color: var(--color-vuelta);
+  color: #fff5f5;
+}
+
+.badge.stage.other {
+  background-color: var(--color-stage);
+  color: #2a2414;
+}

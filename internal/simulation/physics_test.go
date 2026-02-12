@@ -10,7 +10,7 @@ import (
 func TestSpeedFromPowerFlat(t *testing.T) {
 	// 400W, 75kg rider + 8kg bike = 83kg, flat, CdA=0.32
 	// Expected: ~45 km/h
-	speed := SpeedFromPower(400, 83, 0.32, 0, model.SurfaceRoad)
+	speed := SpeedFromPower(400, 83, 0.32, 0, model.SurfaceRoad, 70)
 	speedKmh := speed * 3.6
 	if speedKmh < 43 || speedKmh > 47 {
 		t.Errorf("400W flat speed = %.1f km/h, expected ~45 km/h", speedKmh)
@@ -20,7 +20,7 @@ func TestSpeedFromPowerFlat(t *testing.T) {
 func TestSpeedFromPowerClimb(t *testing.T) {
 	// 380W, 65kg rider + 8kg bike = 73kg, 8% gradient, CdA=0.32
 	// Expected: ~21 km/h
-	speed := SpeedFromPower(380, 73, 0.32, 8.0, model.SurfaceRoad)
+	speed := SpeedFromPower(380, 73, 0.32, 8.0, model.SurfaceRoad, 70)
 	speedKmh := speed * 3.6
 	if speedKmh < 19 || speedKmh > 23 {
 		t.Errorf("380W 8%% climb speed = %.1f km/h, expected ~21 km/h", speedKmh)
@@ -31,11 +31,11 @@ func TestDraftingPowerSavings(t *testing.T) {
 	// At 45 km/h, drafting with factor 0.25 should save ~35-40% power
 	baseCdA := 0.32
 	speed := 45.0 / 3.6 // m/s
-	mass := 83.0         // kg
+	mass := 83.0        // kg
 
 	// Power needed solo
 	fGrav := ForceGravity(mass, 0)
-	fRoll := ForceRolling(mass, 0, model.SurfaceRoad)
+	fRoll := ForceRolling(mass, 0, model.SurfaceRoad, 70)
 	fAero := ForceAero(baseCdA, speed)
 	powerSolo := speed * (fGrav + fRoll + fAero)
 
@@ -85,7 +85,7 @@ func TestModifierFactor(t *testing.T) {
 
 func TestSpeedOnSteepClimb(t *testing.T) {
 	// Very steep climb (15%) - speed should still be reasonable
-	speed := SpeedFromPower(400, 73, 0.32, 15.0, model.SurfaceRoad)
+	speed := SpeedFromPower(400, 73, 0.32, 15.0, model.SurfaceRoad, 70)
 	speedKmh := speed * 3.6
 	if speedKmh < 8 || speedKmh > 14 {
 		t.Errorf("400W 15%% climb speed = %.1f km/h, expected 8-14 km/h", speedKmh)
@@ -94,14 +94,14 @@ func TestSpeedOnSteepClimb(t *testing.T) {
 
 func TestDescentSpeed(t *testing.T) {
 	// Descent at -8%, should be fast but capped
-	speed := DescentSpeed(200, 83, 0.32, -8.0, model.SurfaceRoad, 70, false)
+	speed := DescentSpeed(200, 83, 0.32, -8.0, model.SurfaceRoad, 70, 70, false)
 	speedKmh := speed * 3.6
 	if speedKmh < 50 || speedKmh > 90 {
 		t.Errorf("descent speed = %.1f km/h, expected 50-90 km/h", speedKmh)
 	}
 
 	// Technical descent should be slower
-	techSpeed := DescentSpeed(200, 83, 0.32, -8.0, model.SurfaceRoad, 70, true)
+	techSpeed := DescentSpeed(200, 83, 0.32, -8.0, model.SurfaceRoad, 70, 70, true)
 	if techSpeed >= speed {
 		t.Errorf("technical descent should be slower: %.1f >= %.1f", techSpeed*3.6, speed*3.6)
 	}
@@ -117,8 +117,8 @@ func TestSegmentTime(t *testing.T) {
 
 func TestCobblesPenalty(t *testing.T) {
 	// Cobbles should be slower than road at same power
-	roadSpeed := SpeedFromPower(350, 83, 0.32, 0, model.SurfaceRoad)
-	cobbleSpeed := SpeedFromPower(350, 83, 0.32, 0, model.SurfaceCobbles)
+	roadSpeed := SpeedFromPower(350, 83, 0.32, 0, model.SurfaceRoad, 70)
+	cobbleSpeed := SpeedFromPower(350, 83, 0.32, 0, model.SurfaceCobbles, 70)
 	if cobbleSpeed >= roadSpeed {
 		t.Errorf("cobbles should be slower: %.2f >= %.2f m/s", cobbleSpeed, roadSpeed)
 	}

@@ -106,8 +106,8 @@ func TestStageFatigue(t *testing.T) {
 	if effectiveFTP >= baseFTP {
 		t.Error("accumulated fatigue should reduce FTP")
 	}
-	if effectiveFTP < int(float64(baseFTP)*0.85) {
-		t.Error("FTP should not drop below 85% floor")
+	if effectiveFTP < int(float64(baseFTP)*0.78) {
+		t.Error("FTP should not drop below 78% floor")
 	}
 }
 

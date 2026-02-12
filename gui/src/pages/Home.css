@@ -1,0 +1,151 @@
+.home {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.home-header {
+  margin-bottom: 0;
+  padding: 1.75rem 1.75rem;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.045) 0%, rgba(255, 255, 255, 0.015) 100%),
+    var(--color-surface);
+  box-shadow: var(--shadow-soft);
+}
+
+.home-header h1 {
+  font-size: 2.35rem;
+  letter-spacing: -0.02em;
+  margin-bottom: 0.5rem;
+  line-height: 1.15;
+}
+
+.home-header p {
+  color: rgba(242, 244, 248, 0.78);
+  max-width: 70ch;
+}
+
+.race-section {
+  margin-bottom: 0;
+}
+
+.race-section h2 {
+  margin-bottom: 1rem;
+  font-size: 0.95rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(242, 244, 248, 0.72);
+}
+
+.races-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.25rem;
+}
+
+.race-card {
+  position: relative;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.035) 0%, rgba(255, 255, 255, 0.01) 100%),
+    var(--color-surface);
+  border-radius: 12px;
+  padding: 1.4rem;
+  text-decoration: none;
+  color: var(--color-text);
+  transition: transform 0.2s, box-shadow 0.2s;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.race-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-soft);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.race-card:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.race-card.stage-race {
+  border-left: 5px solid var(--color-warning);
+}
+
+.race-card.stage-race.tdf {
+  border-left-color: var(--color-tdf);
+}
+
+.race-card.stage-race.giro {
+  border-left-color: var(--color-giro);
+}
+
+.race-card.stage-race.vuelta {
+  border-left-color: var(--color-vuelta);
+}
+
+.race-card.stage-race.other {
+  border-left-color: var(--color-stage);
+}
+
+.race-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.race-card h3 {
+  font-size: 1.25rem;
+  margin-bottom: 0.5rem;
+  line-height: 1.2;
+}
+
+.race-meta {
+  display: flex;
+  justify-content: space-between;
+  color: rgba(242, 244, 248, 0.70);
+  font-size: 0.875rem;
+  margin-top: 0.9rem;
+}
+
+.race-meta span:last-child {
+  font-family: 'Source Serif 4', serif;
+}
+
+.badge.stage {
+  background-color: var(--color-warning);
+  color: #1a1a1a;
+}
+
+.quick-actions {
+  margin-top: 0;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.action-buttons a {
+  display: inline-flex;
+}
+
+.action-buttons button {
+  min-width: 220px;
+}
+
+.loading {
+  text-align: center;
+  padding: 2rem;
+  color: var(--color-text-muted);
+}
+
+.code-block {
+  background-color: var(--color-bg);
+  padding: 1rem;
+  border-radius: 4px;
+  font-family: monospace;
+  margin: 1rem 0;
+  overflow-x: auto;
+}

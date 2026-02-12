@@ -1,0 +1,501 @@
+.sim-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.sim-header h1 {
+  text-transform: capitalize;
+}
+
+.sim-controls {
+  display: flex;
+  gap: 1rem;
+}
+
+.sim-controls select {
+  padding: 0.5rem;
+  border-radius: 4px;
+  border: 1px solid var(--color-secondary);
+  background-color: var(--color-surface);
+  color: var(--color-text);
+}
+
+.course-progress {
+  margin-bottom: 1.5rem;
+}
+
+.progress-bar {
+  position: relative;
+  height: 24px;
+  background-color: var(--color-secondary);
+  border-radius: 12px;
+  overflow: visible;
+  margin-bottom: 0.5rem;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--color-primary), var(--color-cobbles));
+  border-radius: 12px;
+  transition: width 0.45s ease;
+}
+
+.progress-marker {
+  position: absolute;
+  top: -4px;
+  transform: translateX(-50%);
+  font-size: 1.5rem;
+  transition: left 0.45s ease;
+}
+
+.progress-info {
+  display: flex;
+  justify-content: space-between;
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+}
+
+.sim-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+.group {
+  padding: 1rem;
+  border-radius: 4px;
+  margin-bottom: 0.75rem;
+  background-color: var(--color-bg);
+}
+
+.group.leader {
+  border-left: 3px solid var(--color-success);
+}
+
+.group.breakaway {
+  border-left: 3px solid var(--color-primary);
+}
+
+.group.chase {
+  border-left: 3px solid var(--color-warning);
+}
+
+.group.peloton {
+  border-left: 3px solid var(--color-secondary);
+}
+
+.group.dropped {
+  border-left: 3px solid var(--color-danger);
+  opacity: 0.7;
+}
+
+.group-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.group-name {
+  font-weight: 600;
+}
+
+.group-gap {
+  color: var(--color-text-muted);
+  font-family: monospace;
+}
+
+.group-riders {
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+}
+
+.events-list {
+  list-style: none;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.events-list li {
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--color-secondary);
+  font-size: 0.875rem;
+}
+
+.race-finished {
+  margin-top: 2rem;
+  text-align: center;
+}
+
+.team-roster {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding-right: 0.25rem;
+}
+
+.sprint-train-panel {
+  border: 1px solid var(--color-secondary);
+  border-radius: 4px;
+  padding: 0.6rem;
+  margin-bottom: 0.75rem;
+  background: var(--color-bg);
+}
+
+.sprint-train-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.45rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.sprint-phase {
+  border: 1px solid var(--color-secondary);
+  border-radius: 999px;
+  padding: 0.1rem 0.5rem;
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+}
+
+.sprint-phase.idle {
+  color: var(--color-text-muted);
+}
+
+.sprint-phase.following {
+  color: var(--color-warning);
+}
+
+.sprint-phase.launch {
+  color: var(--color-danger);
+}
+
+.sprint-train-order {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.sprint-train-order-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.75rem;
+}
+
+.sprint-train-order-row > div {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.attack-pause-toggle {
+  margin-bottom: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.attack-pause-toggle label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.attack-alert {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem;
+  border-radius: 4px;
+  border: 1px solid var(--color-secondary);
+  background: var(--color-surface);
+  margin-bottom: 0.6rem;
+  font-size: 0.78rem;
+}
+
+.attack-alert-actions {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.attack-alert-actions select {
+  padding: 0.45rem;
+  border-radius: 4px;
+  border: 1px solid var(--color-secondary);
+  background-color: var(--color-surface);
+  color: var(--color-text);
+}
+
+.team-group-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.team-group-header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background-color: var(--color-surface);
+  border-bottom: 1px solid var(--color-secondary);
+  padding: 0.2rem 0;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.team-rider {
+  padding: 0.75rem;
+  border-radius: 4px;
+  background-color: var(--color-bg);
+}
+
+.team-rider-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.5rem;
+}
+
+.team-rider-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.team-rider-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+}
+
+.team-rider-controls {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.45rem;
+}
+
+.team-rider-name {
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.team-rider-status {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.team-rider-telemetry {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.4rem;
+  margin-bottom: 0.45rem;
+}
+
+.team-rider-telemetry span {
+  font-size: 0.72rem;
+  text-align: center;
+  border: 1px solid var(--color-secondary);
+  border-radius: 4px;
+  padding: 0.2rem 0.3rem;
+  color: var(--color-text);
+}
+
+.team-rider-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-bottom: 0.5rem;
+}
+
+.team-rider-effort {
+  display: grid;
+  grid-template-columns: 5.8rem 1fr 2.7rem;
+  gap: 0.4rem;
+  align-items: center;
+  margin-bottom: 0.55rem;
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+}
+
+.team-rider-effort.compact {
+  grid-template-columns: 3.2rem 1fr 2.7rem;
+  margin-bottom: 0;
+}
+
+.team-rider-effort input[type='range'] {
+  width: 100%;
+}
+
+.team-rider-effort span {
+  text-align: right;
+  color: var(--color-text);
+}
+
+.telemetry-bar-row {
+  display: grid;
+  grid-template-columns: 3rem 1fr 2.5rem;
+  gap: 0.4rem;
+  align-items: center;
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+}
+
+.telemetry-bar {
+  width: 100%;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-secondary);
+  overflow: hidden;
+}
+
+.telemetry-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 120ms linear;
+}
+
+.telemetry-bar-fill.fatigue {
+  background: var(--color-warning);
+}
+
+.telemetry-bar-fill.wprime {
+  background: var(--color-primary);
+}
+
+.group-label {
+  font-weight: 600;
+}
+
+.group-label.lead {
+  color: var(--color-success);
+}
+
+.group-label.chasers {
+  color: var(--color-warning);
+}
+
+.group-label.peloton {
+  color: var(--color-text);
+}
+
+.group-label.group {
+  color: var(--color-primary);
+}
+
+.group-label.dropped {
+  color: var(--color-danger);
+}
+
+.group-label.unknown {
+  color: var(--color-text-muted);
+}
+
+.team-rider-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.team-rider-actions.compact {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr 1.2fr 0.6fr;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.team-rider-actions.compact select {
+  padding: 0.45rem;
+  border-radius: 4px;
+  border: 1px solid var(--color-secondary);
+  background-color: var(--color-surface);
+  color: var(--color-text);
+}
+
+.team-rider-actions.compact button {
+  padding: 0.45rem;
+}
+
+@media (min-width: 980px) {
+  .team-rider-row {
+    grid-template-columns: 1.2fr 1fr;
+    align-items: center;
+  }
+  .team-rider-controls {
+    grid-template-columns: 1fr;
+  }
+}
+
+.team-rider-actions button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.team-rider-actions button.accepted {
+  animation: commandAcceptedPulse 360ms ease-out;
+}
+
+.route-profile-card {
+  margin-bottom: 1.5rem;
+}
+
+.route-profile-wrap {
+  position: relative;
+}
+
+.route-profile-svg {
+  width: 100%;
+  height: 68px;
+  display: block;
+  border-radius: 4px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-secondary);
+}
+
+.route-profile-line {
+  fill: none;
+  stroke: var(--color-primary);
+  stroke-width: 1.2;
+}
+
+.route-profile-marker {
+  position: absolute;
+  top: 0;
+  bottom: 1.3rem;
+  width: 2px;
+  background: var(--color-warning);
+  transform: translateX(-50%);
+  transition: left 120ms linear;
+}
+
+.route-profile-info {
+  margin-top: 0.35rem;
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+@keyframes commandAcceptedPulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(0, 0, 0, 0);
+  }
+  35% {
+    transform: scale(1.04);
+    box-shadow: 0 0 0 2px var(--color-primary);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(0, 0, 0, 0);
+  }
+}

@@ -3,6 +3,7 @@ package database
 import (
 	"cycling_sim/internal/model"
 	"fmt"
+	"time"
 )
 
 // CreateRace inserts a race.
@@ -28,18 +29,13 @@ func (db *DB) CreateRace(r *model.Race) error {
 
 // GetRace retrieves a race by ID.
 func (db *DB) GetRace(id int64) (*model.Race, error) {
-	r := &model.Race{}
-	var raceType, dateStr string
-	err := db.QueryRow(`
+	r, err := scanRace(db.QueryRow(`
 		SELECT id, name, course_id, race_type, date, temperature, wind_speed_kmh, wind_direction_deg
-		FROM races WHERE id = ?`, id).Scan(
-		&r.ID, &r.Name, &r.CourseID, &raceType, &dateStr, &r.Temperature,
-		&r.WindSpeedKmh, &r.WindDirectionDeg)
+		FROM races WHERE id = ?`, id))
 	if err != nil {
 		return nil, fmt.Errorf("getting race %d: %w", id, err)
 	}
-	r.RaceType = model.RaceType(raceType)
-	return r, nil
+	return &r, nil
 }
 
 // ListRaces returns all races.
@@ -54,16 +50,42 @@ func (db *DB) ListRaces() ([]model.Race, error) {
 
 	var races []model.Race
 	for rows.Next() {
-		var r model.Race
-		var raceType, dateStr string
-		if err := rows.Scan(&r.ID, &r.Name, &r.CourseID, &raceType, &dateStr, &r.Temperature,
-			&r.WindSpeedKmh, &r.WindDirectionDeg); err != nil {
+		r, err := scanRace(rows)
+		if err != nil {
 			return nil, fmt.Errorf("scanning race: %w", err)
 		}
-		r.RaceType = model.RaceType(raceType)
 		races = append(races, r)
 	}
 	return races, rows.Err()
+}
+
+func scanRace(scanner rowScanner) (model.Race, error) {
+	var r model.Race
+	var raceType, dateStr string
+	if err := scanner.Scan(
+		&r.ID, &r.Name, &r.CourseID, &raceType, &dateStr, &r.Temperature,
+		&r.WindSpeedKmh, &r.WindDirectionDeg,
+	); err != nil {
+		return model.Race{}, err
+	}
+	r.RaceType = model.RaceType(raceType)
+	parsedDate, err := parseRaceDate(dateStr)
+	if err != nil {
+		return model.Race{}, err
+	}
+	r.Date = parsedDate
+	return r, nil
+}
+
+func parseRaceDate(dateStr string) (time.Time, error) {
+	if dateStr == "" {
+		return time.Time{}, nil
+	}
+	parsed, err := time.Parse("2006-01-02", dateStr)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("parsing race date %q: %w", dateStr, err)
+	}
+	return parsed, nil
 }
 
 // CreateStageRace inserts a stage race.
@@ -98,6 +120,31 @@ func (db *DB) AddStageToRace(srs *model.StageRaceStage) error {
 	}
 	srs.ID = id
 	return nil
+}
+
+// ListStageRaces returns all stage races with their stage counts.
+func (db *DB) ListStageRaces() ([]model.StageRace, error) {
+	rows, err := db.Query(`
+		SELECT sr.id, sr.name, COUNT(srs.id)
+		FROM stage_races sr
+		LEFT JOIN stage_race_stages srs ON srs.stage_race_id = sr.id
+		GROUP BY sr.id ORDER BY sr.id`)
+	if err != nil {
+		return nil, fmt.Errorf("listing stage races: %w", err)
+	}
+	defer rows.Close()
+
+	var result []model.StageRace
+	for rows.Next() {
+		var sr model.StageRace
+		var stageCount int
+		if err := rows.Scan(&sr.ID, &sr.Name, &stageCount); err != nil {
+			return nil, fmt.Errorf("scanning stage race: %w", err)
+		}
+		sr.Stages = make([]model.StageRaceStage, stageCount)
+		result = append(result, sr)
+	}
+	return result, rows.Err()
 }
 
 // GetStageRace retrieves a stage race with its stages.

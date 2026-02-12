@@ -3,6 +3,7 @@ package database
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 
 	_ "modernc.org/sqlite"
 )
@@ -47,6 +48,7 @@ func (db *DB) migrate() error {
 		name TEXT NOT NULL,
 		team TEXT NOT NULL,
 		nationality TEXT NOT NULL DEFAULT '',
+		age INTEGER NOT NULL DEFAULT 28,
 		weight_kg REAL NOT NULL,
 		height_cm REAL NOT NULL,
 		ftp_watts INTEGER NOT NULL,
@@ -57,6 +59,7 @@ func (db *DB) migrate() error {
 		sprint_ability INTEGER NOT NULL,
 		tt_ability INTEGER NOT NULL,
 		descending_ability INTEGER NOT NULL,
+		handling INTEGER NOT NULL DEFAULT 70,
 		endurance INTEGER NOT NULL,
 		recovery INTEGER NOT NULL,
 		consistency INTEGER NOT NULL,
@@ -136,7 +139,56 @@ func (db *DB) migrate() error {
 	);
 	CREATE INDEX IF NOT EXISTS idx_gc_stage_race ON gc_standings(stage_race_id);
 	CREATE INDEX IF NOT EXISTS idx_gc_rider ON gc_standings(rider_id);
+
+	CREATE TABLE IF NOT EXISTS points_standings (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		stage_race_id INTEGER NOT NULL,
+		rider_id INTEGER NOT NULL,
+		after_stage INTEGER NOT NULL,
+		points INTEGER NOT NULL,
+		points_position INTEGER NOT NULL,
+		FOREIGN KEY (stage_race_id) REFERENCES stage_races(id) ON DELETE CASCADE,
+		FOREIGN KEY (rider_id) REFERENCES riders(id)
+	);
+	CREATE INDEX IF NOT EXISTS idx_points_stage_race ON points_standings(stage_race_id);
+	CREATE INDEX IF NOT EXISTS idx_points_rider ON points_standings(rider_id);
+
+	CREATE TABLE IF NOT EXISTS mountains_standings (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		stage_race_id INTEGER NOT NULL,
+		rider_id INTEGER NOT NULL,
+		after_stage INTEGER NOT NULL,
+		points INTEGER NOT NULL,
+		kom_position INTEGER NOT NULL,
+		FOREIGN KEY (stage_race_id) REFERENCES stage_races(id) ON DELETE CASCADE,
+		FOREIGN KEY (rider_id) REFERENCES riders(id)
+	);
+	CREATE INDEX IF NOT EXISTS idx_kom_stage_race ON mountains_standings(stage_race_id);
+	CREATE INDEX IF NOT EXISTS idx_kom_rider ON mountains_standings(rider_id);
+
+	CREATE TABLE IF NOT EXISTS youth_standings (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		stage_race_id INTEGER NOT NULL,
+		rider_id INTEGER NOT NULL,
+		after_stage INTEGER NOT NULL,
+		total_time_seconds REAL NOT NULL,
+		youth_position INTEGER NOT NULL,
+		FOREIGN KEY (stage_race_id) REFERENCES stage_races(id) ON DELETE CASCADE,
+		FOREIGN KEY (rider_id) REFERENCES riders(id)
+	);
+	CREATE INDEX IF NOT EXISTS idx_youth_stage_race ON youth_standings(stage_race_id);
+	CREATE INDEX IF NOT EXISTS idx_youth_rider ON youth_standings(rider_id);
 	`
-	_, err := db.Exec(schema)
-	return err
+	if _, err := db.Exec(schema); err != nil {
+		return err
+	}
+
+	// Lightweight migrations for older DB files.
+	if _, err := db.Exec(`ALTER TABLE riders ADD COLUMN age INTEGER NOT NULL DEFAULT 28`); err != nil {
+		// Ignore if column already exists.
+		if !strings.Contains(strings.ToLower(err.Error()), "duplicate column") {
+			return err
+		}
+	}
+	return nil
 }

@@ -1,0 +1,359 @@
+package simulation
+
+import (
+	"fmt"
+	"math"
+	"sort"
+
+	"cycling_sim/internal/model"
+)
+
+// ValidationSummary captures a quick validation result for the UI.
+type ValidationSummary struct {
+	Name          string
+	Passed        bool
+	Correlation   float64
+	Top10Accuracy float64
+	Details       string
+}
+
+// RunValidationSuite runs lightweight validation checks for the UI.
+func RunValidationSuite() []ValidationSummary {
+	results := []ValidationSummary{
+		runFlatSprintValidation(),
+		runMountainClimbValidation(),
+		runTTValidation(),
+	}
+	return results
+}
+
+func runFlatSprintValidation() ValidationSummary {
+	return runCategoryValidation(validationCaseConfig{
+		Name:              "Flat sprint dominance",
+		RaceType:          model.RaceTypeRoad,
+		Course:            validationFlatCourse(),
+		NumRuns:           20,
+		ExpectedTopIDs:    buildGroupIDs(1, 10),
+		ExpectedOrderIDs:  append(buildGroupIDs(1, 10), append(buildGroupIDs(11, 10), buildGroupIDs(21, 10)...)...),
+		CorrelationTarget: 0.65,
+		Top10Target:       60,
+		Riders:            buildFlatField(),
+	})
+}
+
+func runMountainClimbValidation() ValidationSummary {
+	return runCategoryValidation(validationCaseConfig{
+		Name:              "Mountain climber dominance",
+		RaceType:          model.RaceTypeRoad,
+		Course:            validationMountainCourse(),
+		NumRuns:           20,
+		ExpectedTopIDs:    buildGroupIDs(11, 10),
+		ExpectedOrderIDs:  append(buildGroupIDs(11, 10), append(buildGroupIDs(21, 10), buildGroupIDs(1, 10)...)...),
+		CorrelationTarget: 0.65,
+		Top10Target:       60,
+		Riders:            buildMountainField(),
+	})
+}
+
+func runTTValidation() ValidationSummary {
+	return runCategoryValidation(validationCaseConfig{
+		Name:              "TT specialists dominate",
+		RaceType:          model.RaceTypeTT,
+		Course:            validationTTCourse(),
+		NumRuns:           20,
+		ExpectedTopIDs:    buildGroupIDs(21, 10),
+		ExpectedOrderIDs:  append(buildGroupIDs(21, 10), append(buildGroupIDs(11, 10), buildGroupIDs(1, 10)...)...),
+		CorrelationTarget: 0.6,
+		Top10Target:       50,
+		Riders:            buildTTField(),
+	})
+}
+
+type validationCaseConfig struct {
+	Name              string
+	RaceType          model.RaceType
+	Course            *model.Course
+	NumRuns           int
+	ExpectedTopIDs    []int64
+	ExpectedOrderIDs  []int64
+	CorrelationTarget float64
+	Top10Target       float64
+	Riders            []model.Rider
+}
+
+func runCategoryValidation(cfg validationCaseConfig) ValidationSummary {
+	race := &model.Race{ID: 1, Name: cfg.Name, CourseID: 1, RaceType: cfg.RaceType}
+	avgPositions := simulateAveragePositions(race, cfg.Course, cfg.Riders, cfg.NumRuns)
+
+	simOrder := rankByAveragePosition(avgPositions)
+	top10 := topNAccuracy(cfg.ExpectedTopIDs, simOrder, 10)
+	corr := validationSpearman(cfg.ExpectedOrderIDs, avgPositions)
+
+	passed := corr >= cfg.CorrelationTarget && top10 >= cfg.Top10Target
+	details := fmt.Sprintf("Corr %.2f (>=%.2f), Top-10 %.0f%% (>=%.0f%%)", corr, cfg.CorrelationTarget, top10, cfg.Top10Target)
+
+	return ValidationSummary{
+		Name:          cfg.Name,
+		Passed:        passed,
+		Correlation:   corr,
+		Top10Accuracy: top10,
+		Details:       details,
+	}
+}
+
+func simulateAveragePositions(race *model.Race, course *model.Course, riders []model.Rider, numRuns int) map[int64]float64 {
+	positionSums := make(map[int64]float64, len(riders))
+	positionCounts := make(map[int64]int, len(riders))
+
+	for run := 0; run < numRuns; run++ {
+		config := RaceConfig{
+			Race:   race,
+			Course: course,
+			Riders: riders,
+			Seed:   int64(run + 1),
+		}
+		var results []model.RaceResult
+		if race.RaceType == model.RaceTypeTT {
+			results = SimulateTT(config)
+		} else {
+			results = SimulateRoadRace(config)
+		}
+		for _, res := range results {
+			positionSums[res.RiderID] += float64(res.Position)
+			positionCounts[res.RiderID]++
+		}
+	}
+
+	avgPositions := make(map[int64]float64, len(riders))
+	for _, r := range riders {
+		if count := positionCounts[r.ID]; count > 0 {
+			avgPositions[r.ID] = positionSums[r.ID] / float64(count)
+		} else {
+			avgPositions[r.ID] = float64(len(riders) + 1)
+		}
+	}
+	return avgPositions
+}
+
+func rankByAveragePosition(avgPositions map[int64]float64) []int64 {
+	type entry struct {
+		id  int64
+		pos float64
+	}
+	entries := make([]entry, 0, len(avgPositions))
+	for id, pos := range avgPositions {
+		entries = append(entries, entry{id: id, pos: pos})
+	}
+	sort.Slice(entries, func(i, j int) bool { return entries[i].pos < entries[j].pos })
+
+	ranked := make([]int64, len(entries))
+	for i, e := range entries {
+		ranked[i] = e.id
+	}
+	return ranked
+}
+
+func topNAccuracy(expected []int64, simOrder []int64, n int) float64 {
+	if len(expected) == 0 {
+		return 0
+	}
+	limit := n
+	if len(simOrder) < limit {
+		limit = len(simOrder)
+	}
+	inTop := make(map[int64]bool, limit)
+	for i := 0; i < limit; i++ {
+		inTop[simOrder[i]] = true
+	}
+	count := 0
+	for _, id := range expected {
+		if inTop[id] {
+			count++
+		}
+	}
+	return float64(count) / float64(len(expected)) * 100
+}
+
+func validationSpearman(expectedOrder []int64, avgPositions map[int64]float64) float64 {
+	n := len(expectedOrder)
+	if n < 2 {
+		return 0
+	}
+	values := make([]float64, n)
+	for i, id := range expectedOrder {
+		values[i] = avgPositions[id]
+	}
+
+	rankX := validationRanks(sequenceFloats(n))
+	rankY := validationRanks(values)
+
+	var sumD2 float64
+	for i := 0; i < n; i++ {
+		d := rankX[i] - rankY[i]
+		sumD2 += d * d
+	}
+	return 1 - 6*sumD2/(float64(n)*(float64(n)*float64(n)-1))
+}
+
+func validationRanks(vals []float64) []float64 {
+	type indexed struct {
+		val float64
+		idx int
+	}
+	items := make([]indexed, len(vals))
+	for i, v := range vals {
+		items[i] = indexed{val: v, idx: i}
+	}
+	sort.Slice(items, func(i, j int) bool { return items[i].val < items[j].val })
+	ranks := make([]float64, len(vals))
+	for rank, item := range items {
+		ranks[item.idx] = float64(rank + 1)
+	}
+	return ranks
+}
+
+func sequenceFloats(n int) []float64 {
+	vals := make([]float64, n)
+	for i := 0; i < n; i++ {
+		vals[i] = float64(i + 1)
+	}
+	return vals
+}
+
+func buildGroupIDs(start int64, count int) []int64 {
+	ids := make([]int64, count)
+	for i := 0; i < count; i++ {
+		ids[i] = start + int64(i)
+	}
+	return ids
+}
+
+func buildFlatField() []model.Rider {
+	riders := make([]model.Rider, 0, 30)
+	riders = append(riders, buildSprinterGroup(1, 10)...)
+	riders = append(riders, buildAllRounderGroup(11, 10)...)
+	riders = append(riders, buildClimberGroup(21, 10)...)
+	return riders
+}
+
+func buildMountainField() []model.Rider {
+	riders := make([]model.Rider, 0, 30)
+	riders = append(riders, buildClimberGroup(11, 10)...)
+	riders = append(riders, buildAllRounderGroup(21, 10)...)
+	riders = append(riders, buildSprinterGroup(1, 10)...)
+	return riders
+}
+
+func buildTTField() []model.Rider {
+	riders := make([]model.Rider, 0, 30)
+	riders = append(riders, buildTTGroup(21, 10)...)
+	riders = append(riders, buildAllRounderGroup(11, 10)...)
+	riders = append(riders, buildSprinterGroup(1, 10)...)
+	return riders
+}
+
+func buildSprinterGroup(startID int64, count int) []model.Rider {
+	riders := make([]model.Rider, count)
+	for i := 0; i < count; i++ {
+		id := startID + int64(i)
+		riders[i] = baseValidationRider(fmt.Sprintf("Sprinter %d", i+1), id, 78, 395, 92, 60, 70, 74)
+		riders[i].MaxSprintWatts = 1900
+	}
+	return riders
+}
+
+func buildClimberGroup(startID int64, count int) []model.Rider {
+	riders := make([]model.Rider, count)
+	for i := 0; i < count; i++ {
+		id := startID + int64(i)
+		riders[i] = baseValidationRider(fmt.Sprintf("Climber %d", i+1), id, 64, 405, 60, 92, 70, 72)
+		riders[i].Handling = 70
+	}
+	return riders
+}
+
+func buildAllRounderGroup(startID int64, count int) []model.Rider {
+	riders := make([]model.Rider, count)
+	for i := 0; i < count; i++ {
+		id := startID + int64(i)
+		riders[i] = baseValidationRider(fmt.Sprintf("All-Rounder %d", i+1), id, 71, 390, 78, 78, 78, 75)
+	}
+	return riders
+}
+
+func buildTTGroup(startID int64, count int) []model.Rider {
+	riders := make([]model.Rider, count)
+	for i := 0; i < count; i++ {
+		id := startID + int64(i)
+		base := baseValidationRider(fmt.Sprintf("TT %d", i+1), id, 72, 400, 65, 70, 92, 76)
+		base.CdA = 0.26
+		base.MaxSprintWatts = 1400
+		riders[i] = base
+	}
+	return riders
+}
+
+func baseValidationRider(name string, id int64, weightKg float64, ftp int, sprint int, climb int, tt int, handling int) model.Rider {
+	return model.Rider{
+		ID:                id,
+		Name:              name,
+		Team:              "Validation",
+		Nationality:       "TST",
+		WeightKg:          weightKg,
+		HeightCm:          180,
+		FTPWatts:          ftp,
+		MaxSprintWatts:    1600,
+		VO2MaxWatts:       int(math.Max(320, float64(ftp)-40)),
+		CdA:               0.3,
+		ClimbingAbility:   climb,
+		SprintAbility:     sprint,
+		TTAbility:         tt,
+		DescendingAbility: 74,
+		Endurance:         80,
+		Recovery:          75,
+		Consistency:       75,
+		TacticalAwareness: 75,
+		Handling:          handling,
+	}
+}
+
+func validationFlatCourse() *model.Course {
+	return &model.Course{
+		ID:              1,
+		Name:            "Flat Validation",
+		TotalDistanceKm: 180,
+		Segments: []model.Segment{
+			{ID: 1, CourseID: 1, SegmentOrder: 1, Name: "Flat 1", DistanceKm: 60, GradientPct: 0, SurfaceType: model.SurfaceRoad},
+			{ID: 2, CourseID: 1, SegmentOrder: 2, Name: "Flat 2", DistanceKm: 60, GradientPct: 0.2, SurfaceType: model.SurfaceRoad},
+			{ID: 3, CourseID: 1, SegmentOrder: 3, Name: "Flat Finish", DistanceKm: 60, GradientPct: -0.3, SurfaceType: model.SurfaceRoad},
+		},
+	}
+}
+
+func validationMountainCourse() *model.Course {
+	return &model.Course{
+		ID:              2,
+		Name:            "Mountain Validation",
+		TotalDistanceKm: 170,
+		Segments: []model.Segment{
+			{ID: 1, CourseID: 2, SegmentOrder: 1, Name: "Valley", DistanceKm: 40, GradientPct: 0.5, SurfaceType: model.SurfaceRoad},
+			{ID: 2, CourseID: 2, SegmentOrder: 2, Name: "Climb 1", DistanceKm: 18, GradientPct: 7.2, SurfaceType: model.SurfaceRoad},
+			{ID: 3, CourseID: 2, SegmentOrder: 3, Name: "Ridge", DistanceKm: 30, GradientPct: 2.0, SurfaceType: model.SurfaceRoad},
+			{ID: 4, CourseID: 2, SegmentOrder: 4, Name: "Climb 2", DistanceKm: 16, GradientPct: 8.1, SurfaceType: model.SurfaceRoad},
+			{ID: 5, CourseID: 2, SegmentOrder: 5, Name: "Descent", DistanceKm: 32, GradientPct: -3.0, SurfaceType: model.SurfaceRoad, IsTechnical: true},
+			{ID: 6, CourseID: 2, SegmentOrder: 6, Name: "Final Rise", DistanceKm: 34, GradientPct: 4.5, SurfaceType: model.SurfaceRoad},
+		},
+	}
+}
+
+func validationTTCourse() *model.Course {
+	return &model.Course{
+		ID:              3,
+		Name:            "TT Validation",
+		TotalDistanceKm: 40,
+		Segments: []model.Segment{
+			{ID: 1, CourseID: 3, SegmentOrder: 1, Name: "TT Out", DistanceKm: 20, GradientPct: 0.8, SurfaceType: model.SurfaceRoad},
+			{ID: 2, CourseID: 3, SegmentOrder: 2, Name: "TT Back", DistanceKm: 20, GradientPct: -0.4, SurfaceType: model.SurfaceRoad},
+		},
+	}
+}

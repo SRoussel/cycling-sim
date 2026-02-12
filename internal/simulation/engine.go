@@ -3,33 +3,27 @@ package simulation
 import (
 	"math/rand"
 	"sort"
+	"time"
 
 	"cycling_sim/internal/model"
 )
 
 // RaceConfig holds configuration for running a simulation.
 type RaceConfig struct {
-	Race   *model.Race
-	Course *model.Course
-	Riders []model.Rider
-	Seed   int64 // random seed for reproducibility (0 = random)
+	Race             *model.Race
+	Course           *model.Course
+	Riders           []model.Rider
+	Seed             int64 // random seed for reproducibility (0 = random)
+	IncidentsEnabled bool  // enable crashes/punctures simulation
+	ActionOverrides  ActionOverrideProvider
 }
 
 // SimulateRoadRace runs a complete road race simulation and returns results.
 func SimulateRoadRace(config RaceConfig) []model.RaceResult {
-	rng := rand.New(rand.NewSource(config.Seed))
+	rng := rngFromSeed(config.Seed)
 
 	// Initialize rider states
-	states := make([]*RiderState, len(config.Riders))
-	for i := range config.Riders {
-		rider := &config.Riders[i]
-		states[i] = &RiderState{
-			Rider:        rider,
-			WPrime:       NewWPrimeState(rider),
-			FormFactor:   DailyFormFactor(rider, rng),
-			EffectiveFTP: rider.FTPWatts,
-		}
-	}
+	states := initStates(config.Riders, rng)
 
 	segments := config.Course.Segments
 	if len(segments) == 0 {
@@ -43,10 +37,13 @@ func SimulateRoadRace(config RaceConfig) []model.RaceResult {
 	}
 
 	// Process each segment
+	tacticsParams := DefaultTacticsParams()
+	raceState := NewRaceState(states, rng, config.Race != nil && isStageRaceStageName(config.Race.Name))
+	raceState.Overrides = config.ActionOverrides
 	coveredDist := 0.0
 	for i := range segments {
 		seg := &segments[i]
-		SimulateSegment(states, seg, false, totalDist-coveredDist, rng)
+		SimulateSegment(states, seg, false, totalDist-coveredDist, rng, raceState, &tacticsParams, config.IncidentsEnabled)
 		coveredDist += seg.DistanceKm
 	}
 
@@ -57,7 +54,7 @@ func SimulateRoadRace(config RaceConfig) []model.RaceResult {
 		sort.Slice(states, func(i, j int) bool {
 			return states[i].TotalTime < states[j].TotalTime
 		})
-		// Lead group: riders within 3 seconds of the leader
+		// Lead group: riders within 3.0 seconds of the leader (bunch finish)
 		leaderTime := states[0].TotalTime
 		var sprintGroup []*RiderState
 		for _, rs := range states {
@@ -72,18 +69,36 @@ func SimulateRoadRace(config RaceConfig) []model.RaceResult {
 
 	// Sort by total time and create results
 	sort.Slice(states, func(i, j int) bool {
+		// DNF riders go to the end, sorted by time gaps
+		if states[i].DNF && states[j].DNF {
+			return states[i].TotalTime < states[j].TotalTime
+		}
+		if states[i].DNF {
+			return false // DNF riders at the end
+		}
+		if states[j].DNF {
+			return true
+		}
 		return states[i].TotalTime < states[j].TotalTime
 	})
 
 	winnerTime := states[0].TotalTime
-	results := make([]model.RaceResult, len(states))
-	for i, rs := range states {
-		results[i] = model.RaceResult{
+	results := make([]model.RaceResult, 0, len(states))
+	position := 1
+	for _, rs := range states {
+		result := model.RaceResult{
 			RaceID:            config.Race.ID,
 			RiderID:           rs.Rider.ID,
-			Position:          i + 1,
+			Position:          position,
 			FinishTimeSeconds: rs.TotalTime,
 			TimeGapSeconds:    rs.TotalTime - winnerTime,
+		}
+		if rs.DNF {
+			result.Position = 0 // 0 indicates DNF
+		}
+		results = append(results, result)
+		if !rs.DNF {
+			position++
 		}
 	}
 	return results
@@ -91,18 +106,8 @@ func SimulateRoadRace(config RaceConfig) []model.RaceResult {
 
 // SimulateTT runs a time trial simulation.
 func SimulateTT(config RaceConfig) []model.RaceResult {
-	rng := rand.New(rand.NewSource(config.Seed))
-
-	states := make([]*RiderState, len(config.Riders))
-	for i := range config.Riders {
-		rider := &config.Riders[i]
-		states[i] = &RiderState{
-			Rider:        rider,
-			WPrime:       NewWPrimeState(rider),
-			FormFactor:   DailyFormFactor(rider, rng),
-			EffectiveFTP: rider.FTPWatts,
-		}
-	}
+	rng := rngFromSeed(config.Seed)
+	states := initStates(config.Riders, rng)
 
 	segments := config.Course.Segments
 
@@ -128,15 +133,15 @@ func SimulateTT(config RaceConfig) []model.RaceResult {
 			var speed float64
 			if seg.GradientPct < -2.0 {
 				speed = DescentSpeed(power, rs.Rider.TotalMassKg(), ttCdA,
-					seg.GradientPct, seg.SurfaceType, rs.Rider.DescendingAbility, seg.IsTechnical)
+					seg.GradientPct, seg.SurfaceType, rs.Rider.Handling, rs.Rider.DescendingAbility, seg.IsTechnical)
 			} else {
 				speed = SpeedFromPower(power, rs.Rider.TotalMassKg(), ttCdA,
-					seg.GradientPct, seg.SurfaceType)
+					seg.GradientPct, seg.SurfaceType, rs.Rider.Handling)
 			}
 
 			segTime := SegmentTime(speed, seg.DistanceKm)
 			rs.TotalTime += segTime
-			rs.WPrime.Update(power, rs.EffectiveFTP, segTime)
+			rs.WPrime.UpdateWithHandling(power, rs.EffectiveFTP, segTime, rs.Rider.Handling, seg.SurfaceType == model.SurfaceCobbles)
 		}
 	}
 
@@ -161,7 +166,7 @@ func SimulateTT(config RaceConfig) []model.RaceResult {
 
 // SimulateStageRace runs a multi-stage race and returns per-stage results and GC standings.
 func SimulateStageRace(stageRace *model.StageRace, stages []StageConfig, riders []model.Rider, seed int64) ([][]model.RaceResult, [][]model.GCStanding) {
-	rng := rand.New(rand.NewSource(seed))
+	rng := rngFromSeed(seed)
 
 	// Initialize cumulative fatigue per rider
 	fatigueMap := make(map[int64]*StageFatigueState)
@@ -178,6 +183,9 @@ func SimulateStageRace(stageRace *model.StageRace, stages []StageConfig, riders 
 		gcTimes[r.ID] = 0
 	}
 
+	activeRiders := make([]model.Rider, len(riders))
+	copy(activeRiders, riders)
+
 	for _, stage := range stages {
 		// Apply rest day
 		if stage.RestDayBefore {
@@ -187,11 +195,11 @@ func SimulateStageRace(stageRace *model.StageRace, stages []StageConfig, riders 
 		}
 
 		// Create adjusted riders with fatigue-reduced FTP
-		adjustedRiders := make([]model.Rider, len(riders))
-		copy(adjustedRiders, riders)
+		adjustedRiders := make([]model.Rider, len(activeRiders))
+		copy(adjustedRiders, activeRiders)
 		for i := range adjustedRiders {
 			if f, ok := fatigueMap[adjustedRiders[i].ID]; ok {
-				adjustedRiders[i].FTPWatts = f.EffectiveFTP(riders[i].FTPWatts)
+				adjustedRiders[i].FTPWatts = f.EffectiveFTP(adjustedRiders[i].FTPWatts)
 			}
 		}
 
@@ -211,15 +219,28 @@ func SimulateStageRace(stageRace *model.StageRace, stages []StageConfig, riders 
 		allResults = append(allResults, results)
 
 		// Update fatigue and GC times
+		activeByID := make(map[int64]model.Rider, len(adjustedRiders))
+		for _, r := range adjustedRiders {
+			activeByID[r.ID] = r
+		}
+		remaining := make([]model.Rider, 0, len(adjustedRiders))
 		for _, res := range results {
+			if res.Position == 0 {
+				delete(gcTimes, res.RiderID)
+				delete(fatigueMap, res.RiderID)
+				continue
+			}
 			gcTimes[res.RiderID] += res.FinishTimeSeconds
 
-			// Stage stress based on finish time relative to winner
-			stageStress := 1.0 + res.TimeGapSeconds/1000.0
+			stageStress := StageStress(stage.Course, stage.Race.RaceType, res.TimeGapSeconds)
 			if f, ok := fatigueMap[res.RiderID]; ok {
 				f.AddStageStress(stageStress)
 			}
+			if rider, ok := activeByID[res.RiderID]; ok {
+				remaining = append(remaining, rider)
+			}
 		}
+		activeRiders = remaining
 
 		// Calculate GC standings
 		type gcEntry struct {
@@ -248,6 +269,28 @@ func SimulateStageRace(stageRace *model.StageRace, stages []StageConfig, riders 
 	}
 
 	return allResults, allStandings
+}
+
+func rngFromSeed(seed int64) *rand.Rand {
+	if seed == 0 {
+		seed = time.Now().UnixNano()
+	}
+	return rand.New(rand.NewSource(seed))
+}
+
+func initStates(riders []model.Rider, rng *rand.Rand) []*RiderState {
+	states := make([]*RiderState, len(riders))
+	for i := range riders {
+		rider := &riders[i]
+		states[i] = &RiderState{
+			Rider:        rider,
+			WPrime:       NewWPrimeState(rider),
+			FormFactor:   DailyFormFactor(rider, rng),
+			EffectiveFTP: rider.FTPWatts,
+		}
+	}
+	AssignTeamRoles(states)
+	return states
 }
 
 // StageConfig holds the configuration for one stage in a stage race.

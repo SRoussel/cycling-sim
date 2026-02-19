@@ -201,6 +201,17 @@ func interpolateRiderGroups(previous map[int64]string, current map[int64]string,
 	return cloneRiderGroups(previous)
 }
 
+func isStageRaceStageName(name string) bool {
+	// Keep in sync with frontend filtering logic; stage races use consistent prefixes.
+	prefixes := []string{"TdF ", "Giro ", "Vuelta ", "Paris-Nice ", "Tirreno ", "Suisse ", "Dauphine ", "Basque ", "Romandie "}
+	for _, p := range prefixes {
+		if len(name) > len(p) && name[:len(p)] == p {
+			return true
+		}
+	}
+	return false
+}
+
 func SimulateRoadRaceWithProgress(config RaceConfig, onProgress func(ProgressSnapshot)) []model.RaceResult {
 	rng := rngFromSeed(config.Seed)
 

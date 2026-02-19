@@ -52,6 +52,7 @@ type RaceState struct {
 	Phase                 RacePhase
 	Segment               *model.Segment
 	IsStageRace           bool
+	LastActions           map[int64]Action
 	HasBreakaway          bool
 	BreakawayGap          float64
 	BreakawayHasDangerous bool
@@ -125,23 +126,13 @@ type TacticsEvent struct {
 	Reason string
 }
 
-func isStageRaceStageName(name string) bool {
-	// Keep in sync with frontend filtering logic; stage races use consistent prefixes.
-	prefixes := []string{"TdF ", "Giro ", "Vuelta ", "Paris-Nice ", "Tirreno ", "Suisse ", "Dauphine ", "Basque ", "Romandie "}
-	for _, p := range prefixes {
-		if len(name) > len(p) && name[:len(p)] == p {
-			return true
-		}
-	}
-	return false
-}
-
 func NewRaceState(states []*RiderState, rng *rand.Rand, isStageRace bool) *RaceState {
 	contexts, rival := BuildTeamContexts(states, rng, isStageRace)
 	return &RaceState{
 		TeamContexts: contexts,
 		Rival:        rival,
 		IsStageRace:  isStageRace,
+		LastActions:  make(map[int64]Action),
 	}
 }
 

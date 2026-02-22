@@ -2,14 +2,17 @@ package main
 
 import (
 	"encoding/csv"
+	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strconv"
+	"strings"
 	"time"
 
 	"cycling_sim/internal/database"
+	"cycling_sim/internal/fcimport"
 	"cycling_sim/internal/model"
 	"cycling_sim/internal/selection"
 	"cycling_sim/internal/simulation"
@@ -98,6 +101,12 @@ func main() {
 			os.Exit(1)
 		}
 		cmdShowGC(db, srID, stage)
+	case "fc-fetch":
+		cmdFCFetch(db, os.Args[2:])
+	case "fc-list":
+		cmdFCList(db)
+	case "fc-match":
+		cmdFCMatch(db)
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown command: %s\n", os.Args[1])
 		printUsage()
@@ -123,6 +132,12 @@ Commands:
   run-stage-race <stage-race-id> Simulate a stage race
   results <race-id>              Show race results
   gc <stage-race-id> <stage>     Show GC standings after a stage
+
+FirstCycling import:
+  fc-fetch --race <id> --year <year> [--stage <n>|--stages <from>-<to>]
+                                 Fetch reference results from firstcycling.com
+  fc-list                        List all fetched FC reference data
+  fc-match                       Auto-match FC rider names to internal riders
 
 Environment:
   CYCLING_SIM_DB                 Database file path (default: cycling_sim.db)`)
@@ -1300,6 +1315,120 @@ func findDataFile(name string) string {
 	}
 	return filepath.Join("data", name) // fallback
 }
+
+// ---------------------------------------------------------------------------
+// FirstCycling import commands
+// ---------------------------------------------------------------------------
+
+// cmdFCFetch fetches race results from FirstCycling and stores them.
+//
+// Usage:
+//
+//	fc-fetch --race <id> --year <year> [--stage <n>] [--stages <from>-<to>]
+func cmdFCFetch(db *database.DB, args []string) {
+	fs := flag.NewFlagSet("fc-fetch", flag.ExitOnError)
+	race := fs.Int("race", 0, "FirstCycling race ID (e.g. 17 = Tour de France)")
+	year := fs.Int("year", 0, "Year (e.g. 2024)")
+	stage := fs.Int("stage", 0, "Specific stage number (0 = overall/GC)")
+	stages := fs.String("stages", "", "Stage range to fetch, e.g. 1-21")
+	if err := fs.Parse(args); err != nil {
+		os.Exit(1)
+	}
+	if *race == 0 || *year == 0 {
+		fmt.Fprintln(os.Stderr, "Usage: cycling-sim fc-fetch --race <id> --year <year> [--stage <n>|--stages <from>-<to>]")
+		os.Exit(1)
+	}
+
+	imp := fcimport.NewImporter(os.Stdout)
+
+	// Collect the list of requests to fetch.
+	var requests []fcimport.FetchRequest
+	switch {
+	case *stages != "":
+		// Parse "from-to" range.
+		parts := strings.SplitN(*stages, "-", 2)
+		if len(parts) != 2 {
+			fmt.Fprintln(os.Stderr, "Invalid --stages format; use e.g. 1-21")
+			os.Exit(1)
+		}
+		from, err1 := strconv.Atoi(strings.TrimSpace(parts[0]))
+		to, err2 := strconv.Atoi(strings.TrimSpace(parts[1]))
+		if err1 != nil || err2 != nil || from < 1 || to < from {
+			fmt.Fprintln(os.Stderr, "Invalid --stages range")
+			os.Exit(1)
+		}
+		for s := from; s <= to; s++ {
+			requests = append(requests, fcimport.FetchRequest{FCRaceID: *race, Year: *year, Stage: s})
+		}
+	default:
+		requests = []fcimport.FetchRequest{{FCRaceID: *race, Year: *year, Stage: *stage}}
+	}
+
+	total := 0
+	for _, req := range requests {
+		result, err := imp.Fetch(req)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error fetching: %v\n", err)
+			os.Exit(1)
+		}
+		if len(result.Results) == 0 {
+			fmt.Printf("  Warning: no results parsed for race=%d year=%d stage=%d\n",
+				req.FCRaceID, req.Year, req.Stage)
+			continue
+		}
+		if err := db.UpsertFCResults(req, result.Results); err != nil {
+			fmt.Fprintf(os.Stderr, "Error storing results: %v\n", err)
+			os.Exit(1)
+		}
+		total += len(result.Results)
+	}
+
+	// After storing, auto-match any new FC rider names.
+	matched, err := db.AutoMatchFCRiders()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: auto-match failed: %v\n", err)
+	} else if matched > 0 {
+		fmt.Printf("Auto-matched %d new rider(s) to internal riders.\n", matched)
+	}
+
+	fmt.Printf("Done. Stored %d result rows total.\n", total)
+}
+
+// cmdFCList prints a summary of all fetched FirstCycling reference data.
+func cmdFCList(db *database.DB) {
+	summaries, err := db.ListFCFetched()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
+	}
+	if len(summaries) == 0 {
+		fmt.Println("No FirstCycling data fetched yet. Use: cycling-sim fc-fetch --race <id> --year <year>")
+		return
+	}
+	fmt.Printf("%-12s %-6s %-8s %-8s %s\n", "FC Race ID", "Year", "Stage", "Results", "Fetched At")
+	fmt.Println(strings.Repeat("-", 55))
+	for _, s := range summaries {
+		stageStr := "overall"
+		if s.Stage > 0 {
+			stageStr = fmt.Sprintf("stage %d", s.Stage)
+		}
+		fmt.Printf("%-12d %-6d %-8s %-8d %s\n", s.FCRaceID, s.Year, stageStr, s.ResultCount, s.FetchedAt)
+	}
+}
+
+// cmdFCMatch attempts to resolve all unmatched FC rider names against internal riders.
+func cmdFCMatch(db *database.DB) {
+	matched, err := db.AutoMatchFCRiders()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
+	}
+	fmt.Printf("Matched %d rider(s).\n", matched)
+}
+
+// ---------------------------------------------------------------------------
+// CSV seed helpers
+// ---------------------------------------------------------------------------
 
 // loadRidersFromCSV reads riders from a CSV file and inserts them into the database.
 // CSV columns: Id,Name,Team,Nationality,Weight_kg,Height_cm,FTP_watts,Sprint_watts,

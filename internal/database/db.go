@@ -178,6 +178,32 @@ func (db *DB) migrate() error {
 	);
 	CREATE INDEX IF NOT EXISTS idx_youth_stage_race ON youth_standings(stage_race_id);
 	CREATE INDEX IF NOT EXISTS idx_youth_rider ON youth_standings(rider_id);
+
+	-- Reference data imported from FirstCycling for validation / calibration.
+	CREATE TABLE IF NOT EXISTS fc_race_results (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		fc_race_id INTEGER NOT NULL,
+		year INTEGER NOT NULL,
+		stage INTEGER NOT NULL DEFAULT 0,
+		position INTEGER NOT NULL,
+		fc_rider_id INTEGER NOT NULL,
+		rider_name TEXT NOT NULL,
+		team_name TEXT NOT NULL,
+		uci_points INTEGER NOT NULL DEFAULT 0,
+		winner_time_secs INTEGER NOT NULL DEFAULT 0,
+		gap_secs INTEGER NOT NULL DEFAULT 0,
+		fetched_at TEXT NOT NULL DEFAULT (datetime('now'))
+	);
+	CREATE UNIQUE INDEX IF NOT EXISTS idx_fc_results_unique
+		ON fc_race_results(fc_race_id, year, stage, position);
+
+	-- Maps FC rider IDs to internal rider IDs; NULL rider_id means unmatched.
+	CREATE TABLE IF NOT EXISTS fc_rider_map (
+		fc_rider_id INTEGER PRIMARY KEY,
+		fc_name TEXT NOT NULL,
+		rider_id INTEGER,
+		FOREIGN KEY (rider_id) REFERENCES riders(id)
+	);
 	`
 	if _, err := db.Exec(schema); err != nil {
 		return err

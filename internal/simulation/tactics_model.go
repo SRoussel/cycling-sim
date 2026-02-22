@@ -63,6 +63,9 @@ type RaceState struct {
 	Rival                 RivalAssessment
 	Events                []TacticsEvent
 	Overrides             ActionOverrideProvider
+	// GCGaps maps rider ID → cumulative GC deficit in seconds vs. leader (0 = race leader).
+	// Populated at the start of each stage race stage. Nil for one-day races.
+	GCGaps                map[int64]float64
 }
 
 type TacticsParams struct {
@@ -173,10 +176,12 @@ func DecideAction(rs *RiderState, state *RaceState, hasLeader bool, rng *rand.Ra
 		return ActionConserve
 	}
 
-	// Stage-race GC leaders should rarely attack on flat/rolling terrain.
+	// ------------------------------------------------------------------
+	// Stage-race GC leader on flat/rolling terrain: conserve energy.
+	// This block only fires when gradient < 3.5 (never on real mountains).
+	// ------------------------------------------------------------------
 	if state != nil && state.IsStageRace && rs.TeamRole == RoleLeader && state.Segment != nil {
 		if state.Segment.SurfaceType != model.SurfaceCobbles && state.Segment.GradientPct < 3.5 {
-			// If there's no dangerous move, conserve most of the day.
 			if !state.HasBreakaway || (!state.BreakawayHasDangerous && state.Phase != PhaseFinal) {
 				if state.Phase != PhaseFinal || rng.Float64() < 0.85 {
 					return ActionConserve
@@ -185,12 +190,81 @@ func DecideAction(rs *RiderState, state *RaceState, hasLeader bool, rng *rand.Ra
 		}
 	}
 
+	// ------------------------------------------------------------------
+	// Stage-race mountain attack evaluation for team leaders.
+	// Placed BEFORE the generic "breakaway → Chase" block so that a GC
+	// leader can launch a counter-attack even when a breakaway is active.
+	// ------------------------------------------------------------------
+	if state != nil && state.Segment != nil &&
+		state.Segment.GradientPct > 4.0 && rs.TeamRole == RoleLeader && state.IsStageRace {
+
+		isFavorite := state.Rival.DangerousRiders[rs.Rider.ID]
+
+		// GC gap: 0 = race leader, positive = seconds behind leader.
+		gcDeficit := 0.0
+		if state.GCGaps != nil {
+			gcDeficit = state.GCGaps[rs.Rider.ID]
+		}
+
+		var attackProb float64
+		if isFavorite {
+			// Top GC contenders: measured attacks in the final climbing km.
+			// km<15 on a real climb (>5%) is the realistic attack window.
+			if state.KmRemaining < 15 && state.Segment.GradientPct > 5.0 && wFrac > 0.40 {
+				attackProb = 0.08
+				if state.KmRemaining < 8 {
+					attackProb = 0.12
+				}
+			}
+			// A rival is up the road — this is urgent, respond harder.
+			if state.BreakawayHasDangerous && state.Phase == PhaseFinal {
+				if attackProb < 0.20 {
+					attackProb = 0.20
+				}
+			}
+			// GC leader (deficit ≈ 0) is slightly less aggressive — protecting the jersey.
+			if gcDeficit < 30 {
+				attackProb *= 0.70
+			}
+		} else {
+			// Non-favorite leaders hunt for stage wins more freely.
+			if state.KmRemaining < 25 && wFrac > 0.35 {
+				attackProb = 0.15
+				if state.KmRemaining < 12 {
+					attackProb = 0.22
+				}
+			}
+		}
+
+		// GC deficit boosts aggression: riders further down need to gamble.
+		// 5 min down (300s) → ×1.17, 30 min down (1800s) → ×2.0, capped at ×2.5.
+		if gcDeficit > 30 {
+			multiplier := math.Min(1.0+gcDeficit/1800.0, 2.5)
+			attackProb *= multiplier
+		}
+		if attackProb > 0.90 {
+			attackProb = 0.90
+		}
+
+		if attackProb > 0 && rng.Float64() < attackProb {
+			return ActionAttack
+		}
+	}
+
+	// ------------------------------------------------------------------
+	// Phase and objective-based decisions (sprinters, team strategy).
+	// ------------------------------------------------------------------
 	if state != nil {
 		if state.Phase == PhaseFinal && rs.TeamRole == RoleSprinter {
 			return ActionChase
 		}
-		if state.HasBreakaway && (state.BreakawayGap > 20 || state.BreakawayHasDangerous) && state.Phase != PhaseEarly {
-			return ActionChase
+		// Generic breakaway chase — applies everywhere, including non-leaders
+		// and leaders on flat/rolling terrain (mountain leaders already evaluated above).
+		isLeaderOnMountain := rs.TeamRole == RoleLeader && state.Segment != nil && state.Segment.GradientPct > 4.0
+		if !isLeaderOnMountain {
+			if state.HasBreakaway && (state.BreakawayGap > 20 || state.BreakawayHasDangerous) && state.Phase != PhaseEarly {
+				return ActionChase
+			}
 		}
 		if strategy != nil {
 			switch strategy.PrimaryObjective {
@@ -215,28 +289,19 @@ func DecideAction(rs *RiderState, state *RaceState, hasLeader bool, rng *rand.Ra
 		}
 	}
 
-	if state != nil && state.Segment != nil && state.Segment.GradientPct > 4.0 && rs.TeamRole == RoleLeader {
-		if state.IsStageRace {
-			// In stage races, top GC favorites generally don't attack every climb for the stage.
-			isFavorite := state.Rival.DangerousRiders[rs.Rider.ID]
-			if isFavorite {
-				// Only attack late, on steep terrain, and only sometimes.
-				if state.KmRemaining < 8 && state.Segment.GradientPct > 6.0 && wFrac > 0.45 && rng.Float64() < 0.03 {
-					return ActionAttack
-				}
-			} else {
-				// Non-favorite leaders are more likely to hunt stages in the mountains.
-				if state.KmRemaining < 18 && wFrac > 0.35 && rng.Float64() < 0.10 {
-					return ActionAttack
-				}
-			}
-		} else {
-			if rng.Float64() < 0.08 && wFrac > 0.35 {
-				return ActionAttack
-			}
+	// ------------------------------------------------------------------
+	// One-day race mountain attacks (simpler: no GC mindset needed).
+	// ------------------------------------------------------------------
+	if state != nil && state.Segment != nil &&
+		state.Segment.GradientPct > 4.0 && rs.TeamRole == RoleLeader && !state.IsStageRace {
+		if rng.Float64() < 0.08 && wFrac > 0.35 {
+			return ActionAttack
 		}
 	}
 
+	// ------------------------------------------------------------------
+	// Generic breakaway attempt (all riders, via tactical awareness roll).
+	// ------------------------------------------------------------------
 	if state != nil && state.Segment != nil {
 		if BreakawayAttemptWithParams(rs, state.Segment, state.KmRemaining, rng, hasLeader, localParams) {
 			return ActionAttack

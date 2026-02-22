@@ -218,6 +218,7 @@ func SimulateRoadRaceWithProgress(config RaceConfig, onProgress func(ProgressSna
 	tacticsParams := DefaultTacticsParams()
 	raceState := NewRaceState(states, rng, config.Race != nil && model.IsStageRaceStageName(config.Race.Name))
 	raceState.Overrides = config.ActionOverrides
+	raceState.GCGaps = config.GCGaps
 	eventIndex := 0
 	routeProfile := buildRouteProfile(config.Course)
 
@@ -419,12 +420,28 @@ func SimulateStageRaceWithProgress(stageRace *model.StageRace, stages []StageCon
 			}
 		}
 
+		// Compute GC gaps (seconds behind leader) so tactics can adapt to race situation.
+		var gcGaps map[int64]float64
+		if len(gcTimes) > 0 {
+			leaderTime := math.MaxFloat64
+			for _, t := range gcTimes {
+				if t < leaderTime {
+					leaderTime = t
+				}
+			}
+			gcGaps = make(map[int64]float64, len(gcTimes))
+			for id, t := range gcTimes {
+				gcGaps[id] = t - leaderTime
+			}
+		}
+
 		config := RaceConfig{
 			Race:            stage.Race,
 			Course:          stage.Course,
 			Riders:          adjustedRiders,
 			Seed:            rng.Int63(),
 			ActionOverrides: overrides,
+			GCGaps:          gcGaps,
 		}
 
 		var results []model.RaceResult

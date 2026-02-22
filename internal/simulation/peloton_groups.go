@@ -82,6 +82,17 @@ func FormGroups(riders []*RiderState, segment *model.Segment, isTT bool, remaini
 			}
 		}
 
+		// Domestique sacrifice: when the team leader is in this group and we're
+		// climbing (or in the final km), domestiques push 4% harder to pace for
+		// their leader. This raises group speed and costs the domestique W'.
+		if rs.TeamRole == RoleDomestique && leaderTeams[rs.Rider.Team] &&
+			action != ActionConserve {
+			if segment.GradientPct > 3.0 ||
+				(state != nil && state.Phase == PhaseFinal && segment.GradientPct > -1.0) {
+				power *= 1.04
+			}
+		}
+
 		// W' depletion limits power
 		if rs.WPrime.FractionRemaining() < 0.1 {
 			// Can't sustain above FTP when W' is very low

@@ -16,6 +16,9 @@ type RaceConfig struct {
 	Seed             int64 // random seed for reproducibility (0 = random)
 	IncidentsEnabled bool  // enable crashes/punctures simulation
 	ActionOverrides  ActionOverrideProvider
+	// GCGaps maps rider ID → cumulative GC deficit in seconds vs. the current leader.
+	// Set by the stage race runner before each stage. Nil for standalone races.
+	GCGaps           map[int64]float64
 }
 
 // SimulateRoadRace runs a complete road race simulation and returns results.

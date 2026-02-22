@@ -65,7 +65,7 @@ type RaceState struct {
 	Overrides             ActionOverrideProvider
 	// GCGaps maps rider ID → cumulative GC deficit in seconds vs. leader (0 = race leader).
 	// Populated at the start of each stage race stage. Nil for one-day races.
-	GCGaps                map[int64]float64
+	GCGaps map[int64]float64
 }
 
 type TacticsParams struct {

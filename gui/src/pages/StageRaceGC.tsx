@@ -2,24 +2,8 @@ import { useParams, Link } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import * as App from '../../wailsjs/go/main/App'
 import { main } from '../../wailsjs/go/models'
+import { formatTime, formatGap } from '../utils/format'
 import './Results.css'
-
-function formatTime(seconds: number): string {
-  const h = Math.floor(seconds / 3600)
-  const m = Math.floor((seconds % 3600) / 60)
-  const s = Math.floor(seconds % 60)
-  return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
-}
-
-function formatGap(seconds: number): string {
-  if (seconds === 0) return '—'
-  const m = Math.floor(seconds / 60)
-  const s = Math.floor(seconds % 60)
-  if (m > 0) {
-    return `+${m}:${s.toString().padStart(2, '0')}`
-  }
-  return `+${s}s`
-}
 
 function StageRaceGC() {
   const { stageRaceId } = useParams()
@@ -97,7 +81,7 @@ function StageRaceGC() {
   const top3 = standings.slice(0, 3)
 
   return (
-    <div className="results">
+    <div className="results page-enter">
       <header className="results-header">
         <h1>{stageRace?.name || 'Stage Race'}</h1>
         <p>General Classification - Final</p>

@@ -48,7 +48,7 @@ function RaceSetup() {
   const teams = Array.from(new Set(startList.map((r) => r.team))).sort()
 
   return (
-    <div className="race-setup">
+    <div className="race-setup page-enter">
       <header className="setup-header">
         <h1>Race Setup: {race?.name || raceId}</h1>
         <p>Configure simulation parameters</p>

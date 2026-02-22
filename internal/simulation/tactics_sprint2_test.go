@@ -106,7 +106,7 @@ func TestGCDeficitBoostsAttackProbability(t *testing.T) {
 	r1RS := &RiderState{Rider: &rival1, WPrime: NewWPrimeState(&rival1), FormFactor: 1.0, EffectiveFTP: rival1.FTPWatts, TeamRole: RoleLeader}
 	rivals := []*RiderState{r1RS}
 
-	rsDose, stateDose := makeLeaderState(1, 0, rivals)   // leads the race
+	rsDose, stateDose := makeLeaderState(1, 0, rivals)          // leads the race
 	rsDeficit, stateDeficit := makeLeaderState(2, 1200, rivals) // 20 minutes down
 
 	n := 10000

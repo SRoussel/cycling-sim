@@ -63,7 +63,7 @@ function Settings() {
   }
 
   return (
-    <div className="settings">
+    <div className="settings page-enter">
       <header className="settings-header">
         <h1>Settings</h1>
         <p>Configure simulation parameters and manage data</p>
@@ -161,7 +161,7 @@ function Settings() {
         <h2>Backend Status</h2>
         <div className="api-status">
           <span className="status-indicator online"></span>
-          <span>Wails backend connected</span>
+          <span>Simulation engine active</span>
         </div>
       </section>
     </div>

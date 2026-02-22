@@ -6,7 +6,7 @@ function Layout() {
     <div className="layout">
       <nav className="navbar">
         <div className="nav-brand">
-          <span className="brand-icon" aria-hidden="true">CS</span>
+          <span className="brand-icon" aria-hidden="true">&#x25B2;</span>
           <span className="brand-text">Cycling Sim</span>
         </div>
         <ul className="nav-links">

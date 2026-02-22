@@ -2,24 +2,8 @@ import { useParams, Link, useLocation, useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import * as App from '../../wailsjs/go/main/App'
 import { main } from '../../wailsjs/go/models'
+import { formatTime, formatGap } from '../utils/format'
 import './Results.css'
-
-function formatTime(seconds: number): string {
-  const h = Math.floor(seconds / 3600)
-  const m = Math.floor((seconds % 3600) / 60)
-  const s = Math.floor(seconds % 60)
-  return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
-}
-
-function formatGap(seconds: number): string {
-  if (seconds === 0) return '—'
-  const m = Math.floor(seconds / 60)
-  const s = Math.floor(seconds % 60)
-  if (m > 0) {
-    return `+${m}:${s.toString().padStart(2, '0')}`
-  }
-  return `+${s}s`
-}
 
 function Results() {
   const { raceId } = useParams()

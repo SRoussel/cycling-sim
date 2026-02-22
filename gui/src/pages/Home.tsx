@@ -134,7 +134,7 @@ function Home() {
             <button className="primary">Run Validation Tests</button>
           </Link>
           <Link to="/settings">
-            <button className="secondary">Manage Riders</button>
+            <button className="secondary">Settings</button>
           </Link>
         </div>
       </section>

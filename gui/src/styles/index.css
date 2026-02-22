@@ -24,6 +24,7 @@
   --color-vuelta: #e63946;
   --color-stage: #d9c76a;
   --shadow-soft: 0 16px 32px rgba(0, 0, 0, 0.35);
+  --font-numeric: 'Source Serif 4', serif;
 }
 
 body {
@@ -184,3 +185,47 @@ th {
   background-color: var(--color-stage);
   color: #2a2414;
 }
+
+/* ─── Scrollbar ─────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-bg);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-secondary);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #2e3d52;
+}
+
+/* ─── Error / empty states ──────────────────────────── */
+.error-message {
+  text-align: center;
+  padding: 3rem 2rem;
+  color: var(--color-text-muted);
+}
+
+.error-message h2 {
+  font-size: 1.5rem;
+  margin-bottom: 0.75rem;
+  color: var(--color-text);
+}
+
+.error-message p {
+  margin-bottom: 1.5rem;
+}
+
+/* ─── Numeric values (override with font-numeric) ───── */
+.stat-val, .time-val, .gap-val {
+  font-family: var(--font-numeric);
+}
+
+/* ─── Responsive layout padding ─────────────────────── */
+/* Main content responsiveness is handled in Layout.css */

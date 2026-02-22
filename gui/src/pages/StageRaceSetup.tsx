@@ -70,7 +70,7 @@ function StageRaceSetup() {
   }
 
   return (
-    <div className="race-setup">
+    <div className="race-setup page-enter">
       <header className="setup-header">
         <h1>{stageRace.name}</h1>
       </header>

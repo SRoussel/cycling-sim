@@ -6,6 +6,8 @@ export function ClearDatabase():Promise<string>;
 
 export function GetCourses():Promise<Array<main.CourseInfo>>;
 
+export function GetFCFetchedSummary():Promise<Array<main.FCFetchSummary>>;
+
 export function GetGCStandings(arg1:number,arg2:number):Promise<Array<main.GCStanding>>;
 
 export function GetMountainsStandings(arg1:number,arg2:number):Promise<Array<main.MountainsStanding>>;

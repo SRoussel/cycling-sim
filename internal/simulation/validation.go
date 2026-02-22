@@ -10,11 +10,14 @@ import (
 
 // ValidationSummary captures a quick validation result for the UI.
 type ValidationSummary struct {
-	Name          string
-	Passed        bool
-	Correlation   float64
-	Top10Accuracy float64
-	Details       string
+	Name                 string
+	Passed               bool
+	Correlation          float64
+	Top10Accuracy        float64
+	MeanTimeGapErrorSecs float64 // MAE of time gaps for matched riders (0 if N/A)
+	MatchedRiders        int     // number of riders matched between reference and internal DB
+	IsRealRace           bool    // true when backed by real FirstCycling reference data
+	Details              string
 }
 
 // RunValidationSuite runs lightweight validation checks for the UI.

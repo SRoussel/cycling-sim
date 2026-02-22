@@ -309,19 +309,45 @@ export namespace main {
 	    passed: boolean;
 	    correlation: number;
 	    top10Accuracy: number;
+	    timeGapMAE: number;
+	    matchedRiders: number;
+	    isRealRace: boolean;
 	    details: string;
-	
+
 	    static createFrom(source: any = {}) {
 	        return new ValidationResult(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.testName = source["testName"];
 	        this.passed = source["passed"];
 	        this.correlation = source["correlation"];
 	        this.top10Accuracy = source["top10Accuracy"];
+	        this.timeGapMAE = source["timeGapMAE"];
+	        this.matchedRiders = source["matchedRiders"];
+	        this.isRealRace = source["isRealRace"];
 	        this.details = source["details"];
+	    }
+	}
+	export class FCFetchSummary {
+	    fcRaceID: number;
+	    year: number;
+	    stage: number;
+	    resultCount: number;
+	    fetchedAt: string;
+
+	    static createFrom(source: any = {}) {
+	        return new FCFetchSummary(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.fcRaceID = source["fcRaceID"];
+	        this.year = source["year"];
+	        this.stage = source["stage"];
+	        this.resultCount = source["resultCount"];
+	        this.fetchedAt = source["fetchedAt"];
 	    }
 	}
 	export class YouthStanding {

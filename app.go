@@ -213,11 +213,23 @@ type YouthStanding struct {
 
 // ValidationResult holds test validation results
 type ValidationResult struct {
-	TestName    string  `json:"testName"`
-	Passed      bool    `json:"passed"`
-	Correlation float64 `json:"correlation"`
-	Top10Acc    float64 `json:"top10Accuracy"`
-	Details     string  `json:"details"`
+	TestName      string  `json:"testName"`
+	Passed        bool    `json:"passed"`
+	Correlation   float64 `json:"correlation"`
+	Top10Acc      float64 `json:"top10Accuracy"`
+	TimeGapMAE    float64 `json:"timeGapMAE"`    // mean absolute time-gap error vs FC reference (seconds)
+	MatchedRiders int     `json:"matchedRiders"` // riders matched between FC reference and internal DB
+	IsRealRace    bool    `json:"isRealRace"`    // true for FC-backed cases
+	Details       string  `json:"details"`
+}
+
+// FCFetchSummary describes one batch of FC data stored in the database.
+type FCFetchSummary struct {
+	FCRaceID    int    `json:"fcRaceID"`
+	Year        int    `json:"year"`
+	Stage       int    `json:"stage"`
+	ResultCount int    `json:"resultCount"`
+	FetchedAt   string `json:"fetchedAt"`
 }
 
 // GetRiders returns all riders from the database
@@ -642,20 +654,49 @@ func (a *App) IsDatabaseSeeded() bool {
 	return len(riders) > 0
 }
 
-// RunValidation runs validation tests
+// RunValidation runs synthetic + real-race (FirstCycling) validation tests.
+// Synthetic cases are always run. FC cases run only if FC data has been fetched.
 func (a *App) RunValidation() []ValidationResult {
-	results := simulation.RunValidationSuite()
-	output := make([]ValidationResult, len(results))
-	for i, r := range results {
+	synthetic := simulation.RunValidationSuite()
+	fcCases := simulation.RunFCValidationSuite(a.db)
+
+	all := append(synthetic, fcCases...)
+	output := make([]ValidationResult, len(all))
+	for i, r := range all {
 		output[i] = ValidationResult{
-			TestName:    r.Name,
-			Passed:      r.Passed,
-			Correlation: r.Correlation,
-			Top10Acc:    r.Top10Accuracy,
-			Details:     r.Details,
+			TestName:      r.Name,
+			Passed:        r.Passed,
+			Correlation:   r.Correlation,
+			Top10Acc:      r.Top10Accuracy,
+			TimeGapMAE:    r.MeanTimeGapErrorSecs,
+			MatchedRiders: r.MatchedRiders,
+			IsRealRace:    r.IsRealRace,
+			Details:       r.Details,
 		}
 	}
 	return output
+}
+
+// GetFCFetchedSummary returns metadata for all FC race result batches stored in the DB.
+func (a *App) GetFCFetchedSummary() []FCFetchSummary {
+	if a.db == nil {
+		return nil
+	}
+	summaries, err := a.db.ListFCFetched()
+	if err != nil {
+		return nil
+	}
+	out := make([]FCFetchSummary, len(summaries))
+	for i, s := range summaries {
+		out[i] = FCFetchSummary{
+			FCRaceID:    s.FCRaceID,
+			Year:        s.Year,
+			Stage:       s.Stage,
+			ResultCount: s.ResultCount,
+			FetchedAt:   s.FetchedAt,
+		}
+	}
+	return out
 }
 
 // GetSimulationParams returns current simulation parameters

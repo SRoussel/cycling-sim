@@ -41,10 +41,10 @@ type ActionOverrideProvider interface {
 }
 
 type TeamState struct {
-	SprintTrainOrder []int64
-	FollowMap        map[int64]*int64
-	SprintTrainPhase string
-	LaunchingRiderID *int64
+	SprintTrainOrder []int64          `json:"sprintTrainOrder"`
+	FollowMap        map[int64]*int64 `json:"followMap"`
+	SprintTrainPhase string           `json:"sprintTrainPhase"`
+	LaunchingRiderID *int64           `json:"launchingRiderId,omitempty"`
 }
 
 type RaceState struct {

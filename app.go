@@ -138,133 +138,44 @@ type ProgressGroup struct {
 	Riders []string `json:"riders"`
 }
 
-// RiderTelemetryPoint represents realtime telemetry for a rider.
-type RiderTelemetryPoint struct {
-	SpeedKph   float64 `json:"speedKph"`
-	PowerWatts float64 `json:"powerWatts"`
-	EffortPct  float64 `json:"effortPct"`
-	FatiguePct float64 `json:"fatiguePct"`
-	WPrimePct  float64 `json:"wPrimePct"`
-	RouteKm    float64 `json:"routeKm"`
-	RoutePct   float64 `json:"routePct"`
-}
-
-// ProfilePoint represents one sampled point on the route profile.
-type ProfilePoint struct {
-	Km   float64 `json:"km"`
-	Elev float64 `json:"elev"`
-}
-
-// RouteProfile represents a route elevation profile for live rendering.
-type RouteProfile struct {
-	TotalKm float64        `json:"totalKm"`
-	Points  []ProfilePoint `json:"points"`
-}
-
-// TeamState represents current controllable team tactical mode.
-type TeamState struct {
-	SprintTrainOrder []int64          `json:"sprintTrainOrder"`
-	FollowMap        map[int64]*int64 `json:"followMap"`
-	SprintTrainPhase string           `json:"sprintTrainPhase"`
-	LaunchingRiderID *int64           `json:"launchingRiderId,omitempty"`
-}
-
-func mapTelemetry(in map[int64]simulation.RiderTelemetryPoint) map[int64]RiderTelemetryPoint {
-	if len(in) == 0 {
-		return nil
-	}
-	out := make(map[int64]RiderTelemetryPoint, len(in))
-	for riderID, point := range in {
-		out[riderID] = RiderTelemetryPoint{
-			SpeedKph:   point.SpeedKph,
-			PowerWatts: point.PowerWatts,
-			EffortPct:  point.EffortPct,
-			FatiguePct: point.FatiguePct,
-			WPrimePct:  point.WPrimePct,
-			RouteKm:    point.RouteKm,
-			RoutePct:   point.RoutePct,
-		}
-	}
-	return out
-}
-
-func mapRouteProfile(in *simulation.RouteProfile) *RouteProfile {
-	if in == nil {
-		return nil
-	}
-	points := make([]ProfilePoint, len(in.Points))
-	for i, p := range in.Points {
-		points[i] = ProfilePoint{Km: p.Km, Elev: p.Elev}
-	}
-	return &RouteProfile{TotalKm: in.TotalKm, Points: points}
-}
-
-func mapTeamState(in *simulation.TeamState) *TeamState {
-	if in == nil {
-		return nil
-	}
-	order := make([]int64, len(in.SprintTrainOrder))
-	copy(order, in.SprintTrainOrder)
-	follow := make(map[int64]*int64, len(in.FollowMap))
-	for riderID, followID := range in.FollowMap {
-		if followID == nil {
-			follow[riderID] = nil
-			continue
-		}
-		id := *followID
-		follow[riderID] = &id
-	}
-	var launching *int64
-	if in.LaunchingRiderID != nil {
-		id := *in.LaunchingRiderID
-		launching = &id
-	}
-	return &TeamState{
-		SprintTrainOrder: order,
-		FollowMap:        follow,
-		SprintTrainPhase: in.SprintTrainPhase,
-		LaunchingRiderID: launching,
-	}
-}
-
 // SimulationProgress is emitted during a race simulation.
 type SimulationProgress struct {
-	SessionID      string                        `json:"sessionId,omitempty"`
-	RaceID         int64                         `json:"raceId"`
-	KmCovered      float64                       `json:"kmCovered"`
-	KmTotal        float64                       `json:"kmTotal"`
-	ElapsedTime    float64                       `json:"elapsedTime"`
-	ProgressPct    float64                       `json:"progress"`
-	SegmentName    string                        `json:"segmentName"`
-	Groups         []ProgressGroup               `json:"groups"`
-	RiderGroups    map[int64]string              `json:"riderGroups,omitempty"`
-	RiderTelemetry map[int64]RiderTelemetryPoint `json:"riderTelemetry,omitempty"`
-	Profile        *RouteProfile                 `json:"profile,omitempty"`
-	TeamState      *TeamState                    `json:"teamState,omitempty"`
-	Events         []string                      `json:"events"`
+	SessionID      string                                   `json:"sessionId,omitempty"`
+	RaceID         int64                                    `json:"raceId"`
+	KmCovered      float64                                  `json:"kmCovered"`
+	KmTotal        float64                                  `json:"kmTotal"`
+	ElapsedTime    float64                                  `json:"elapsedTime"`
+	ProgressPct    float64                                  `json:"progress"`
+	SegmentName    string                                   `json:"segmentName"`
+	Groups         []ProgressGroup                          `json:"groups"`
+	RiderGroups    map[int64]string                         `json:"riderGroups,omitempty"`
+	RiderTelemetry map[int64]simulation.RiderTelemetryPoint `json:"riderTelemetry,omitempty"`
+	Profile        *simulation.RouteProfile                 `json:"profile,omitempty"`
+	TeamState      *simulation.TeamState                    `json:"teamState,omitempty"`
+	Events         []string                                 `json:"events"`
 }
 
 // StageRaceProgress is emitted during a stage race simulation.
 type StageRaceProgress struct {
-	SessionID       string                        `json:"sessionId,omitempty"`
-	StageRaceID     int64                         `json:"stageRaceId"`
-	StageNumber     int                           `json:"stageNumber"`
-	StageCount      int                           `json:"stageCount"`
-	StageName       string                        `json:"stageName"`
-	StageKm         float64                       `json:"stageKm"`
-	StageKmTotal    float64                       `json:"stageKmTotal"`
-	StageElapsed    float64                       `json:"stageElapsed"`
-	OverallKm       float64                       `json:"overallKm"`
-	OverallKmTotal  float64                       `json:"overallKmTotal"`
-	OverallElapsed  float64                       `json:"overallElapsed"`
-	ProgressStage   float64                       `json:"progressStage"`
-	ProgressOverall float64                       `json:"progressOverall"`
-	Groups          []ProgressGroup               `json:"groups"`
-	RiderGroups     map[int64]string              `json:"riderGroups,omitempty"`
-	RiderTelemetry  map[int64]RiderTelemetryPoint `json:"riderTelemetry,omitempty"`
-	Profile         *RouteProfile                 `json:"profile,omitempty"`
-	TeamState       *TeamState                    `json:"teamState,omitempty"`
-	Events          []string                      `json:"events"`
+	SessionID       string                                   `json:"sessionId,omitempty"`
+	StageRaceID     int64                                    `json:"stageRaceId"`
+	StageNumber     int                                      `json:"stageNumber"`
+	StageCount      int                                      `json:"stageCount"`
+	StageName       string                                   `json:"stageName"`
+	StageKm         float64                                  `json:"stageKm"`
+	StageKmTotal    float64                                  `json:"stageKmTotal"`
+	StageElapsed    float64                                  `json:"stageElapsed"`
+	OverallKm       float64                                  `json:"overallKm"`
+	OverallKmTotal  float64                                  `json:"overallKmTotal"`
+	OverallElapsed  float64                                  `json:"overallElapsed"`
+	ProgressStage   float64                                  `json:"progressStage"`
+	ProgressOverall float64                                  `json:"progressOverall"`
+	Groups          []ProgressGroup                          `json:"groups"`
+	RiderGroups     map[int64]string                         `json:"riderGroups,omitempty"`
+	RiderTelemetry  map[int64]simulation.RiderTelemetryPoint `json:"riderTelemetry,omitempty"`
+	Profile         *simulation.RouteProfile                 `json:"profile,omitempty"`
+	TeamState       *simulation.TeamState                    `json:"teamState,omitempty"`
+	Events          []string                                 `json:"events"`
 }
 
 // GCStanding holds GC standings
@@ -320,21 +231,7 @@ func (a *App) GetRiders() []RiderInfo {
 	}
 	result := make([]RiderInfo, len(riders))
 	for i, r := range riders {
-		result[i] = RiderInfo{
-			ID:          r.ID,
-			Name:        r.Name,
-			Team:        r.Team,
-			Nationality: r.Nationality,
-			Weight:      r.WeightKg,
-			FTP:         r.FTPWatts,
-			Sprint:      r.SprintAbility,
-			Climbing:    r.ClimbingAbility,
-			TT:          r.TTAbility,
-			Descending:  r.DescendingAbility,
-			Endurance:   r.Endurance,
-			Handling:    r.Handling,
-			Recovery:    r.Recovery,
-		}
+		result[i] = riderToInfo(r)
 	}
 	return result
 }
@@ -374,7 +271,7 @@ func (a *App) GetRaces() []RaceInfo {
 	// Filter out stage race stages (names starting with TdF, Giro, Vuelta, etc.)
 	var oneDayRaces []RaceInfo
 	for _, r := range races {
-		if isStageRaceStage(r.Name) {
+		if model.IsStageRaceStageName(r.Name) {
 			continue
 		}
 		course, _ := a.db.GetCourse(r.CourseID)
@@ -471,81 +368,24 @@ func (a *App) RunSimulation(raceID int64, enableIncidents bool) RaceResults {
 	if a.db == nil {
 		return RaceResults{}
 	}
-
-	race, err := a.db.GetRace(raceID)
+	raceConfig, selected, err := a.loadRaceConfig(raceID, enableIncidents, nil)
 	if err != nil {
 		return raceResultsError(err)
 	}
 
-	course, err := a.db.GetCourse(race.CourseID)
-	if err != nil {
-		return raceResultsError(err)
-	}
-
-	riders, err := a.db.ListRiders()
-	if err != nil {
-		return raceResultsError(err)
-	}
-
-	// Select riders for the race
-	config := selection.DefaultConfig(race.RaceType, false, 0)
-	selected := selection.SelectStartList(riders, course, race, config)
-
-	// Run simulation
-	raceConfig := simulation.RaceConfig{
-		Race:             race,
-		Course:           course,
-		Riders:           selected,
-		Seed:             0,
-		IncidentsEnabled: enableIncidents,
-	}
 	var simResults []model.RaceResult
-	if race.RaceType == model.RaceTypeTT {
+	if raceConfig.Race.RaceType == model.RaceTypeTT {
 		simResults = simulation.SimulateTT(raceConfig)
 	} else {
-		progressCallback := func(snapshot simulation.ProgressSnapshot) {
-			if a.ctx == nil {
-				return
-			}
-			progressPct := 0.0
-			if snapshot.KmTotal > 0 {
-				progressPct = snapshot.KmCovered / snapshot.KmTotal * 100
-			}
-			groups := make([]ProgressGroup, len(snapshot.Groups))
-			for i, g := range snapshot.Groups {
-				groups[i] = ProgressGroup{
-					Name:   g.Name,
-					Gap:    g.GapSeconds,
-					Riders: g.Riders,
-				}
-			}
-			runtime.EventsEmit(a.ctx, "simulation_progress", SimulationProgress{
-				RaceID:         raceID,
-				KmCovered:      snapshot.KmCovered,
-				KmTotal:        snapshot.KmTotal,
-				ElapsedTime:    snapshot.ElapsedTime,
-				ProgressPct:    progressPct,
-				SegmentName:    snapshot.SegmentName,
-				Groups:         groups,
-				RiderGroups:    snapshot.RiderGroups,
-				RiderTelemetry: mapTelemetry(snapshot.RiderTelemetry),
-				Profile:        mapRouteProfile(snapshot.RouteProfile),
-				TeamState:      mapTeamState(snapshot.TeamState),
-				Events:         snapshot.Events,
-			})
-		}
-		simResults = simulation.SimulateRoadRaceWithProgress(raceConfig, progressCallback)
+		simResults = simulation.SimulateRoadRaceWithProgress(raceConfig, a.makeRaceProgressCallback(raceID, "", nil))
 	}
+
 	riderMap := buildRiderMap(selected)
-	results := mapSimulationResults(simResults, riderMap)
-
-	// Store results
-	a.db.SaveRaceResults(simResults)
-
+	_ = a.db.SaveRaceResults(simResults)
 	return RaceResults{
 		RaceID:   raceID,
-		RaceName: race.Name,
-		Results:  results,
+		RaceName: raceConfig.Race.Name,
+		Results:  mapSimulationResults(simResults, riderMap),
 	}
 }
 
@@ -554,103 +394,37 @@ func (a *App) RunStageRace(stageRaceID int64) []RaceResults {
 	if a.db == nil {
 		return nil
 	}
-
 	sr, err := a.db.GetStageRace(stageRaceID)
 	if err != nil {
 		return nil
 	}
-	if err := a.db.ClearGCStandings(stageRaceID); err != nil {
+	if err := a.clearStageRaceData(stageRaceID); err != nil {
 		return nil
 	}
-	_ = a.db.ClearPointsStandings(stageRaceID)
-	_ = a.db.ClearMountainsStandings(stageRaceID)
-	_ = a.db.ClearYouthStandings(stageRaceID)
-
 	allRiders, err := a.db.ListRiders()
 	if err != nil {
 		return nil
 	}
-
-	var stages []simulation.StageConfig
-	var stageInfos []selection.StageInfo
-	for _, s := range sr.Stages {
-		race, err := a.db.GetRace(s.RaceID)
-		if err != nil {
-			return nil
-		}
-		if err := a.db.ClearRaceResults(race.ID); err != nil {
-			return nil
-		}
-		course, err := a.db.GetCourse(race.CourseID)
-		if err != nil {
-			return nil
-		}
-		stages = append(stages, simulation.StageConfig{
-			Race:          race,
-			Course:        course,
-			StageNumber:   s.StageNumber,
-			RestDayBefore: s.RestDayBefore,
-		})
-		stageInfos = append(stageInfos, selection.StageInfo{Course: course, RaceType: race.RaceType})
+	stages, stageInfos, err := a.buildStageConfigs(sr, true)
+	if err != nil {
+		return nil
 	}
-
 	selConfig := selection.DefaultConfig(model.RaceTypeRoad, true, len(stages))
 	selected := selection.SelectStageRaceStartList(allRiders, stageInfos, selConfig)
 	if len(selected) == 0 {
 		return nil
 	}
 
-	stageCount := len(stages)
-	progressCallback := func(snapshot simulation.StageProgressSnapshot) {
-		if a.ctx == nil {
-			return
-		}
-		progressStage := 0.0
-		if snapshot.StageKmTotal > 0 {
-			progressStage = snapshot.StageKmCovered / snapshot.StageKmTotal * 100
-		}
-		progressOverall := 0.0
-		if snapshot.OverallKmTotal > 0 {
-			progressOverall = snapshot.OverallKmCovered / snapshot.OverallKmTotal * 100
-		}
-		groups := make([]ProgressGroup, len(snapshot.Groups))
-		for i, g := range snapshot.Groups {
-			groups[i] = ProgressGroup{
-				Name:   g.Name,
-				Gap:    g.GapSeconds,
-				Riders: g.Riders,
-			}
-		}
-		runtime.EventsEmit(a.ctx, "stage_race_progress", StageRaceProgress{
-			StageRaceID:     stageRaceID,
-			StageNumber:     snapshot.StageNumber,
-			StageCount:      stageCount,
-			StageName:       snapshot.StageName,
-			StageKm:         snapshot.StageKmCovered,
-			StageKmTotal:    snapshot.StageKmTotal,
-			StageElapsed:    snapshot.StageElapsedTime,
-			OverallKm:       snapshot.OverallKmCovered,
-			OverallKmTotal:  snapshot.OverallKmTotal,
-			OverallElapsed:  snapshot.OverallElapsed,
-			ProgressStage:   progressStage,
-			ProgressOverall: progressOverall,
-			Groups:          groups,
-			RiderGroups:     snapshot.RiderGroups,
-			RiderTelemetry:  mapTelemetry(snapshot.RiderTelemetry),
-			Profile:         mapRouteProfile(snapshot.RouteProfile),
-			TeamState:       mapTeamState(snapshot.TeamState),
-			Events:          snapshot.Events,
-		})
-	}
-
-	allResults, allStandings := simulation.SimulateStageRaceWithProgress(sr, stages, selected, 0, progressCallback, nil)
+	allResults, allStandings := simulation.SimulateStageRaceWithProgress(
+		sr, stages, selected, 0,
+		a.makeStageRaceProgressCallback(stageRaceID, len(stages), "", nil), nil)
 	pointsByStage, komByStage, youthByStage := simulation.ComputeStageRaceCompetitions(sr.ID, stages, selected, allResults)
+	a.saveStageRaceData(stages, allResults, allStandings, pointsByStage, komByStage, youthByStage)
 
 	riderMap := buildRiderMap(selected)
 	finalResults := make([]RaceResults, 0, len(allResults))
 	for i, results := range allResults {
 		if i < len(stages) {
-			_ = a.db.SaveRaceResults(results)
 			finalResults = append(finalResults, RaceResults{
 				RaceID:   stages[i].Race.ID,
 				RaceName: stages[i].Race.Name,
@@ -658,20 +432,6 @@ func (a *App) RunStageRace(stageRaceID int64) []RaceResults {
 			})
 		}
 	}
-
-	for _, standings := range allStandings {
-		_ = a.db.SaveGCStandings(standings)
-	}
-	for _, ps := range pointsByStage {
-		_ = a.db.SavePointsStandings(ps)
-	}
-	for _, ks := range komByStage {
-		_ = a.db.SaveMountainsStandings(ks)
-	}
-	for _, ys := range youthByStage {
-		_ = a.db.SaveYouthStandings(ys)
-	}
-
 	return finalResults
 }
 
@@ -915,6 +675,195 @@ func (a *App) SaveSimulationParams(params SimParams) error {
 
 // Helper functions
 
+// riderToInfo converts a model.Rider to the frontend-facing RiderInfo DTO.
+func riderToInfo(r model.Rider) RiderInfo {
+	return RiderInfo{
+		ID:          r.ID,
+		Name:        r.Name,
+		Team:        r.Team,
+		Nationality: r.Nationality,
+		Weight:      r.WeightKg,
+		FTP:         r.FTPWatts,
+		Sprint:      r.SprintAbility,
+		Climbing:    r.ClimbingAbility,
+		TT:          r.TTAbility,
+		Descending:  r.DescendingAbility,
+		Endurance:   r.Endurance,
+		Handling:    r.Handling,
+		Recovery:    r.Recovery,
+	}
+}
+
+// makeRaceProgressCallback returns a progress callback for a single-race simulation.
+// sessionID is included in the emitted event (empty for non-interactive runs).
+// If pace is non-nil it is called after each update (for interactive sessions).
+func (a *App) makeRaceProgressCallback(raceID int64, sessionID string, pace func()) func(simulation.ProgressSnapshot) {
+	return func(snapshot simulation.ProgressSnapshot) {
+		if a.ctx == nil {
+			return
+		}
+		progressPct := 0.0
+		if snapshot.KmTotal > 0 {
+			progressPct = snapshot.KmCovered / snapshot.KmTotal * 100
+		}
+		groups := make([]ProgressGroup, len(snapshot.Groups))
+		for i, g := range snapshot.Groups {
+			groups[i] = ProgressGroup{Name: g.Name, Gap: g.GapSeconds, Riders: g.Riders}
+		}
+		runtime.EventsEmit(a.ctx, "simulation_progress", SimulationProgress{
+			SessionID:      sessionID,
+			RaceID:         raceID,
+			KmCovered:      snapshot.KmCovered,
+			KmTotal:        snapshot.KmTotal,
+			ElapsedTime:    snapshot.ElapsedTime,
+			ProgressPct:    progressPct,
+			SegmentName:    snapshot.SegmentName,
+			Groups:         groups,
+			RiderGroups:    snapshot.RiderGroups,
+			RiderTelemetry: snapshot.RiderTelemetry,
+			Profile:        snapshot.RouteProfile,
+			TeamState:      snapshot.TeamState,
+			Events:         snapshot.Events,
+		})
+		if pace != nil {
+			pace()
+		}
+	}
+}
+
+// makeStageRaceProgressCallback returns a progress callback for a stage race simulation.
+func (a *App) makeStageRaceProgressCallback(stageRaceID int64, stageCount int, sessionID string, pace func()) func(simulation.StageProgressSnapshot) {
+	return func(snapshot simulation.StageProgressSnapshot) {
+		if a.ctx == nil {
+			return
+		}
+		progressStage := 0.0
+		if snapshot.StageKmTotal > 0 {
+			progressStage = snapshot.StageKmCovered / snapshot.StageKmTotal * 100
+		}
+		progressOverall := 0.0
+		if snapshot.OverallKmTotal > 0 {
+			progressOverall = snapshot.OverallKmCovered / snapshot.OverallKmTotal * 100
+		}
+		groups := make([]ProgressGroup, len(snapshot.Groups))
+		for i, g := range snapshot.Groups {
+			groups[i] = ProgressGroup{Name: g.Name, Gap: g.GapSeconds, Riders: g.Riders}
+		}
+		runtime.EventsEmit(a.ctx, "stage_race_progress", StageRaceProgress{
+			SessionID:       sessionID,
+			StageRaceID:     stageRaceID,
+			StageNumber:     snapshot.StageNumber,
+			StageCount:      stageCount,
+			StageName:       snapshot.StageName,
+			StageKm:         snapshot.StageKmCovered,
+			StageKmTotal:    snapshot.StageKmTotal,
+			StageElapsed:    snapshot.StageElapsedTime,
+			OverallKm:       snapshot.OverallKmCovered,
+			OverallKmTotal:  snapshot.OverallKmTotal,
+			OverallElapsed:  snapshot.OverallElapsed,
+			ProgressStage:   progressStage,
+			ProgressOverall: progressOverall,
+			Groups:          groups,
+			RiderGroups:     snapshot.RiderGroups,
+			RiderTelemetry:  snapshot.RiderTelemetry,
+			Profile:         snapshot.RouteProfile,
+			TeamState:       snapshot.TeamState,
+			Events:          snapshot.Events,
+		})
+		if pace != nil {
+			pace()
+		}
+	}
+}
+
+// loadRaceConfig loads race/course/riders from DB and builds a RaceConfig ready for simulation.
+func (a *App) loadRaceConfig(raceID int64, enableIncidents bool, overrides simulation.ActionOverrideProvider) (simulation.RaceConfig, []model.Rider, error) {
+	race, err := a.db.GetRace(raceID)
+	if err != nil {
+		return simulation.RaceConfig{}, nil, err
+	}
+	course, err := a.db.GetCourse(race.CourseID)
+	if err != nil {
+		return simulation.RaceConfig{}, nil, err
+	}
+	allRiders, err := a.db.ListRiders()
+	if err != nil {
+		return simulation.RaceConfig{}, nil, err
+	}
+	cfg := selection.DefaultConfig(race.RaceType, false, 0)
+	selected := selection.SelectStartList(allRiders, course, race, cfg)
+	return simulation.RaceConfig{
+		Race:             race,
+		Course:           course,
+		Riders:           selected,
+		Seed:             0,
+		IncidentsEnabled: enableIncidents,
+		ActionOverrides:  overrides,
+	}, selected, nil
+}
+
+// buildStageConfigs builds StageConfig and StageInfo slices from a stage race.
+// If clearResults is true, existing race results for each stage are cleared first.
+func (a *App) buildStageConfigs(sr *model.StageRace, clearResults bool) ([]simulation.StageConfig, []selection.StageInfo, error) {
+	stages := make([]simulation.StageConfig, 0, len(sr.Stages))
+	stageInfos := make([]selection.StageInfo, 0, len(sr.Stages))
+	for _, s := range sr.Stages {
+		race, err := a.db.GetRace(s.RaceID)
+		if err != nil {
+			return nil, nil, err
+		}
+		if clearResults {
+			if err := a.db.ClearRaceResults(race.ID); err != nil {
+				return nil, nil, err
+			}
+		}
+		course, err := a.db.GetCourse(race.CourseID)
+		if err != nil {
+			return nil, nil, err
+		}
+		stages = append(stages, simulation.StageConfig{
+			Race:          race,
+			Course:        course,
+			StageNumber:   s.StageNumber,
+			RestDayBefore: s.RestDayBefore,
+		})
+		stageInfos = append(stageInfos, selection.StageInfo{Course: course, RaceType: race.RaceType})
+	}
+	return stages, stageInfos, nil
+}
+
+// clearStageRaceData removes all prior standings for a stage race.
+func (a *App) clearStageRaceData(stageRaceID int64) error {
+	if err := a.db.ClearGCStandings(stageRaceID); err != nil {
+		return err
+	}
+	_ = a.db.ClearPointsStandings(stageRaceID)
+	_ = a.db.ClearMountainsStandings(stageRaceID)
+	_ = a.db.ClearYouthStandings(stageRaceID)
+	return nil
+}
+
+// saveStageRaceData persists all stage race simulation outputs to the database.
+func (a *App) saveStageRaceData(stages []simulation.StageConfig, allResults [][]model.RaceResult, allStandings [][]model.GCStanding, pointsByStage [][]model.PointsStanding, komByStage [][]model.MountainsStanding, youthByStage [][]model.YouthStanding) {
+	for i, results := range allResults {
+		if i < len(stages) {
+			_ = a.db.SaveRaceResults(results)
+		}
+	}
+	for _, standings := range allStandings {
+		_ = a.db.SaveGCStandings(standings)
+	}
+	for _, ps := range pointsByStage {
+		_ = a.db.SavePointsStandings(ps)
+	}
+	for _, ks := range komByStage {
+		_ = a.db.SaveMountainsStandings(ks)
+	}
+	for _, ys := range youthByStage {
+		_ = a.db.SaveYouthStandings(ys)
+	}
+}
+
 func classifyCourse(c model.Course) string {
 	hasCobbles := false
 	totalClimbing := 0.0
@@ -937,16 +886,6 @@ func classifyCourse(c model.Course) string {
 		return "hilly"
 	}
 	return "flat"
-}
-
-func isStageRaceStage(name string) bool {
-	prefixes := []string{"TdF ", "Giro ", "Vuelta ", "Paris-Nice ", "Tirreno ", "Suisse ", "Dauphine ", "Basque ", "Romandie "}
-	for _, p := range prefixes {
-		if len(name) > len(p) && name[:len(p)] == p {
-			return true
-		}
-	}
-	return false
 }
 
 func raceResultsError(err error) RaceResults {

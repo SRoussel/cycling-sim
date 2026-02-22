@@ -15,23 +15,23 @@ type ProgressGroup struct {
 }
 
 type RiderTelemetryPoint struct {
-	SpeedKph   float64
-	PowerWatts float64
-	EffortPct  float64
-	FatiguePct float64
-	WPrimePct  float64
-	RouteKm    float64
-	RoutePct   float64
+	SpeedKph   float64 `json:"speedKph"`
+	PowerWatts float64 `json:"powerWatts"`
+	EffortPct  float64 `json:"effortPct"`
+	FatiguePct float64 `json:"fatiguePct"`
+	WPrimePct  float64 `json:"wPrimePct"`
+	RouteKm    float64 `json:"routeKm"`
+	RoutePct   float64 `json:"routePct"`
 }
 
 type ProfilePoint struct {
-	Km   float64
-	Elev float64
+	Km   float64 `json:"km"`
+	Elev float64 `json:"elev"`
 }
 
 type RouteProfile struct {
-	TotalKm float64
-	Points  []ProfilePoint
+	TotalKm float64        `json:"totalKm"`
+	Points  []ProfilePoint `json:"points"`
 }
 
 type ProgressSnapshot struct {
@@ -201,17 +201,6 @@ func interpolateRiderGroups(previous map[int64]string, current map[int64]string,
 	return cloneRiderGroups(previous)
 }
 
-func isStageRaceStageName(name string) bool {
-	// Keep in sync with frontend filtering logic; stage races use consistent prefixes.
-	prefixes := []string{"TdF ", "Giro ", "Vuelta ", "Paris-Nice ", "Tirreno ", "Suisse ", "Dauphine ", "Basque ", "Romandie "}
-	for _, p := range prefixes {
-		if len(name) > len(p) && name[:len(p)] == p {
-			return true
-		}
-	}
-	return false
-}
-
 func SimulateRoadRaceWithProgress(config RaceConfig, onProgress func(ProgressSnapshot)) []model.RaceResult {
 	rng := rngFromSeed(config.Seed)
 
@@ -227,7 +216,7 @@ func SimulateRoadRaceWithProgress(config RaceConfig, onProgress func(ProgressSna
 	}
 
 	tacticsParams := DefaultTacticsParams()
-	raceState := NewRaceState(states, rng, config.Race != nil && isStageRaceStageName(config.Race.Name))
+	raceState := NewRaceState(states, rng, config.Race != nil && model.IsStageRaceStageName(config.Race.Name))
 	raceState.Overrides = config.ActionOverrides
 	eventIndex := 0
 	routeProfile := buildRouteProfile(config.Course)

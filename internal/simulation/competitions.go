@@ -161,6 +161,31 @@ func DefaultAgeFromName(name string) int {
 	return 22 + int(h.Sum32()%15)
 }
 
+// rankEntry holds a rider's position in a points-based ranking.
+type rankEntry struct {
+	riderID int64
+	pts     int
+	gcTime  float64
+}
+
+// buildPointsRanked returns active riders sorted by points (desc), breaking ties by GC time (asc).
+func buildPointsRanked(pointsMap map[int64]int, gcTimes map[int64]float64, active map[int64]bool) []rankEntry {
+	entries := make([]rankEntry, 0, len(pointsMap))
+	for id, pts := range pointsMap {
+		if !active[id] {
+			continue
+		}
+		entries = append(entries, rankEntry{riderID: id, pts: pts, gcTime: gcTimes[id]})
+	}
+	sort.Slice(entries, func(a, b int) bool {
+		if entries[a].pts != entries[b].pts {
+			return entries[a].pts > entries[b].pts
+		}
+		return entries[a].gcTime < entries[b].gcTime
+	})
+	return entries
+}
+
 // ComputeStageRaceCompetitions builds cumulative standings after each stage.
 // This is intentionally simple: points/KOM are based on stage finish positions.
 func ComputeStageRaceCompetitions(stageRaceID int64, stages []StageConfig, riders []model.Rider, allResults [][]model.RaceResult) ([][]model.PointsStanding, [][]model.MountainsStanding, [][]model.YouthStanding) {
@@ -275,31 +300,14 @@ func ComputeStageRaceCompetitions(stageRaceID int64, stages []StageConfig, rider
 
 		// Build points standings.
 		{
-			type entry struct {
-				riderID int64
-				points  int
-				gcTime  float64
-			}
-			entries := make([]entry, 0, len(pointsByRider))
-			for id, pts := range pointsByRider {
-				if !active[id] {
-					continue
-				}
-				entries = append(entries, entry{riderID: id, points: pts, gcTime: gcTimeByRider[id]})
-			}
-			sort.Slice(entries, func(a, b int) bool {
-				if entries[a].points != entries[b].points {
-					return entries[a].points > entries[b].points
-				}
-				return entries[a].gcTime < entries[b].gcTime
-			})
-			standings := make([]model.PointsStanding, len(entries))
-			for idx, e := range entries {
+			ranked := buildPointsRanked(pointsByRider, gcTimeByRider, active)
+			standings := make([]model.PointsStanding, len(ranked))
+			for idx, e := range ranked {
 				standings[idx] = model.PointsStanding{
 					StageRaceID: stageRaceID,
 					RiderID:     e.riderID,
 					AfterStage:  afterStage,
-					Points:      e.points,
+					Points:      e.pts,
 					Position:    idx + 1,
 				}
 			}
@@ -308,31 +316,14 @@ func ComputeStageRaceCompetitions(stageRaceID int64, stages []StageConfig, rider
 
 		// Build KOM standings.
 		{
-			type entry struct {
-				riderID int64
-				points  int
-				gcTime  float64
-			}
-			entries := make([]entry, 0, len(komByRider))
-			for id, pts := range komByRider {
-				if !active[id] {
-					continue
-				}
-				entries = append(entries, entry{riderID: id, points: pts, gcTime: gcTimeByRider[id]})
-			}
-			sort.Slice(entries, func(a, b int) bool {
-				if entries[a].points != entries[b].points {
-					return entries[a].points > entries[b].points
-				}
-				return entries[a].gcTime < entries[b].gcTime
-			})
-			standings := make([]model.MountainsStanding, len(entries))
-			for idx, e := range entries {
+			ranked := buildPointsRanked(komByRider, gcTimeByRider, active)
+			standings := make([]model.MountainsStanding, len(ranked))
+			for idx, e := range ranked {
 				standings[idx] = model.MountainsStanding{
 					StageRaceID: stageRaceID,
 					RiderID:     e.riderID,
 					AfterStage:  afterStage,
-					Points:      e.points,
+					Points:      e.pts,
 					Position:    idx + 1,
 				}
 			}

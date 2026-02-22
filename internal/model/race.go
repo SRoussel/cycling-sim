@@ -69,3 +69,20 @@ type StageRaceStage struct {
 	StageNumber   int
 	RestDayBefore bool
 }
+
+// StageRaceNamePrefixes are race name prefixes that identify stages within stage races.
+// They are used to distinguish stage-race stages from standalone one-day races.
+var StageRaceNamePrefixes = []string{
+	"TdF ", "Giro ", "Vuelta ", "Paris-Nice ", "Tirreno ",
+	"Suisse ", "Dauphine ", "Basque ", "Romandie ",
+}
+
+// IsStageRaceStageName reports whether name matches a known stage-race stage prefix.
+func IsStageRaceStageName(name string) bool {
+	for _, p := range StageRaceNamePrefixes {
+		if len(name) > len(p) && name[:len(p)] == p {
+			return true
+		}
+	}
+	return false
+}

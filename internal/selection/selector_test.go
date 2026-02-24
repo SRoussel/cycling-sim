@@ -269,3 +269,42 @@ func TestStageRaceIncludesDiverseRoles(t *testing.T) {
 		}
 	}
 }
+
+// TestSprintGuaranteeIncludesBestSprinter verifies that in flatfinish sprint races
+// the top sprinter per team is always selected even if their composite score ranks outside top N.
+func TestSprintGuaranteeIncludesBestSprinter(t *testing.T) {
+	// Build a team where the pure sprinter has low endurance/climbing (low composite score)
+	var riders []model.Rider
+	// 8 all-rounders with solid endurance (score will be high composite)
+	for i := 0; i < 8; i++ {
+		riders = append(riders, makeRider(int64(i+1), "AllRounder", "Team A", 70, 78, 70, 85))
+	}
+	// 1 pure sprinter with Sprint=97 but low endurance → low composite
+	pureSprinter := makeRider(9, "PureSprinter", "Team A", 40, 97, 55, 50)
+	riders = append(riders, pureSprinter)
+
+	// Flat sprint-finish course (like MSR)
+	course := &model.Course{
+		Name:            "MSR-like",
+		TotalDistanceKm: 290,
+		Segments: []model.Segment{
+			{Name: "Flat Run-in", DistanceKm: 285, SurfaceType: model.SurfaceRoad, GradientPct: 0},
+			{Name: "Final Sprint", DistanceKm: 5, SurfaceType: model.SurfaceRoad, GradientPct: 0},
+		},
+	}
+	race := &model.Race{RaceType: model.RaceTypeRoad}
+	config := SelectionConfig{NumTeams: 1, RidersPerTeam: 7}
+
+	selected := SelectStartList(riders, course, race, config)
+
+	found := false
+	for _, r := range selected {
+		if r.ID == pureSprinter.ID {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Error("pure sprinter with highest sprint ability should be guaranteed selected in sprint-profile race")
+	}
+}

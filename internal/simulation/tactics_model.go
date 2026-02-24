@@ -66,6 +66,9 @@ type RaceState struct {
 	// GCGaps maps rider ID → cumulative GC deficit in seconds vs. leader (0 = race leader).
 	// Populated at the start of each stage race stage. Nil for one-day races.
 	GCGaps map[int64]float64
+	// HasCobbles is true when the course contains significant cobbled sectors.
+	// Used to weight Handling in rival assessment (Paris-Roubaix style races).
+	HasCobbles bool
 }
 
 type TacticsParams struct {
@@ -129,12 +132,13 @@ type TacticsEvent struct {
 	Reason string
 }
 
-func NewRaceState(states []*RiderState, rng *rand.Rand, isStageRace bool) *RaceState {
-	contexts, rival := BuildTeamContexts(states, rng, isStageRace)
+func NewRaceState(states []*RiderState, rng *rand.Rand, isStageRace bool, hasCobbles bool) *RaceState {
+	contexts, rival := BuildTeamContexts(states, rng, isStageRace, hasCobbles)
 	return &RaceState{
 		TeamContexts: contexts,
 		Rival:        rival,
 		IsStageRace:  isStageRace,
+		HasCobbles:   hasCobbles,
 		LastActions:  make(map[int64]Action),
 	}
 }
@@ -260,8 +264,28 @@ func DecideAction(rs *RiderState, state *RaceState, hasLeader bool, rng *rand.Ra
 		}
 		// Generic breakaway chase — applies everywhere, including non-leaders
 		// and leaders on flat/rolling terrain (mountain leaders already evaluated above).
-		isLeaderOnMountain := rs.TeamRole == RoleLeader && state.Segment != nil && state.Segment.GradientPct > 4.0
+		isLeaderOnMountain := rs.TeamRole == RoleLeader && state.Segment != nil && state.Segment.GradientPct > 5.0
 		if !isLeaderOnMountain {
+			// One-day classics on flat/rolling non-cobble terrain: the peloton
+			// always controls the pace when a breakaway forms (sprint teams drive
+			// the chase). This prevents unrealistic solo gaps on opening flats
+			// and rolling terrain like the Poggio (3.7%).
+			onFlatOrRolling := state.Segment != nil &&
+				state.Segment.GradientPct >= -1.0 && state.Segment.GradientPct < 5.0 &&
+				state.Segment.SurfaceType != model.SurfaceCobbles
+			if state.HasBreakaway && onFlatOrRolling && !state.IsStageRace {
+				return ActionChase
+			}
+			// Cobbles classics (Paris-Roubaix): dangerous riders (cobbles specialists)
+			// always chase when a non-dangerous breakaway escapes. This ensures vdP,
+			// van Aert, Pedersen etc. control the race on the pavé sectors.
+			onCobbles := state.Segment != nil && state.Segment.SurfaceType == model.SurfaceCobbles
+			isDangerous := state.Rival.DangerousRiders[rs.Rider.ID]
+			if state.HasBreakaway && onCobbles && !state.IsStageRace {
+				if isDangerous || state.BreakawayHasDangerous || state.BreakawayGap > 30 {
+					return ActionChase
+				}
+			}
 			if state.HasBreakaway && (state.BreakawayGap > 20 || state.BreakawayHasDangerous) && state.Phase != PhaseEarly {
 				return ActionChase
 			}
@@ -293,7 +317,7 @@ func DecideAction(rs *RiderState, state *RaceState, hasLeader bool, rng *rand.Ra
 	// One-day race mountain attacks (simpler: no GC mindset needed).
 	// ------------------------------------------------------------------
 	if state != nil && state.Segment != nil &&
-		state.Segment.GradientPct > 4.0 && rs.TeamRole == RoleLeader && !state.IsStageRace {
+		state.Segment.GradientPct > 5.0 && rs.TeamRole == RoleLeader && !state.IsStageRace {
 		if rng.Float64() < 0.08 && wFrac > 0.35 {
 			return ActionAttack
 		}
@@ -334,7 +358,7 @@ func ApplyEventModifiers(params TacticsParams, state *RaceState) TacticsParams {
 		params.AttackPowerBoost *= 1.02
 		state.LogEvent("cobbles", "technical sector")
 	}
-	if segment.GradientPct > 4.0 && state.KmRemaining < 15 {
+	if segment.GradientPct > 5.0 && state.KmRemaining < 15 {
 		params.AttackAggression *= 1.1
 		params.AttackPowerBoost *= 1.02
 		state.LogEvent("summit", "climb near finish")
@@ -343,17 +367,35 @@ func ApplyEventModifiers(params TacticsParams, state *RaceState) TacticsParams {
 		params.ChasePowerBoost *= 1.05
 		state.LogEvent("final", "final 10 km")
 	}
+	// Long flat non-cobble segments: nobody can sustain a 5% attack boost for
+	// many km. Scale the boost down proportionally with segment length so that
+	// a 90 km road section gives ~1% extra instead of 5%. Cobble selectors and
+	// climbs are explicitly excluded — those are where the race is decided.
+	if segment.DistanceKm > 5 &&
+		segment.GradientPct >= -1.0 && segment.GradientPct <= 2.5 &&
+		segment.SurfaceType != model.SurfaceCobbles {
+		scale := math.Min(1.0, 5.0/segment.DistanceKm)
+		params.AttackPowerBoost = 1.0 + (params.AttackPowerBoost-1.0)*scale
+	}
 	return params
 }
 
-func BuildTeamContexts(states []*RiderState, rng *rand.Rand, isStageRace bool) (map[string]*TeamContext, RivalAssessment) {
+func BuildTeamContexts(states []*RiderState, rng *rand.Rand, isStageRace bool, hasCobbles bool) (map[string]*TeamContext, RivalAssessment) {
 	contexts := make(map[string]*TeamContext)
 	teams := make(map[string][]*RiderState)
 	for _, rs := range states {
 		teams[rs.Rider.Team] = append(teams[rs.Rider.Team], rs)
 	}
 
-	for team, members := range teams {
+	// Sort team names for deterministic RNG consumption (Go maps iterate in random order).
+	teamNames := make([]string, 0, len(teams))
+	for team := range teams {
+		teamNames = append(teamNames, team)
+	}
+	sort.Strings(teamNames)
+
+	for _, team := range teamNames {
+		members := teams[team]
 		ctx := &TeamContext{Team: team}
 		for _, rs := range members {
 			switch rs.TeamRole {
@@ -375,18 +417,18 @@ func BuildTeamContexts(states []*RiderState, rng *rand.Rand, isStageRace bool) (
 		contexts[team] = ctx
 	}
 
-	rival := BuildRivalAssessment(states)
+	rival := BuildRivalAssessment(states, hasCobbles)
 	return contexts, rival
 }
 
-func BuildRivalAssessment(states []*RiderState) RivalAssessment {
+func BuildRivalAssessment(states []*RiderState, hasCobbles bool) RivalAssessment {
 	gcCandidates := make([]*RiderState, 0, len(states))
 	for _, rs := range states {
 		gcCandidates = append(gcCandidates, rs)
 	}
 	sort.Slice(gcCandidates, func(i, j int) bool {
-		gi := gcScore(gcCandidates[i].Rider)
-		gj := gcScore(gcCandidates[j].Rider)
+		gi := gcScore(gcCandidates[i].Rider, hasCobbles)
+		gj := gcScore(gcCandidates[j].Rider, hasCobbles)
 		return gi > gj
 	})
 
@@ -457,7 +499,14 @@ func pickObjective(ctx *TeamContext, members []*RiderState, rng *rand.Rand, isSt
 	return ObjectiveStageWin
 }
 
-func gcScore(r *model.Rider) float64 {
+func gcScore(r *model.Rider, hasCobbles bool) float64 {
+	if hasCobbles {
+		// On cobbles races (Paris-Roubaix style), Handling dominates.
+		// Weight Handling 3x vs Endurance to give correct hierarchy:
+		//   vdP (H=99): 96.25  van Aert (H=96): 94.5  Pogacar (H=90): 90.75
+		return float64(r.Handling*3+r.Endurance) / 4.0
+	}
+	// Standard: climbing, TT, endurance weighted equally.
 	return float64(r.ClimbingAbility+r.TTAbility+r.Endurance) / 3.0
 }
 

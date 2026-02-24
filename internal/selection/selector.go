@@ -35,11 +35,13 @@ func RiderScore(rider *model.Rider, profile CourseProfile) float64 {
 		float64(rider.SprintAbility)*profile.SprintDemand +
 		float64(rider.TTAbility)*profile.TTDemand +
 		float64(rider.DescendingAbility)*profile.TechnicalDemand +
+		float64(rider.Handling)*profile.CobblesDemand +
 		float64(rider.Endurance)*profile.EnduranceDemand
 
 	// Normalize by total demand weight so score stays in ~1-100 range
 	totalWeight := profile.ClimbingDemand + profile.SprintDemand +
-		profile.TTDemand + profile.TechnicalDemand + profile.EnduranceDemand
+		profile.TTDemand + profile.TechnicalDemand + profile.CobblesDemand +
+		profile.EnduranceDemand
 	if totalWeight > 0 {
 		score /= totalWeight
 	}
@@ -79,6 +81,22 @@ func SelectStartList(allRiders []model.Rider, course *model.Course, race *model.
 	var selected []model.Rider
 	for _, ts := range scored[:numTeams] {
 		riders := ts.team.riders
+
+		// For sprint-profile races, guarantee the best sprinter on each team
+		// is included even if their composite score ranks outside the top N.
+		guaranteedID := int64(-1)
+		var guaranteedRider model.Rider
+		if profile.SprintDemand >= 0.5 && config.RidersPerTeam > 1 {
+			bestSprint := -1
+			for i := range riders {
+				if riders[i].SprintAbility > bestSprint {
+					bestSprint = riders[i].SprintAbility
+					guaranteedID = riders[i].ID
+					guaranteedRider = riders[i]
+				}
+			}
+		}
+
 		// Score and sort riders within team
 		sort.Slice(riders, func(i, j int) bool {
 			return RiderScore(&riders[i], profile) > RiderScore(&riders[j], profile)
@@ -87,7 +105,23 @@ func SelectStartList(allRiders []model.Rider, course *model.Course, race *model.
 		if count > len(riders) {
 			count = len(riders)
 		}
-		selected = append(selected, riders[:count]...)
+		teamSelected := riders[:count]
+
+		// If the guaranteed sprinter is not already in the selection, swap out last
+		if guaranteedID >= 0 {
+			found := false
+			for _, r := range teamSelected {
+				if r.ID == guaranteedID {
+					found = true
+					break
+				}
+			}
+			if !found {
+				teamSelected = append(riders[:count-1:count-1], guaranteedRider)
+			}
+		}
+
+		selected = append(selected, teamSelected...)
 	}
 
 	return selected

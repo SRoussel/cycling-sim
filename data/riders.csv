@@ -58,7 +58,7 @@ Id,Name,Team,Nationality,Weight_kg,Height_cm,FTP_watts,Sprint_watts,Threshold_wa
 57,Vlad Van Mechelen,Team Bahrain Victorious,BEL,69,178,380,1660,432,0.30,58,82,72,76,74,70,78,74,68
 58,Edoardo Zambanini,Team Bahrain Victorious,ITA,70,179,388,1680,440,0.32,65,82,78,80,78,74,80,78,70
 59,Tobias Lund Andresen,Decathlon-CMA CGM,DEN,71,180,388,1700,442,0.32,62,84,76,78,78,74,80,78,70
-60,Tiesj Benoot,Decathlon-CMA CGM,BEL,74,183,405,1200,465,0.36,82,60,85,88,90,85,85,90,55
+60,Tiesj Benoot,Decathlon-CMA CGM,BEL,74,183,405,1200,465,0.36,82,60,85,88,90,85,85,90,82
 61,Léo Bisiaux,Decathlon-CMA CGM,FRA,68,177,375,1600,430,0.29,55,80,70,74,72,68,76,74,66
 62,Stefan Bissegger,Decathlon-CMA CGM,SUI,71,180,395,1550,455,0.34,72,75,95,85,88,85,88,88,86
 63,Cees Bol,Decathlon-CMA CGM,NED,76,186,400,1800,450,0.34,60,90,80,80,82,78,84,82,72
@@ -336,7 +336,7 @@ Id,Name,Team,Nationality,Weight_kg,Height_cm,FTP_watts,Sprint_watts,Threshold_wa
 335,Maximilian Schachmann,Soudal-QuickStep,GER,73,182,405,1200,465,0.36,85,55,88,88,92,88,85,92,55
 336,Jasper Stuyven,Soudal-QuickStep,BEL,74,183,405,1650,465,0.36,75,78,85,90,88,82,85,88,80
 337,Martin Svrček,Soudal-QuickStep,SVK,70,179,385,1680,435,0.31,70,82,78,80,78,74,80,80,70
-338,Dylan van Baarle,Soudal-QuickStep,NED,73,182,405,1200,465,0.36,82,55,85,88,90,85,85,90,55
+338,Dylan van Baarle,Soudal-QuickStep,NED,73,182,405,1200,465,0.36,82,55,85,88,90,85,85,90,82
 339,Fabio Van den Bossche,Soudal-QuickStep,BEL,71,180,388,1700,440,0.32,65,82,78,80,80,76,80,82,70
 340,Dries Van Gestel,Soudal-QuickStep,BEL,72,181,392,1700,445,0.33,72,84,80,82,82,78,82,84,72
 341,Bert Van Lerberghe,Soudal-QuickStep,BEL,73,182,402,1700,450,0.34,75,86,82,85,85,80,82,85,75

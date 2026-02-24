@@ -368,24 +368,24 @@ func TestValidation_ParisRoubaix(t *testing.T) {
 		actualPos int
 	}{
 		{"Mathieu van der Poel", 28, 1}, // Alpecin-Premier Tech (H=99)
-		{"Tadej Pogačar", 0, 2},         // UAE Team Emirates (H=90, may not be in DB)
-		{"Mads Pedersen", 0, 3},         // Lidl-Trek (H=90)
-		{"Wout van Aert", 0, 4},         // Visma (H=96)
-		{"Florian Vermeersch", 0, 5},    // UAE Team Emirates (H=82)
+		{"Tadej Pogačar", 452, 2},       // UAE Team Emirates
+		{"Mads Pedersen", 190, 3},       // Lidl-Trek
+		{"Wout van Aert", 429, 4},       // Visma-Lease a Bike
+		{"Florian Vermeersch", 0, 5},    // UAE (not in DB)
 		{"Jonas Rutsch", 0, 6},          // Intermarché-Wanty
 		{"Stefan Bissegger", 0, 7},      // Decathlon-AG2R
-		{"Markus Hoelgaard", 0, 8},      // Uno-X Mobility
+		{"Markus Hoelgaard", 0, 8},      // Uno-X
 		{"Fred Wright", 0, 9},           // Bahrain Victorious
 		{"Laurenz Rex", 0, 10},          // Intermarché-Wanty
-		{"Jasper Philipsen", 17, 11},    // Alpecin-Premier Tech (H=74)
-		{"Marco Haller", 0, 12},         // Tudor Pro Cycling
-		{"Filippo Ganna", 0, 13},        // INEOS Grenadiers
+		{"Jasper Philipsen", 17, 11},    // Alpecin-Premier Tech
+		{"Marco Haller", 0, 12},         // Tudor
+		{"Filippo Ganna", 150, 13},      // INEOS Grenadiers
 		{"Madis Mihkels", 0, 14},        // EF Education
-		{"Biniam Girmay", 0, 15},        // Intermarché-Wanty
+		{"Biniam Girmay", 269, 15},      // NSN Cycling Team
 		{"Mike Teunissen", 0, 16},       // XDS Astana
 		{"Daan Hoole", 0, 17},           // Lidl-Trek
 		{"Mick van Dijke", 0, 18},       // Red Bull-BORA
-		{"Marius Mayrhofer", 0, 19},     // Tudor Pro Cycling
+		{"Marius Mayrhofer", 0, 19},     // Tudor
 		{"Taco van der Hoorn", 0, 20},   // Intermarché-Wanty
 	}
 
@@ -412,23 +412,56 @@ func TestValidation_ParisRoubaix(t *testing.T) {
 	// Build realistic peloton with known finishers
 	var riders []model.Rider
 
-	// Add known finishers
+	// Add known finishers with attributes from data/riders.csv
 	for _, f := range knownRiders {
-		if f.riderID == 28 { // Van der Poel
-			r := makeRider("Mathieu van der Poel", 415, 75, 75, 90, 78, 80, 88, 82, 88, 80)
+		switch f.riderID {
+		case 28: // Mathieu van der Poel: ftp=415, H=99
+			r := makeRider("Mathieu van der Poel", 415, 75, 75, 90, 78, 90, 88, 82, 88, 85)
 			r.ID = 28
 			r.Handling = 99
+			r.MaxSprintWatts = 1700
 			riders = append(riders, r)
-		} else if f.riderID == 17 { // Philipsen
-			r := makeSprinter("Jasper Philipsen")
+		case 452: // Tadej Pogačar: ftp=425, H=90
+			r := makeRider("Tadej Pogačar", 425, 66, 97, 75, 92, 88, 93, 90, 92, 95)
+			r.ID = 452
+			r.Handling = 90
+			r.MaxSprintWatts = 1400
+			riders = append(riders, r)
+		case 190: // Mads Pedersen: ftp=400, H=90
+			r := makeRider("Mads Pedersen", 400, 76, 60, 88, 82, 82, 82, 78, 85, 82)
+			r.ID = 190
+			r.Handling = 90
+			r.MaxSprintWatts = 1700
+			riders = append(riders, r)
+		case 429: // Wout van Aert: ftp=420, H=96
+			r := makeRider("Wout van Aert", 420, 78, 72, 92, 93, 85, 90, 85, 90, 88)
+			r.ID = 429
+			r.Handling = 96
+			r.MaxSprintWatts = 1750
+			riders = append(riders, r)
+		case 17: // Jasper Philipsen: ftp=385, H=74
+			r := makeRider("Jasper Philipsen", 385, 76, 45, 97, 60, 70, 72, 70, 75, 78)
 			r.ID = 17
 			r.Handling = 74
+			r.MaxSprintWatts = 1850
+			riders = append(riders, r)
+		case 150: // Filippo Ganna: ftp=425, TT=98, H=55
+			r := makeRider("Filippo Ganna", 425, 82, 50, 70, 98, 75, 82, 78, 72, 88)
+			r.ID = 150
+			r.Handling = 55
+			r.MaxSprintWatts = 1500
+			riders = append(riders, r)
+		case 269: // Biniam Girmay: ftp=388, Sprint=93, H=65
+			r := makeRider("Biniam Girmay", 388, 73, 55, 93, 62, 75, 78, 72, 78, 76)
+			r.ID = 269
+			r.Handling = 65
+			r.MaxSprintWatts = 1780
 			riders = append(riders, r)
 		}
 	}
 
-	// Add 28 synthetic riders to make realistic field (140 riders roughly)
-	for i := 0; i < 28; i++ {
+	// Fill to ~30 riders with synthetic filler
+	for i := 0; i < 23; i++ {
 		var r model.Rider
 		switch i % 4 {
 		case 0:
@@ -513,20 +546,11 @@ func TestValidation_ParisRoubaix(t *testing.T) {
 		t.Logf("%s %-25s (#%d actual) -> %.1f avg\n", status, f.name, f.actualPos, avgPos)
 	}
 
-	// Summary analysis
-	vanderPoelAvgPos := riderPlacementsSum[28] / float64(riderRunCount[28])
-	philipsenAvgPos := riderPlacementsSum[17] / float64(riderRunCount[17])
-
+	// Summary
 	t.Logf("\n=== Summary ===")
-	t.Logf("Van der Poel (actual 1st, H=99): avg %.1f", vanderPoelAvgPos)
-	t.Logf("Philipsen (actual 11th, H=74): avg %.1f", philipsenAvgPos)
-
-	if vanderPoelAvgPos <= 3 {
-		t.Logf("✅ EXCELLENT: Winner ranking is realistic")
-	} else if vanderPoelAvgPos <= 5 {
-		t.Logf("✅ GOOD: Winner finishes top-5 consistently")
-	} else {
-		t.Logf("⚠️ WARNING: Winner averaging position %.1f (expected <5)", vanderPoelAvgPos)
+	for _, f := range knownRiders {
+		avgPos := riderPlacementsSum[f.riderID] / float64(riderRunCount[f.riderID])
+		t.Logf("%s (actual #%d): avg sim pos %.1f", f.name, f.actualPos, avgPos)
 	}
 }
 
@@ -630,26 +654,26 @@ func TestValidation_TourOfFlanders(t *testing.T) {
 		riderID   int64
 		actualPos int
 	}{
-		{"Tadej Pogačar", 0, 1},           // UAE (not in our DB, or hard to find)
-		{"Mads Pedersen", 0, 2},           // Lidl-Trek
-		{"Mathieu van der Poel", 28, 3},   // Alpecin-Deceuninck (H=99)
-		{"Wout van Aert", 0, 4},           // Visma
-		{"Jasper Stuyven", 0, 5},          // Lidl-Trek
-		{"Tiesj Benoot", 0, 6},            // Visma
-		{"Stefan Küng", 0, 7},             // Groupama-FDJ
-		{"Filippo Ganna", 0, 8},           // INEOS
-		{"Iván García Cortina", 0, 9},     // Movistar
-		{"Davide Ballerini", 0, 10},       // XDS Astana
-		{"Laurence Pithie", 0, 11},        // Red Bull-BORA
-		{"Mike Teunissen", 0, 12},         // XDS Astana
-		{"Michael Matthews", 0, 13},       // Jayco-AlUla
-		{"Markus Hoelgaard", 0, 14},       // Uno-X
-		{"Gianni Vermeersch", 0, 15},      // Alpecin-Deceuninck
-		{"Aurélien Paret-Peintre", 0, 16}, // Decathlon-AG2R
-		{"Valentin Madouas", 0, 17},       // Groupama-FDJ
-		{"Timo Kielich", 0, 18},           // Alpecin-Deceuninck
-		{"Stefan Bissegger", 0, 19},       // Decathlon-AG2R
-		{"Magnus Sheffield", 0, 20},       // INEOS
+		{"Tadej Pogačar", 452, 1},         // UAE Team Emirates
+		{"Mads Pedersen", 190, 2},         // Lidl-Trek
+		{"Mathieu van der Poel", 28, 3},   // Alpecin-Premier Tech (H=99)
+		{"Wout van Aert", 429, 4},         // Visma-Lease a Bike
+		{"Jasper Stuyven", 336, 5},        // Soudal-QuickStep
+		{"Tiesj Benoot", 60, 6},           // Decathlon-CMA CGM
+		{"Stefan Küng", 0, 7},             // Groupama-FDJ (not in DB)
+		{"Filippo Ganna", 150, 8},         // INEOS Grenadiers
+		{"Iván García Cortina", 0, 9},     // Movistar (not in DB)
+		{"Davide Ballerini", 492, 10},     // XDS Astana
+		{"Laurence Pithie", 0, 11},        // Red Bull-BORA (not in DB)
+		{"Mike Teunissen", 0, 12},         // XDS Astana (not in DB)
+		{"Michael Matthews", 0, 13},       // Jayco-AlUla (not in DB)
+		{"Markus Hoelgaard", 0, 14},       // Uno-X (not in DB)
+		{"Gianni Vermeersch", 0, 15},      // Alpecin (not in DB)
+		{"Aurélien Paret-Peintre", 0, 16}, // Decathlon-AG2R (not in DB)
+		{"Valentin Madouas", 0, 17},       // Groupama-FDJ (not in DB)
+		{"Dylan van Baarle", 338, 18},     // Soudal-QuickStep
+		{"Stefan Bissegger", 0, 19},       // Decathlon-AG2R (not in DB)
+		{"Magnus Sheffield", 0, 20},       // INEOS (not in DB)
 	}
 
 	// Filter to riders we have in database
@@ -675,18 +699,68 @@ func TestValidation_TourOfFlanders(t *testing.T) {
 	// Build realistic peloton with known finishers
 	var riders []model.Rider
 
-	// Add known finishers
+	// Add known finishers with attributes from data/riders.csv
 	for _, f := range knownRiders {
-		if f.riderID == 28 { // Van der Poel
-			r := makeRider("Mathieu van der Poel", 415, 75, 75, 90, 78, 80, 88, 82, 88, 80)
+		switch f.riderID {
+		case 452: // Tadej Pogačar: ftp=425, H=90
+			r := makeRider("Tadej Pogačar", 425, 66, 97, 75, 92, 88, 93, 90, 92, 95)
+			r.ID = 452
+			r.Handling = 90
+			r.MaxSprintWatts = 1400
+			riders = append(riders, r)
+		case 190: // Mads Pedersen: ftp=400, H=90
+			r := makeRider("Mads Pedersen", 400, 76, 60, 88, 82, 82, 82, 78, 85, 82)
+			r.ID = 190
+			r.Handling = 90
+			r.MaxSprintWatts = 1700
+			riders = append(riders, r)
+		case 28: // Mathieu van der Poel: ftp=415, H=99
+			r := makeRider("Mathieu van der Poel", 415, 75, 75, 90, 78, 90, 88, 82, 88, 85)
 			r.ID = 28
 			r.Handling = 99
+			r.MaxSprintWatts = 1700
+			riders = append(riders, r)
+		case 429: // Wout van Aert: ftp=420, H=96
+			r := makeRider("Wout van Aert", 420, 78, 72, 92, 93, 85, 90, 85, 90, 88)
+			r.ID = 429
+			r.Handling = 96
+			r.MaxSprintWatts = 1750
+			riders = append(riders, r)
+		case 336: // Jasper Stuyven: ftp=405, Classics=90, H=80
+			r := makeRider("Jasper Stuyven", 405, 74, 75, 78, 85, 90, 88, 82, 88, 85)
+			r.ID = 336
+			r.Handling = 80
+			r.MaxSprintWatts = 1650
+			riders = append(riders, r)
+		case 60: // Tiesj Benoot: ftp=405, Classics=88, H=55
+			r := makeRider("Tiesj Benoot", 405, 74, 82, 60, 85, 88, 90, 85, 90, 85)
+			r.ID = 60
+			r.Handling = 55
+			r.MaxSprintWatts = 1200
+			riders = append(riders, r)
+		case 150: // Filippo Ganna: TT=98, H=55
+			r := makeRider("Filippo Ganna", 425, 82, 50, 70, 98, 75, 82, 78, 72, 88)
+			r.ID = 150
+			r.Handling = 55
+			r.MaxSprintWatts = 1500
+			riders = append(riders, r)
+		case 492: // Davide Ballerini: Sprint=84, Classics=85, H=72
+			r := makeRider("Davide Ballerini", 392, 72, 75, 84, 82, 85, 85, 80, 85, 82)
+			r.ID = 492
+			r.Handling = 72
+			r.MaxSprintWatts = 1700
+			riders = append(riders, r)
+		case 338: // Dylan van Baarle: Classics=88, H=55
+			r := makeRider("Dylan van Baarle", 405, 73, 82, 55, 85, 88, 90, 85, 90, 85)
+			r.ID = 338
+			r.Handling = 55
+			r.MaxSprintWatts = 1200
 			riders = append(riders, r)
 		}
 	}
 
-	// Add 29 synthetic riders to make realistic field (30 riders for small validation)
-	for i := 0; i < 29; i++ {
+	// Fill to ~30 riders with synthetic filler
+	for i := 0; i < 21; i++ {
 		var r model.Rider
 		switch i % 4 {
 		case 0:
@@ -694,7 +768,7 @@ func TestValidation_TourOfFlanders(t *testing.T) {
 		case 1:
 			r = makeAllRounder(fmt.Sprintf("AllRounder %d", i))
 		case 2:
-			r = makeAllRounder(fmt.Sprintf("AllRounder %d", i))
+			r = makeCobbleSpecialist(fmt.Sprintf("Classics %d", i))
 		default:
 			r = makeSprinter(fmt.Sprintf("Sprinter %d", i))
 		}
@@ -768,18 +842,11 @@ func TestValidation_TourOfFlanders(t *testing.T) {
 		t.Logf("%s %-25s (#%d actual) -> %.1f avg\n", status, f.name, f.actualPos, avgPos)
 	}
 
-	// Summary analysis
-	vanderPoelAvgPos := riderPlacementsSum[28] / float64(riderRunCount[28])
-
+	// Summary
 	t.Logf("\n=== Summary ===")
-	t.Logf("Van der Poel (actual 3rd, H=99): avg %.1f", vanderPoelAvgPos)
-
-	if vanderPoelAvgPos <= 3 {
-		t.Logf("✅ EXCELLENT: Van der Poel finishes top-3")
-	} else if vanderPoelAvgPos <= 8 {
-		t.Logf("⚠️ GOOD: Van der Poel finishes top-10 (realistic for hilly classics)")
-	} else {
-		t.Logf("⚠️ WARNING: Van der Poel averaging position %.1f (expected <10)", vanderPoelAvgPos)
+	for _, f := range knownRiders {
+		avgPos := riderPlacementsSum[f.riderID] / float64(riderRunCount[f.riderID])
+		t.Logf("%s (actual #%d): avg sim pos %.1f", f.name, f.actualPos, avgPos)
 	}
 }
 
@@ -795,10 +862,16 @@ func TestValidation_MilanSanRemo(t *testing.T) {
 		riderID   int64
 		actualPos int
 	}{
-		{"Mathieu van der Poel", 28, 1},
-		{"Kaden Groves", 14, 5},
-		{"Jasper Philipsen", 17, 163}, // Philipsen finished 163rd, but in your data, he is present
-		// Add more mapped riders as needed from data/riders.csv
+		{"Mathieu van der Poel", 28, 1}, // Alpecin-Premier Tech (H=99)
+		{"Biniam Girmay", 269, 2},       // NSN Cycling Team
+		{"Wout van Aert", 429, 3},       // Visma-Lease a Bike
+		{"Mads Pedersen", 190, 4},       // Lidl-Trek
+		{"Kaden Groves", 14, 5},         // Alpecin-Premier Tech
+		{"Matej Mohorič", 47, 6},        // Bahrain Victorious (H=85)
+		{"Jasper Stuyven", 336, 7},      // Soudal-QuickStep
+		{"Tadej Pogačar", 452, 8},       // UAE Team Emirates
+		{"Jonathan Milan", 184, 9},      // Lidl-Trek
+		{"Jasper Philipsen", 17, 163},   // Alpecin-Premier Tech
 	}
 
 	// Filter to riders we have in database
@@ -823,36 +896,82 @@ func TestValidation_MilanSanRemo(t *testing.T) {
 	// Build realistic peloton with known finishers
 	var riders []model.Rider
 
-	// Add known finishers
+	// Add known finishers with attributes from data/riders.csv
 	for _, f := range knownRiders {
-		if f.riderID == 28 { // Van der Poel
-			r := makeRider("Mathieu van der Poel", 415, 75, 75, 90, 78, 80, 88, 82, 88, 80)
+		switch f.riderID {
+		case 28: // Mathieu van der Poel: ftp=415, H=99
+			r := makeRider("Mathieu van der Poel", 415, 75, 75, 90, 78, 90, 88, 82, 88, 85)
 			r.ID = 28
 			r.Handling = 99
+			r.MaxSprintWatts = 1700
 			riders = append(riders, r)
-		} else if f.riderID == 14 { // Groves
-			r := makeSprinter("Kaden Groves")
+		case 269: // Biniam Girmay: Sprint=93, H=65
+			r := makeRider("Biniam Girmay", 388, 73, 55, 93, 62, 75, 78, 72, 78, 76)
+			r.ID = 269
+			r.Handling = 65
+			r.MaxSprintWatts = 1780
+			riders = append(riders, r)
+		case 429: // Wout van Aert: ftp=420, H=96
+			r := makeRider("Wout van Aert", 420, 78, 72, 92, 93, 85, 90, 85, 90, 88)
+			r.ID = 429
+			r.Handling = 96
+			r.MaxSprintWatts = 1750
+			riders = append(riders, r)
+		case 190: // Mads Pedersen: Sprint=88, H=90
+			r := makeRider("Mads Pedersen", 400, 76, 60, 88, 82, 82, 82, 78, 85, 82)
+			r.ID = 190
+			r.Handling = 90
+			r.MaxSprintWatts = 1700
+			riders = append(riders, r)
+		case 14: // Kaden Groves: Sprint=92, H=75
+			r := makeRider("Kaden Groves", 400, 74, 55, 92, 80, 80, 82, 78, 82, 88)
 			r.ID = 14
+			r.Handling = 75
+			r.MaxSprintWatts = 1850
 			riders = append(riders, r)
-		} else if f.riderID == 17 { // Philipsen
-			r := makeSprinter("Jasper Philipsen")
+		case 47: // Matej Mohorič: Classics=90, Descending=90, H=85
+			r := makeRider("Matej Mohorič", 405, 71, 78, 72, 85, 90, 92, 85, 90, 85)
+			r.ID = 47
+			r.Handling = 85
+			r.MaxSprintWatts = 1400
+			riders = append(riders, r)
+		case 336: // Jasper Stuyven: Classics=90, H=80
+			r := makeRider("Jasper Stuyven", 405, 74, 75, 78, 85, 90, 88, 82, 88, 85)
+			r.ID = 336
+			r.Handling = 80
+			r.MaxSprintWatts = 1650
+			riders = append(riders, r)
+		case 452: // Tadej Pogačar: ftp=425, H=90
+			r := makeRider("Tadej Pogačar", 425, 66, 97, 75, 92, 88, 93, 90, 92, 95)
+			r.ID = 452
+			r.Handling = 90
+			r.MaxSprintWatts = 1400
+			riders = append(riders, r)
+		case 184: // Jonathan Milan: Sprint=95, H=48
+			r := makeRider("Jonathan Milan", 395, 82, 40, 95, 72, 68, 70, 68, 70, 75)
+			r.ID = 184
+			r.Handling = 48
+			r.MaxSprintWatts = 1900
+			riders = append(riders, r)
+		case 17: // Jasper Philipsen: Sprint=97, H=74
+			r := makeRider("Jasper Philipsen", 385, 76, 45, 97, 60, 70, 72, 70, 75, 78)
 			r.ID = 17
+			r.Handling = 74
+			r.MaxSprintWatts = 1850
 			riders = append(riders, r)
 		}
 	}
 
-	// Add 27 synthetic riders to make a 30-rider field
-	for i := 0; i < 27; i++ {
+	// Fill to ~25 riders with synthetic filler
+	for i := 0; i < 15; i++ {
 		var r model.Rider
-		switch i % 4 {
+		switch i % 3 {
 		case 0:
-			r = makeClimber(fmt.Sprintf("Climber %d", i))
+			r = makeSprinter(fmt.Sprintf("Sprinter %d", i))
 		case 1:
 			r = makeAllRounder(fmt.Sprintf("AllRounder %d", i))
-		case 2:
-			r = makeAllRounder(fmt.Sprintf("AllRounder %d", i))
 		default:
-			r = makeSprinter(fmt.Sprintf("Sprinter %d", i))
+			r = makeClimber(fmt.Sprintf("Climber %d", i))
 		}
 		r.ID = int64(7000 + i)
 		riders = append(riders, r)
@@ -922,15 +1041,10 @@ func TestValidation_MilanSanRemo(t *testing.T) {
 		t.Logf("%s %-25s (#%d actual) -> %.1f avg\n", status, f.name, f.actualPos, avgPos)
 	}
 
-	// Summary analysis for van der Poel
-	vanderPoelAvgPos := riderPlacementsSum[28] / float64(riderRunCount[28])
+	// Summary
 	t.Logf("\n=== Summary ===")
-	t.Logf("Van der Poel (actual 1st, H=99): avg %.1f", vanderPoelAvgPos)
-	if vanderPoelAvgPos <= 3 {
-		t.Logf("✅ EXCELLENT: Van der Poel finishes top-3")
-	} else if vanderPoelAvgPos <= 8 {
-		t.Logf("⚠️ GOOD: Van der Poel finishes top-10 (realistic for classics)")
-	} else {
-		t.Logf("⚠️ WARNING: Van der Poel averaging position %.1f (expected <10)", vanderPoelAvgPos)
+	for _, f := range knownRiders {
+		avgPos := riderPlacementsSum[f.riderID] / float64(riderRunCount[f.riderID])
+		t.Logf("%s (actual #%d): avg sim pos %.1f", f.name, f.actualPos, avgPos)
 	}
 }

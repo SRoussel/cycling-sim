@@ -90,6 +90,21 @@ func buildRouteProfile(course *model.Course) *RouteProfile {
 	return &RouteProfile{TotalKm: course.TotalDistanceKm, Points: points}
 }
 
+// courseHasCobbles returns true when the course has at least 15km of cobbled sectors
+// (Paris-Roubaix style, not just rough bergs as in Tour of Flanders).
+func courseHasCobbles(course *model.Course) bool {
+	if course == nil {
+		return false
+	}
+	cobbleKm := 0.0
+	for _, seg := range course.Segments {
+		if seg.SurfaceType == model.SurfaceCobbles {
+			cobbleKm += seg.DistanceKm
+		}
+	}
+	return cobbleKm >= 15.0
+}
+
 func segmentStartTimes(states []*RiderState) map[int64]float64 {
 	out := make(map[int64]float64, len(states))
 	for _, rs := range states {
@@ -216,7 +231,8 @@ func SimulateRoadRaceWithProgress(config RaceConfig, onProgress func(ProgressSna
 	}
 
 	tacticsParams := DefaultTacticsParams()
-	raceState := NewRaceState(states, rng, config.Race != nil && model.IsStageRaceStageName(config.Race.Name))
+	hasCobbles := courseHasCobbles(config.Course)
+	raceState := NewRaceState(states, rng, config.Race != nil && model.IsStageRaceStageName(config.Race.Name), hasCobbles)
 	raceState.Overrides = config.ActionOverrides
 	raceState.GCGaps = config.GCGaps
 	eventIndex := 0
@@ -306,15 +322,26 @@ func SimulateRoadRaceWithProgress(config RaceConfig, onProgress func(ProgressSna
 		sort.Slice(states, func(i, j int) bool {
 			return states[i].TotalTime < states[j].TotalTime
 		})
-		leaderTime := states[0].TotalTime
-		var sprintGroup []*RiderState
-		for _, rs := range states {
-			if rs.TotalTime-leaderTime < 3.0 {
-				sprintGroup = append(sprintGroup, rs)
+		// Apply SprintFinish to each cluster of riders finishing within 3 s of
+		// each other. This covers both the front group (classic bunch sprint) and
+		// any large peloton that finishes together behind a breakaway — without it
+		// such riders would be ordered by their position in the states slice, which
+		// is arbitrary and does not respect sprint ability.
+		i := 0
+		for i < len(states) {
+			if states[i].DNF {
+				i++
+				continue
 			}
-		}
-		if len(sprintGroup) > 1 {
-			SprintFinish(sprintGroup, rng)
+			clusterTime := states[i].TotalTime
+			j := i + 1
+			for j < len(states) && !states[j].DNF && states[j].TotalTime-clusterTime < 3.0 {
+				j++
+			}
+			if j-i > 1 {
+				SprintFinish(states[i:j], rng)
+			}
+			i = j
 		}
 	}
 
@@ -697,7 +724,7 @@ func progressGapThreshold(segment *model.Segment) float64 {
 	if segment.SurfaceType == model.SurfaceCobbles {
 		return 8.0
 	}
-	if segment.GradientPct > 4.0 {
+	if segment.GradientPct > 5.0 {
 		return 6.0
 	}
 	if segment.GradientPct < -2.0 {

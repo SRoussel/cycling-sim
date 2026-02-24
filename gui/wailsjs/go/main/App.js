@@ -10,10 +10,6 @@ export function GetCourses() {
   return window['go']['main']['App']['GetCourses']();
 }
 
-export function GetFCFetchedSummary() {
-  return window['go']['main']['App']['GetFCFetchedSummary']();
-}
-
 export function GetGCStandings(arg1, arg2) {
   return window['go']['main']['App']['GetGCStandings'](arg1, arg2);
 }

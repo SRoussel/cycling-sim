@@ -14,16 +14,19 @@ PLATFORM ?= linux/amd64
 all: build
 
 ## dev — Start Wails dev server with hot-reload
+## GDK_BACKEND=wayland: this is a pure Wayland session (no Xwayland / no .Xauthority).
+## Without it, Wails forces GDK_BACKEND=x11 (because XDG_SESSION_TYPE is unset)
+## and GTK panics trying to connect to an X server that doesn't exist.
 dev:
-	wails dev -tags $(BUILD_TAGS)
+	GDK_BACKEND=wayland wails dev -tags $(BUILD_TAGS)
 
 ## build — Produce a release binary in build/bin/
 build:
-	wails build -tags $(BUILD_TAGS) -clean
+	GDK_BACKEND=wayland wails build -tags $(BUILD_TAGS) -clean
 
 ## build-debug — Debug build (not optimised; includes DevTools)
 build-debug:
-	wails build -tags $(BUILD_TAGS) -debug
+	GDK_BACKEND=wayland wails build -tags $(BUILD_TAGS) -debug
 
 ## build-appimage — Package as an AppImage (requires appimagetool on PATH)
 build-appimage: build

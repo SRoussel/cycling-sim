@@ -98,7 +98,7 @@ func breakawayProbability(rs *RiderState, segment *model.Segment, remainingKm fl
 	probability := baseProbability * wFactor
 
 	// Climbing ability boost on hills — climbers attack on climbs
-	if segment.GradientPct > 4.0 {
+	if segment.GradientPct > 5.0 {
 		climbFactor := 1.0 + float64(rs.Rider.ClimbingAbility-70)*0.03
 		if climbFactor < 0.5 {
 			climbFactor = 0.5
@@ -108,36 +108,48 @@ func breakawayProbability(rs *RiderState, segment *model.Segment, remainingKm fl
 
 	// Handling boost on cobbles only — specialists attack on technical terrain
 	if segment.SurfaceType == model.SurfaceCobbles {
-		// H=95: 4x, H=85: 2x, H=70: 1x, H<70: 0.5x
-		handlingFactor := 1.0 + float64(rs.Rider.Handling-70)*0.12
+		// H=99: ~2.2x, H=90: ~1.8x, H=80: ~1.4x, H=70: 1x, H<70: capped at 0.5x
+		handlingFactor := 1.0 + float64(rs.Rider.Handling-70)*0.04
 		if handlingFactor < 0.5 {
 			handlingFactor = 0.5
 		}
-		if handlingFactor > 4.0 {
-			handlingFactor = 4.0
+		if handlingFactor > 2.5 {
+			handlingFactor = 2.5
 		}
 		probability *= handlingFactor
 	}
 
-	// Sprinters are less likely to break away early (they want a bunch sprint)
+	// Sprinters are less likely to break away early (they want a bunch sprint),
+	// but cobbles specialists who are also good sprinters (e.g. vdP, van Aert)
+	// should NOT be suppressed on cobbled sectors where they are the strongest.
 	if rs.Rider.SprintAbility > 85 && remainingKm > 20 {
-		probability *= 0.3
+		if segment.SurfaceType != model.SurfaceCobbles || rs.Rider.Handling <= 85 {
+			probability *= 0.3
+		}
 	}
 
 	// Distance factor: most likely 30-60km from finish (optimal attack zone)
 	if remainingKm > 30 && remainingKm < 60 {
 		probability *= 1.5
 	}
-	// Flat road suppression: breakaways are less likely on flat stages
-	if segment.GradientPct >= -1.0 && segment.GradientPct <= 2.0 && remainingKm > 15 {
-		probability *= 0.5
+	// Flat non-cobble road suppression: peloton always controls pace on flat.
+	// Close to the finish (≤15 km) this lifts to allow sprint-finish attacks.
+	if segment.GradientPct >= -1.0 && segment.GradientPct <= 2.0 &&
+		segment.SurfaceType != model.SurfaceCobbles && remainingKm > 15 {
+		if remainingKm > 80 {
+			// Opening flat — almost no breakaway survives this far out
+			probability *= 0.05
+		} else {
+			probability *= 0.35
+		}
 	}
 	// Too close to finish — peloton will chase hard
 	if remainingKm < 10 {
 		probability *= 0.3
 	}
-	// Very far from finish — breakaway unlikely to survive
-	if remainingKm > 100 {
+	// Very far from finish on non-flat terrain (climbs/cobbles handled above)
+	if remainingKm > 100 &&
+		!(segment.GradientPct >= -1.0 && segment.GradientPct <= 2.0 && segment.SurfaceType != model.SurfaceCobbles) {
 		probability *= 0.7
 	}
 

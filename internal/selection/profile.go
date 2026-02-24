@@ -7,7 +7,8 @@ type CourseProfile struct {
 	ClimbingDemand  float64
 	SprintDemand    float64
 	TTDemand        float64
-	TechnicalDemand float64
+	TechnicalDemand float64 // descending/puncheur ability
+	CobblesDemand   float64 // cobbles handling ability
 	EnduranceDemand float64
 }
 
@@ -61,10 +62,17 @@ func AnalyzeCourse(course *model.Course, raceType model.RaceType) CourseProfile 
 		}
 	}
 
-	// Technical demand from cobbles
-	techDemand := cobbleProp * 10.0 // scale up so 10% cobbles → 1.0
-	if techDemand > 1.0 {
-		techDemand = 1.0
+	// Technical demand from cobbles — split into cobbles (Handling) vs general descending (DescendingAbility)
+	cobbleDemand := cobbleProp * 10.0 // scale: 10% cobbles → 1.0
+	if cobbleDemand > 1.0 {
+		cobbleDemand = 1.0
+	}
+	// General technical/descending demand for non-cobble courses (e.g., Strade Bianche gravel)
+	// Use a small amount so puncheur ability still matters in races without cobbles
+	techDemand := 0.0
+	if cobbleProp < 0.02 && climbProp < 0.3 {
+		// Flat/rolling classics without major climbs — some technical demand for handling
+		techDemand = 0.1
 	}
 
 	// Endurance demand from total distance (200km = 0.5, 300km = 0.75)
@@ -78,6 +86,7 @@ func AnalyzeCourse(course *model.Course, raceType model.RaceType) CourseProfile 
 		SprintDemand:    sprintDemand,
 		TTDemand:        0.1, // small TT component for road races (pacing)
 		TechnicalDemand: techDemand,
+		CobblesDemand:   cobbleDemand,
 		EnduranceDemand: enduranceDemand,
 	}
 }

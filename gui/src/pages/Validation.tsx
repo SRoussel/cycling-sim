@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import * as App from '../../wailsjs/go/main/App'
 import { main } from '../../wailsjs/go/models'
 import './Validation.css'
@@ -34,16 +34,9 @@ function formatGapMAE(secs: number | undefined): string {
 
 function Validation() {
   const [tests, setTests] = useState<ValidationTest[]>([])
-  const [fcData, setFcData] = useState<main.FCFetchSummary[]>([])
   const [notice, setNotice] = useState<string | null>(null)
   const [isRunning, setIsRunning] = useState(false)
   const [activeTab, setActiveTab] = useState<'synthetic' | 'real'>('synthetic')
-
-  useEffect(() => {
-    App.GetFCFetchedSummary()
-      .then((data) => setFcData(data || []))
-      .catch(() => setFcData([]))
-  }, [])
 
   const runTests = async () => {
     setIsRunning(true)
@@ -104,7 +97,7 @@ function Validation() {
     <div className="validation page-enter">
       <header className="validation-header">
         <h1>Validation Dashboard</h1>
-        <p>Validate simulation accuracy against synthetic benchmarks and real FirstCycling race results</p>
+        <p>Validate simulation accuracy against synthetic benchmarks and real-race reference results</p>
       </header>
 
       {/* ── Release Gate ───────────────────────────────────────── */}
@@ -125,13 +118,13 @@ function Validation() {
               <span className="gate-icon">⚠</span>
               <span className="gate-title">Synthetic Pass — Limited Calibration</span>
               <span className="gate-sub">
-                Fetch FC reference data or resolve FC test issues for full confidence
+                Resolve real-race test issues for full confidence
               </span>
             </>}
           </div>
           <div className="gate-stats">
             <span>{syntheticTests.filter((t) => t.status === 'passed').length}/{syntheticTests.length} synthetic pass</span>
-            <span>{realTests.filter((t) => t.status === 'passed').length}/{realTests.filter((t) => t.status !== 'skipped').length} FC pass</span>
+            <span>{realTests.filter((t) => t.status === 'passed').length}/{realTests.filter((t) => t.status !== 'skipped').length} real-race pass</span>
           </div>
         </div>
       )}
@@ -142,47 +135,11 @@ function Validation() {
           {isRunning ? 'Running Tests...' : 'Run All Tests'}
         </button>
         <span className="controls-hint">
-          Synthetic: ~5s &nbsp;·&nbsp; FC cases: ~30s each (requires fetched FC data)
+          Synthetic: ~5s &nbsp;·&nbsp; Real-race cases: ~30s each
         </span>
       </div>
 
       {notice && <div className="empty-state">{notice}</div>}
-
-      {/* ── FC Data Status ───────────────────────────────────────── */}
-      <section className="card fc-status-section">
-        <h2>FirstCycling Reference Data</h2>
-        {fcData.length === 0 ? (
-          <div className="empty-state">
-            No FC data fetched yet. Use the CLI to import reference results:
-            <pre className="fc-cmd">cycling-sim fc-fetch --race 71 --year 2024  # Paris-Roubaix</pre>
-            <pre className="fc-cmd">cycling-sim fc-fetch --race 74 --year 2024  # Milan-San Remo</pre>
-            <pre className="fc-cmd">cycling-sim fc-match                         # auto-link riders</pre>
-          </div>
-        ) : (
-          <table>
-            <thead>
-              <tr>
-                <th>FC Race ID</th>
-                <th>Year</th>
-                <th>Stage</th>
-                <th>Results</th>
-                <th>Fetched</th>
-              </tr>
-            </thead>
-            <tbody>
-              {fcData.map((d, i) => (
-                <tr key={i}>
-                  <td><code>{d.fcRaceID}</code></td>
-                  <td>{d.year}</td>
-                  <td>{d.stage === 0 ? 'Overall' : `Stage ${d.stage}`}</td>
-                  <td>{d.resultCount}</td>
-                  <td className="details-cell">{d.fetchedAt?.slice(0, 10)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </section>
 
       {/* ── Test Results ─────────────────────────────────────────── */}
       <section className="card tests-list">
@@ -202,7 +159,7 @@ function Validation() {
                 className={activeTab === 'real' ? 'tab active' : 'tab'}
                 onClick={() => setActiveTab('real')}
               >
-                FC Reference ({realTests.length})
+                Real Race ({realTests.length})
               </button>
             </div>
           )}
@@ -211,7 +168,7 @@ function Validation() {
         {tests.length === 0 ? (
           <div className="empty-state">No validation results yet. Run tests to populate this table.</div>
         ) : visibleTests.length === 0 ? (
-          <div className="empty-state">No {activeTab === 'synthetic' ? 'synthetic' : 'FC reference'} tests available.</div>
+          <div className="empty-state">No {activeTab === 'synthetic' ? 'synthetic' : 'real-race'} tests available.</div>
         ) : (
           <table>
             <thead>

@@ -223,15 +223,6 @@ type ValidationResult struct {
 	Details       string  `json:"details"`
 }
 
-// FCFetchSummary describes one batch of FC data stored in the database.
-type FCFetchSummary struct {
-	FCRaceID    int    `json:"fcRaceID"`
-	Year        int    `json:"year"`
-	Stage       int    `json:"stage"`
-	ResultCount int    `json:"resultCount"`
-	FetchedAt   string `json:"fetchedAt"`
-}
-
 // GetRiders returns all riders from the database
 func (a *App) GetRiders() []RiderInfo {
 	if a.db == nil {
@@ -654,13 +645,12 @@ func (a *App) IsDatabaseSeeded() bool {
 	return len(riders) > 0
 }
 
-// RunValidation runs synthetic + real-race (FirstCycling) validation tests.
-// Synthetic cases are always run. FC cases run only if FC data has been fetched.
+// RunValidation runs synthetic + real-race validation tests.
 func (a *App) RunValidation() []ValidationResult {
 	synthetic := simulation.RunValidationSuite()
-	fcCases := simulation.RunFCValidationSuite(a.db)
+	realCases := simulation.RunRealRaceValidation(a.db)
 
-	all := append(synthetic, fcCases...)
+	all := append(synthetic, realCases...)
 	output := make([]ValidationResult, len(all))
 	for i, r := range all {
 		output[i] = ValidationResult{
@@ -675,28 +665,6 @@ func (a *App) RunValidation() []ValidationResult {
 		}
 	}
 	return output
-}
-
-// GetFCFetchedSummary returns metadata for all FC race result batches stored in the DB.
-func (a *App) GetFCFetchedSummary() []FCFetchSummary {
-	if a.db == nil {
-		return nil
-	}
-	summaries, err := a.db.ListFCFetched()
-	if err != nil {
-		return nil
-	}
-	out := make([]FCFetchSummary, len(summaries))
-	for i, s := range summaries {
-		out[i] = FCFetchSummary{
-			FCRaceID:    s.FCRaceID,
-			Year:        s.Year,
-			Stage:       s.Stage,
-			ResultCount: s.ResultCount,
-			FetchedAt:   s.FetchedAt,
-		}
-	}
-	return out
 }
 
 // GetSimulationParams returns current simulation parameters

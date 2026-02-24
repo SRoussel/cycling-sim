@@ -21,7 +21,7 @@ func powerForSpeed(speedMPS float64, totalMassKg float64, cda float64, gradientP
 // partitionByTimeGap splits riders into road clusters based on accumulated time gaps.
 // Riders who are too far apart on the road cannot regroup. Returns clusters sorted
 // by leader time (fastest cluster first).
-func partitionByTimeGap(riders []*RiderState, segment *model.Segment) [][]*RiderState {
+func partitionByTimeGap(riders []*RiderState, segment *model.Segment, distanceRemaining float64) [][]*RiderState {
 	if len(riders) <= 1 {
 		return [][]*RiderState{riders}
 	}
@@ -34,18 +34,37 @@ func partitionByTimeGap(riders []*RiderState, segment *model.Segment) [][]*Rider
 	})
 
 	// Gap threshold: how close riders must be to potentially regroup.
-	// On flat terrain, riders within ~15s can draft back on.
-	// On climbs, gaps are sticky — only very close riders regroup.
-	// On descents, some natural regrouping occurs.
-	gapThreshold := 45.0 // flat road: peloton draft can close moderate gaps
+	// Priority order:
+	//  1. Cobbles always shatter groups (10 s).
+	//  2. Final 5 km - sprint zone; gaps lock in (10 s).
+	//  3. Steep climbs in the final 60 km (>6%) are decisive (5 s).
+	//  4. Any climb >4%: sticky gaps (8 s).
+	//  5. Steep descents (<-2%) outside the final 5 km allow regrouping (60 s).
+	//  6. Final 15 km on flat/rolling: gaps carry through (15 s).
+	//  7. Final 60 km on flat/rolling: gaps from preceding climbs persist (20 s).
+	//  8. Default flat road (>60 km to go): peloton draft closes gaps (45 s).
+	gapThreshold := 45.0
 	if segment.SurfaceType == model.SurfaceCobbles {
 		gapThreshold = 10.0 // cobbles shatter groups; gaps stick
+	} else if distanceRemaining < 5 {
+		// Sprint zone: gaps are locked in regardless of terrain.
+		gapThreshold = 10.0
+	} else if segment.GradientPct > 6.0 && distanceRemaining < 60 {
+		// Decisive final climbs: only riders within 5 s can stay connected.
+		gapThreshold = 5.0
 	} else if segment.GradientPct > 4.0 {
-		gapThreshold = 8.0 // gaps are hard to close on climbs, but small regrouping happens
-	} else if segment.GradientPct < -2.0 {
-		gapThreshold = 60.0 // descents allow significant regrouping
+		gapThreshold = 8.0 // moderate climbs: gaps are hard to close
+	} else if segment.GradientPct < -2.0 && distanceRemaining >= 5 {
+		// Steep descents outside sprint zone: significant regrouping possible.
+		// This covers Cipressa descent (8.7km remaining), Poggio descent, etc.
+		gapThreshold = 60.0
+	} else if distanceRemaining < 15 {
+		// Final 15 km (flat, rolling, modest descent): gaps from last climb hold.
+		gapThreshold = 15.0
+	} else if distanceRemaining < 60 {
+		// Final 60 km flat/rolling: chase groups cannot close 20+ s gaps.
+		gapThreshold = 20.0
 	}
-
 	var clusters [][]*RiderState
 	cluster := []*RiderState{sorted[0]}
 	for i := 1; i < len(sorted); i++ {
@@ -98,7 +117,7 @@ func SimulateSegment(riders []*RiderState, segment *model.Segment, isTT bool, di
 
 	// Partition riders into road clusters by accumulated time gaps.
 	// Dropped riders can't teleport back to the front group.
-	clusters := partitionByTimeGap(activeRiders, segment)
+	clusters := partitionByTimeGap(activeRiders, segment, distanceRemaining)
 
 	// Form groups within each cluster independently
 	var groups []*Group
@@ -165,6 +184,18 @@ func SimulateSegment(riders []*RiderState, segment *model.Segment, isTT bool, di
 			if state.SprintChaseActive {
 				breakawayGap /= localParams.SprintTrainEfficiency
 			}
+		}
+
+		// When the power analysis says the peloton CAN match the break (breakawayGap==0),
+		// prevent physical speed differences from creating spurious time gaps on flat cobbles.
+		// On flat/rolling cobbles, gradient multipliers (EffectivePower) don't strongly
+		// favour any rider, so the small weight/CdA advantage of lighter riders should not
+		// open a decisive gap. On steep cobbled climbs (>6%), genuine climbing ability
+		// differences ARE meaningful and should be allowed to produce gaps.
+		if breakawayGap == 0 && segment.SurfaceType == model.SurfaceCobbles &&
+			segment.GradientPct < 6.0 &&
+			len(pelotonGroup.Riders) > 0 && pelotonGroup.Speed < breakGroup.Speed {
+			pelotonGroup.Speed = breakGroup.Speed
 		}
 		if state != nil {
 			if !state.BreakawayActive {
@@ -233,7 +264,7 @@ func SimulateSegment(riders []*RiderState, segment *model.Segment, isTT bool, di
 				// Small breakaway group gets less draft benefit
 				draftFactor = math.Max(draftFactor, 0.65)
 			}
-			if segment.GradientPct > 4.0 {
+			if segment.GradientPct > 5.0 {
 				draftFactor = math.Max(draftFactor, 0.85) // reduced draft on climbs
 			}
 			actualPower := powerForSpeed(groupSpeed, rs.Rider.TotalMassKg(),

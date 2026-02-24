@@ -117,7 +117,7 @@ func FormGroups(riders []*RiderState, segment *model.Segment, isTT bool, remaini
 		}
 	}
 
-	if segment.GradientPct <= 4.0 {
+	if segment.GradientPct <= 5.0 {
 		// Flat/rolling: split into breakaway group and peloton
 		sort.Slice(rps, func(i, j int) bool { return rps[i].power > rps[j].power })
 
@@ -145,8 +145,57 @@ func FormGroups(riders []*RiderState, segment *model.Segment, isTT bool, remaini
 			}
 		}
 
-		// If no breakaway riders, everyone stays in the peloton
+		// If no breakaway riders, everyone stays in the peloton (or splits on cobbles)
 		if len(breakawayRPs) == 0 {
+			if segment.SurfaceType == model.SurfaceCobbles {
+				// On cobbles with no explicit breakaway, the peloton still splinters.
+				// The strongest cobbles rider sets the pace; others drop if they can't
+				// sustain it with reduced drafting (cobbles break up draft lines).
+				// Sort by cobbles-adjusted power: raw power / HandlingFactor so that
+				// handlers who are efficient on pavé lead the group.
+				sort.Slice(rps, func(i, j int) bool {
+					hfi := HandlingFactor(rps[i].state.Rider.Handling)
+					hfj := HandlingFactor(rps[j].state.Rider.Handling)
+					return rps[i].power/hfi > rps[j].power/hfj
+				})
+				cobbleLeader := rps[0]
+				cobbleLeaderSpeed := SpeedFromPower(cobbleLeader.power, cobbleLeader.state.Rider.TotalMassKg(),
+					cobbleLeader.state.Rider.CdA, segment.GradientPct, segment.SurfaceType, cobbleLeader.state.Rider.Handling)
+
+				var mainGroup []*riderPower
+				var droppedGroups []*Group
+				for _, rp := range rps {
+					// Cobbles draft is severely limited — riders must mostly ride on their own.
+					cobbleDraft := 0.85
+					requiredPower := powerForSpeed(cobbleLeaderSpeed, rp.state.Rider.TotalMassKg(),
+						rp.state.Rider.CdA*cobbleDraft, segment.GradientPct, segment.SurfaceType, rp.state.Rider.Handling)
+					if rp.power >= requiredPower*0.95 {
+						rp := rp
+						mainGroup = append(mainGroup, &rp)
+					} else {
+						droppedSpeed := SpeedFromPower(rp.power, rp.state.Rider.TotalMassKg(),
+							rp.state.Rider.CdA, segment.GradientPct, segment.SurfaceType, rp.state.Rider.Handling)
+						droppedGroup := &Group{ID: len(droppedGroups) + 1, Speed: droppedSpeed, Riders: []*RiderState{rp.state}}
+						rp.state.GroupID = droppedGroup.ID
+						rp.state.GroupPosition = 1
+						rp.state.Dropped = true
+						droppedGroups = append(droppedGroups, droppedGroup)
+					}
+				}
+				if len(mainGroup) == 0 {
+					mainGroup = []*riderPower{&rps[0]}
+				}
+				frontGroup := &Group{ID: 0, Speed: cobbleLeaderSpeed, Riders: make([]*RiderState, len(mainGroup))}
+				for i, rp := range mainGroup {
+					rp.state.GroupID = 0
+					rp.state.GroupPosition = i + 1
+					frontGroup.Riders[i] = rp.state
+				}
+				result := []*Group{frontGroup}
+				result = append(result, droppedGroups...)
+				return result
+			}
+
 			group := &Group{ID: 0, Riders: make([]*RiderState, len(rps))}
 			for i, rp := range rps {
 				rp.state.GroupID = 0
@@ -187,13 +236,15 @@ func FormGroups(riders []*RiderState, segment *model.Segment, isTT bool, remaini
 		// On technical sections (cobbles), apply dropping for riders who can't maintain pace
 		// This allows specialization to matter: riders with poor handling naturally get dropped
 		if segment.SurfaceType == model.SurfaceCobbles {
-			// Technical terrain: riders with insufficient power get dropped
+			// Technical terrain: riders with insufficient power get dropped.
+			// Draft efficiency on cobbles is severely limited (0.85 vs 0.65 on smooth road)
+			// because riders must constantly adapt line and can't sit smoothly in a wheel.
 			var mainPeloton []*riderPower
 			droppedGroups := make([]*Group, 0)
 
 			for _, rp := range pelotonRPs {
 				// Calculate power needed to stay with peloton (less draft benefit on cobbles)
-				draftFactor := 0.65
+				draftFactor := 0.85
 				requiredPower := powerForSpeed(pelotonSpeed, rp.state.Rider.TotalMassKg(),
 					rp.state.Rider.CdA*draftFactor, segment.GradientPct, segment.SurfaceType, rp.state.Rider.Handling)
 

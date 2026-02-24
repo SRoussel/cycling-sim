@@ -11,7 +11,7 @@ import (
 
 // buildStageRaceState creates a minimal RaceState for a stage-race mountain scenario.
 func buildStageRaceState(segment *model.Segment, kmRemaining float64, hasDangerousBreakaway bool, breakawayGap float64, gcGaps map[int64]float64, riders []*RiderState) *RaceState {
-	state := NewRaceState(riders, rand.New(rand.NewSource(1)), true)
+	state := NewRaceState(riders, rand.New(rand.NewSource(1)), true, false)
 	state.Segment = segment
 	state.KmRemaining = kmRemaining
 	state.Phase = PhaseFromKm(kmRemaining)
@@ -243,7 +243,7 @@ func measureDomestiquePowers(dom *model.Rider, leader *model.Rider, seg *model.S
 		domRS := &RiderState{Rider: dom, WPrime: NewWPrimeState(dom), FormFactor: 1.0, EffectiveFTP: dom.FTPWatts, TeamRole: RoleDomestique}
 		leaderRS := &RiderState{Rider: leader, WPrime: NewWPrimeState(leader), FormFactor: 1.0, EffectiveFTP: leader.FTPWatts, TeamRole: RoleLeader}
 		riders := []*RiderState{domRS, leaderRS}
-		state := NewRaceState(riders, rng, true)
+		state := NewRaceState(riders, rng, true, false)
 		state.Segment = seg
 		state.KmRemaining = baseRemaining
 		state.Phase = PhaseFromKm(baseRemaining)

@@ -33,6 +33,7 @@ type riderPower struct {
 	power     float64 // effective power for this segment
 	wpw       float64 // watts per kg
 	breakaway bool
+	action    Action
 }
 
 // Group represents a cluster of riders traveling together.

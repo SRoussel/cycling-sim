@@ -6,15 +6,105 @@ import (
 	"cycling_sim/internal/model"
 )
 
-// followSplit splits riders into road groups using one physical rule on all
-// terrain: the fastest rider sets the tempo at the power their tactical
-// decision gives them (hold / attack / conserve multipliers), and each follower must produce
-// the power needed to hold that speed in the draft for their position, using
-// their power plus whatever W' they can spend over the segment. Riders who
-// can't are dropped and start the next group at their own speed.
-//
-// Drafting only reduces aerodynamic drag, so its benefit in watts falls off
-// naturally as speed drops on steeper climbs; no gradient thresholds needed.
+// Group-dynamics constants. These are the only knobs of the group model; all
+// gaps, drops, catches and regroups emerge from physics plus rider intent.
+const (
+	// contactSeconds: riders this close on the road are in contact and ride as
+	// one road group (a short effort closes ~150 m).
+	contactSeconds = 10.0
+
+	// maxRotation: at most this many riders usefully share the front in a
+	// rotating pace line; more riders add shelter but no extra speed.
+	maxRotation = 8
+
+	// cobbleDraftRetention: fraction of the normal drafting benefit available on
+	// cobbles, where riders can't hold a wheel smoothly.
+	cobbleDraftRetention = 0.4
+)
+
+// Phase intensity: the fraction of sustainable power the front of a group
+// rides at when riders are simply holding position. Attacks and chases are
+// layered on top by TacticsPowerMultiplier. This is rider intent, not terrain.
+var phaseIntensity = map[RacePhase]float64{
+	PhaseEarly: 0.82,
+	PhaseMid:   0.90,
+	PhaseFinal: 0.97,
+}
+
+// IntensityForPhase returns the holding intensity for a race phase.
+func IntensityForPhase(p RacePhase) float64 {
+	if v, ok := phaseIntensity[p]; ok {
+		return v
+	}
+	return 1.0
+}
+
+// draftFor returns the CdA multiplier for a rider at a position in a group.
+func draftFor(position int, surface model.SurfaceType) float64 {
+	d := DraftFactor(position)
+	if surface == model.SurfaceCobbles {
+		d = 1 - (1-d)*cobbleDraftRetention
+	}
+	return d
+}
+
+// rotationFactor is the average CdA multiplier of a rider sharing the front
+// in a k-rider pace line: one turn in the wind, k-1 turns on a wheel.
+func rotationFactor(k int, surface model.SurfaceType) float64 {
+	if k <= 1 {
+		return 1.0
+	}
+	if k > maxRotation {
+		k = maxRotation
+	}
+	wheel := draftFor(2, surface)
+	return (1 + float64(k-1)*wheel) / float64(k)
+}
+
+// isSheltered reports whether a rider stays out of the rotation (protected
+// leaders/sprinters and riders conserving).
+func isSheltered(rp riderPower) bool {
+	role := rp.state.TeamRole
+	return role == RoleLeader || role == RoleSprinter || rp.action == ActionConserve
+}
+
+// paceLineSpeed is the speed a group sustains when its strongest workers
+// rotate on the front. Sheltered riders only work when the group is too
+// small to protect them.
+func paceLineSpeed(rps []riderPower, segment *model.Segment) float64 {
+	var workers []riderPower
+	for _, rp := range rps {
+		if !isSheltered(rp) {
+			workers = append(workers, rp)
+		}
+	}
+	if len(workers) < 2 {
+		workers = append([]riderPower(nil), rps...)
+	}
+	sort.SliceStable(workers, func(i, j int) bool { return workers[i].power > workers[j].power })
+	k := len(workers)
+	if k > maxRotation {
+		k = maxRotation
+	}
+	var p, m, cda, handling float64
+	for _, w := range workers[:k] {
+		p += w.power
+		m += w.state.Rider.TotalMassKg()
+		cda += w.state.Rider.CdA
+		handling += float64(w.state.Rider.Handling)
+	}
+	n := float64(k)
+	return SpeedFromPower(p/n, m/n, cda/n*rotationFactor(k, segment.SurfaceType),
+		segment.GradientPct, segment.SurfaceType, int(handling/n))
+}
+
+// followSplit splits riders into road groups with one physical rule on all
+// terrain. A group's pace comes from its rotating workers (and is never
+// slower than its strongest rider alone); each follower must hold that pace
+// with their positional draft plus spendable W'. Riders who can't are dropped
+// and form the next group from those remaining. Drafting only reduces aero
+// drag, so its benefit fades naturally as speed drops on climbs: no gradient
+// thresholds.
 func followSplit(rps []riderPower, segment *model.Segment, firstID int) []*Group {
 	if len(rps) == 0 {
 		return nil
@@ -24,48 +114,41 @@ func followSplit(rps []riderPower, segment *model.Segment, firstID int) []*Group
 		r := rp.state.Rider
 		solo[rp.state] = SpeedFromPower(rp.power, r.TotalMassKg(), r.CdA, segment.GradientPct, segment.SurfaceType, r.Handling)
 	}
-	sort.SliceStable(rps, func(i, j int) bool { return solo[rps[i].state] > solo[rps[j].state] })
+	remaining := append([]riderPower(nil), rps...)
+	sort.SliceStable(remaining, func(i, j int) bool { return solo[remaining[i].state] > solo[remaining[j].state] })
 
 	var groups []*Group
-	var members []riderPower
-	var current *Group
-	start := func(rp riderPower, speed float64, dropped bool) {
-		if current != nil {
-			groups = append(groups, current)
+	for len(remaining) > 0 {
+		speed := paceLineSpeed(remaining, segment)
+		if s := solo[remaining[0].state]; speed < s {
+			speed = s
 		}
-		current = &Group{ID: firstID + len(groups), Speed: speed}
-		members = members[:0]
-		rp.state.Dropped = rp.state.Dropped || dropped
-		current.Riders = append(current.Riders, rp.state)
-		members = append(members, rp)
-	}
-	finish := func() {
-		// Within a formed group, domestiques ride in the wind for their leaders.
-		assignTeamPositions(append([]riderPower(nil), members...))
-		for _, rs := range current.Riders {
-			rs.GroupID = current.ID
+		g := &Group{ID: firstID + len(groups), Speed: speed}
+		segTime := SegmentTime(speed, segment.DistanceKm)
+		var members, rest []riderPower
+		for _, rp := range remaining {
+			r := rp.state.Rider
+			required := powerForSpeed(speed, r.TotalMassKg(), r.CdA*draftFor(len(members)+1, segment.SurfaceType),
+				segment.GradientPct, segment.SurfaceType, r.Handling)
+			available := rp.power + rp.state.WPrime.AvailablePowerAboveFTP(segTime)
+			if len(members) == 0 || available >= required {
+				members = append(members, rp)
+			} else {
+				rest = append(rest, rp)
+			}
 		}
-	}
-
-	leader := rps[0]
-	lr := leader.state.Rider
-	start(leader, SpeedFromPower(leader.power, lr.TotalMassKg(), lr.CdA, segment.GradientPct, segment.SurfaceType, lr.Handling), false)
-
-	for _, rp := range rps[1:] {
-		r := rp.state.Rider
-		position := len(current.Riders) + 1
-		required := powerForSpeed(current.Speed, r.TotalMassKg(), r.CdA*DraftFactor(position), segment.GradientPct, segment.SurfaceType, r.Handling)
-		segTime := SegmentTime(current.Speed, segment.DistanceKm)
-		available := rp.power + rp.state.WPrime.AvailablePowerAboveFTP(segTime)
-		if available >= required {
-			current.Riders = append(current.Riders, rp.state)
-			members = append(members, rp)
-			continue
+		if len(groups) > 0 {
+			for _, m := range members {
+				m.state.Dropped = true
+			}
 		}
-		finish()
-		start(rp, solo[rp.state], true)
+		assignTeamPositions(members) // domestiques ride in the wind for their leaders
+		for _, m := range members {
+			m.state.GroupID = g.ID
+			g.Riders = append(g.Riders, m.state)
+		}
+		groups = append(groups, g)
+		remaining = rest
 	}
-	finish()
-	groups = append(groups, current)
 	return groups
 }

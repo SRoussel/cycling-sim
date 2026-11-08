@@ -3,7 +3,6 @@ package simulation
 import (
 	"fmt"
 	"math/rand"
-	"sort"
 
 	"cycling_sim/internal/model"
 )
@@ -75,7 +74,17 @@ func FormGroups(riders []*RiderState, segment *model.Segment, isTT bool, remaini
 			}
 			state.LastActions[rs.Rider.ID] = action
 		}
+		if action != ActionAttack && state != nil {
+			power *= IntensityForPhase(state.Phase)
+		}
 		power *= TacticsPowerMultiplier(action, *params)
+		if action == ActionAttack {
+			// An attack is funded by W': spend what's available over the time
+			// this segment would take at the attacker's own speed.
+			r := rs.Rider
+			est := SegmentTime(SpeedFromPower(power, r.TotalMassKg(), r.CdA, segment.GradientPct, segment.SurfaceType, r.Handling), segment.DistanceKm)
+			power += rs.WPrime.AvailablePowerAboveFTP(est)
+		}
 		if state != nil && state.Overrides != nil {
 			if effortMultiplier, ok := state.Overrides.EffortMultiplier(rs.Rider.ID); ok {
 				power *= effortMultiplier
@@ -114,166 +123,39 @@ func FormGroups(riders []*RiderState, segment *model.Segment, isTT bool, remaini
 			power:     power,
 			wpw:       power / rs.Rider.WeightKg,
 			breakaway: breakaway,
+			action:    action,
 		}
 	}
 
-	if segment.GradientPct <= 5.0 {
-		// Flat/rolling: split into breakaway group and peloton
-		sort.Slice(rps, func(i, j int) bool { return rps[i].power > rps[j].power })
-
-		var breakawayRPs []riderPower
-		var pelotonRPs []riderPower
-
-		// First pass: identify which leaders/sprinters are in the breakaway
-		breakawayLeaderTeams := make(map[string]bool)
-		for _, rp := range rps {
-			if rp.breakaway && (rp.state.TeamRole == RoleLeader || rp.state.TeamRole == RoleSprinter) {
-				breakawayLeaderTeams[rp.state.Rider.Team] = true
-			}
+	// Attackers ride away as their own group; everyone else follows the same
+	// physical rule. Gaps then grow or shrink from speed differences alone.
+	breakawayLeaderTeams := make(map[string]bool)
+	for _, rp := range rps {
+		if rp.breakaway && (rp.state.TeamRole == RoleLeader || rp.state.TeamRole == RoleSprinter) {
+			breakawayLeaderTeams[rp.state.Rider.Team] = true
 		}
-
-		for _, rp := range rps {
-			if rp.breakaway && len(breakawayRPs) < maxBreakawaySize {
-				// Domestiques don't join a breakaway that contains their own leader
-				if rp.state.TeamRole == RoleDomestique && breakawayLeaderTeams[rp.state.Rider.Team] {
-					pelotonRPs = append(pelotonRPs, rp)
-					continue
-				}
-				breakawayRPs = append(breakawayRPs, rp)
-			} else {
-				pelotonRPs = append(pelotonRPs, rp)
-			}
-		}
-
-		// If no breakaway riders, everyone stays in the peloton (or splits on cobbles)
-		if len(breakawayRPs) == 0 {
-			if segment.SurfaceType == model.SurfaceCobbles {
-				// On cobbles with no explicit breakaway, the peloton still splinters.
-				// The strongest cobbles rider sets the pace; others drop if they can't
-				// sustain it with reduced drafting (cobbles break up draft lines).
-				// Sort by cobbles-adjusted power: raw power / HandlingFactor so that
-				// handlers who are efficient on pavé lead the group.
-				sort.Slice(rps, func(i, j int) bool {
-					hfi := HandlingFactor(rps[i].state.Rider.Handling)
-					hfj := HandlingFactor(rps[j].state.Rider.Handling)
-					return rps[i].power/hfi > rps[j].power/hfj
-				})
-				cobbleLeader := rps[0]
-				cobbleLeaderSpeed := SpeedFromPower(cobbleLeader.power, cobbleLeader.state.Rider.TotalMassKg(),
-					cobbleLeader.state.Rider.CdA, segment.GradientPct, segment.SurfaceType, cobbleLeader.state.Rider.Handling)
-
-				var mainGroup []*riderPower
-				var droppedGroups []*Group
-				for _, rp := range rps {
-					// Cobbles draft is severely limited — riders must mostly ride on their own.
-					cobbleDraft := 0.85
-					requiredPower := powerForSpeed(cobbleLeaderSpeed, rp.state.Rider.TotalMassKg(),
-						rp.state.Rider.CdA*cobbleDraft, segment.GradientPct, segment.SurfaceType, rp.state.Rider.Handling)
-					if rp.power >= requiredPower*0.95 {
-						rp := rp
-						mainGroup = append(mainGroup, &rp)
-					} else {
-						droppedSpeed := SpeedFromPower(rp.power, rp.state.Rider.TotalMassKg(),
-							rp.state.Rider.CdA, segment.GradientPct, segment.SurfaceType, rp.state.Rider.Handling)
-						droppedGroup := &Group{ID: len(droppedGroups) + 1, Speed: droppedSpeed, Riders: []*RiderState{rp.state}}
-						rp.state.GroupID = droppedGroup.ID
-						rp.state.GroupPosition = 1
-						rp.state.Dropped = true
-						droppedGroups = append(droppedGroups, droppedGroup)
-					}
-				}
-				if len(mainGroup) == 0 {
-					mainGroup = []*riderPower{&rps[0]}
-				}
-				frontGroup := &Group{ID: 0, Speed: cobbleLeaderSpeed, Riders: make([]*RiderState, len(mainGroup))}
-				for i, rp := range mainGroup {
-					rp.state.GroupID = 0
-					rp.state.GroupPosition = i + 1
-					frontGroup.Riders[i] = rp.state
-				}
-				result := []*Group{frontGroup}
-				result = append(result, droppedGroups...)
-				return result
-			}
-
-			return followSplit(rps, segment, 0)
-		}
-
-		// Breakaway group (rides at front, reduced drafting)
-		breakGroup := &Group{ID: 0, Riders: make([]*RiderState, len(breakawayRPs)), IsBreakaway: true}
-		for i, rp := range breakawayRPs {
-			rp.state.GroupID = 0
-			rp.state.GroupPosition = i + 1
-			breakGroup.Riders[i] = rp.state
-		}
-		// Breakaway speed: strongest rider sets pace (less draft benefit in small group)
-		breakLeader := breakawayRPs[0]
-		breakSpeed := SpeedFromPower(breakLeader.power, breakLeader.state.Rider.TotalMassKg(),
-			breakLeader.state.Rider.CdA, segment.GradientPct, segment.SurfaceType, breakLeader.state.Rider.Handling)
-		breakGroup.Speed = breakSpeed
-
-		// Peloton group with dropping logic on technical sections
-		groups := []*Group{breakGroup}
-
-		if len(pelotonRPs) == 0 {
-			return groups // Only breakaway, no peloton
-		}
-
-		pelotonLeader := pelotonRPs[0]
-		pelotonSpeed := SpeedFromPower(pelotonLeader.power, pelotonLeader.state.Rider.TotalMassKg(),
-			pelotonLeader.state.Rider.CdA, segment.GradientPct, segment.SurfaceType, pelotonLeader.state.Rider.Handling)
-
-		// On technical sections (cobbles), apply dropping for riders who can't maintain pace
-		// This allows specialization to matter: riders with poor handling naturally get dropped
-		if segment.SurfaceType == model.SurfaceCobbles {
-			// Technical terrain: riders with insufficient power get dropped.
-			// Draft efficiency on cobbles is severely limited (0.85 vs 0.65 on smooth road)
-			// because riders must constantly adapt line and can't sit smoothly in a wheel.
-			var mainPeloton []*riderPower
-			droppedGroups := make([]*Group, 0)
-
-			for _, rp := range pelotonRPs {
-				// Calculate power needed to stay with peloton (less draft benefit on cobbles)
-				draftFactor := 0.85
-				requiredPower := powerForSpeed(pelotonSpeed, rp.state.Rider.TotalMassKg(),
-					rp.state.Rider.CdA*draftFactor, segment.GradientPct, segment.SurfaceType, rp.state.Rider.Handling)
-
-				// Drop riders who can't sustain 95% of group pace (cobbles are unforgiving)
-				if rp.power >= requiredPower*0.95 {
-					mainPeloton = append(mainPeloton, &rp)
-				} else {
-					// Dropped — create own group at their speed
-					droppedSpeed := SpeedFromPower(rp.power, rp.state.Rider.TotalMassKg(),
-						rp.state.Rider.CdA, segment.GradientPct, segment.SurfaceType, rp.state.Rider.Handling)
-					droppedGroup := &Group{ID: len(groups) + len(droppedGroups), Speed: droppedSpeed, Riders: []*RiderState{rp.state}}
-					rp.state.GroupID = droppedGroup.ID
-					rp.state.GroupPosition = 1
-					rp.state.Dropped = true
-					droppedGroups = append(droppedGroups, droppedGroup)
-				}
-			}
-
-			// Main peloton (or remaining peloton after drops)
-			if len(mainPeloton) > 0 {
-				pelotonGroup := &Group{ID: 1, Speed: pelotonSpeed, Riders: make([]*RiderState, len(mainPeloton))}
-				for i, rp := range mainPeloton {
-					rp.state.GroupID = 1
-					rp.state.GroupPosition = i + 1
-					pelotonGroup.Riders[i] = rp.state
-				}
-				groups = append(groups, pelotonGroup)
-			}
-			groups = append(groups, droppedGroups...)
+	}
+	var attackers, others []riderPower
+	for _, rp := range rps {
+		// Domestiques don't join a move that contains their own leader.
+		joins := rp.breakaway && len(attackers) < maxBreakawaySize &&
+			!(rp.state.TeamRole == RoleDomestique && breakawayLeaderTeams[rp.state.Rider.Team])
+		if joins {
+			attackers = append(attackers, rp)
 		} else {
-			// Non-technical: same physical follow rule as everywhere else.
-			groups = append(groups, followSplit(pelotonRPs, segment, len(groups))...)
+			others = append(others, rp)
 		}
-
-		return groups
 	}
-
-	// Climbs: attackers simply lead the tempo; the same follow rule applies.
-	return followSplit(rps, segment, 0)
+	var groups []*Group
+	if len(attackers) > 0 && len(others) > 0 {
+		groups = followSplit(attackers, segment, 0)
+		for _, g := range groups {
+			g.IsBreakaway = true
+		}
+	} else {
+		others = rps
+	}
+	return append(groups, followSplit(others, segment, len(groups))...)
 }
 
 // assignTeamPositions reorders riders in a group so domestiques ride at the front

@@ -11,6 +11,7 @@ import (
 	"cycling_sim/internal/model"
 	"cycling_sim/internal/seed"
 	"cycling_sim/internal/service"
+	"cycling_sim/internal/simulation"
 )
 
 func main() {
@@ -54,6 +55,8 @@ func main() {
 	case "run-stage-race":
 		srID := idArg(args, 0, "Usage: cycling-sim run-stage-race <stage-race-id> [--seed N]")
 		cmdRunStageRace(db, srID, seedVal)
+	case "validate":
+		cmdValidate(db)
 	case "results":
 		raceID := idArg(args, 0, "Usage: cycling-sim results <race-id>")
 		cmdShowResults(db, raceID)
@@ -126,6 +129,7 @@ Commands:
   run <race-id> [--incidents]    Simulate a race
   run-stage-race <stage-race-id> Simulate a stage race
                                  (both accept --seed N for reproducible runs)
+  validate                       Run synthetic + real-race (2024) validation
   results <race-id>              Show race results
   gc <stage-race-id> <stage>     Show GC standings after a stage
 
@@ -383,4 +387,29 @@ func formatDuration(seconds float64) string {
 		return fmt.Sprintf("%d'%02d\"", m, s)
 	}
 	return fmt.Sprintf("%d\"", s)
+}
+
+func cmdValidate(db *database.DB) {
+	print := func(title string, rows []simulation.ValidationSummary) int {
+		fmt.Printf("== %s ==\n", title)
+		passed := 0
+		for _, r := range rows {
+			mark := "FAIL"
+			if r.Passed {
+				mark = "PASS"
+				passed++
+			}
+			fmt.Printf("[%s] %-28s %s\n", mark, r.Name, r.Details)
+		}
+		fmt.Println()
+		return passed
+	}
+	synth := simulation.RunValidationSuite()
+	real := simulation.RunRealRaceValidation(db)
+	if real == nil {
+		fmt.Println("(no riders in DB: run 'cycling-sim seed' for real-race validation)")
+	}
+	p1 := print("Synthetic fields", synth)
+	p2 := print("Real races (2024)", real)
+	fmt.Printf("Passed %d/%d synthetic, %d/%d real\n", p1, len(synth), p2, len(real))
 }

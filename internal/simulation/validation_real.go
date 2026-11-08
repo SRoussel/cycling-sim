@@ -27,20 +27,23 @@ import (
 
 const (
 	// realPassTop10Target is the minimum % of known top-10 riders that must also
-	// appear in the simulated top-10 for the case to pass.
-	realPassTop10Target = 20.0
+	// appear (on average across runs) in the simulated top-10 for the case to pass.
+	realPassTop10Target = 40.0
 
 	// realPassGapMAE is the maximum acceptable mean-absolute-error (seconds)
-	// between reference time-gaps and simulated time-gaps.
-	realPassGapMAE = 600.0
+	// between reference and simulated time gaps, over riders with a known gap.
+	realPassGapMAE = 120.0
 
 	// realMinMatchedRiders is the minimum number of known-ID riders before the
 	// validation case is considered meaningful.
 	realMinMatchedRiders = 3
 
-	// realValidationRuns is the number of simulation runs per race.
-	realValidationRuns = 10
+	// realValidationRuns is the number of simulation runs (seeds) per race.
+	realValidationRuns = 20
 )
+
+// gapUnknown marks a reference slot whose time gap is not known.
+const gapUnknown = -1
 
 // RealRaceEntry holds a hardcoded reference top-10 for a known race.
 type RealRaceEntry struct {
@@ -48,50 +51,62 @@ type RealRaceEntry struct {
 	DisplayName string
 	// InternalName must exactly match the race name as seeded in the database.
 	InternalName string
-	// Top10RiderIDs lists internal rider IDs in 1st-through-Nth finishing order.
-	// Use 0 to represent a rider not present in the internal DB; those slots are skipped.
+	// Top10RiderIDs lists internal rider IDs in 1st-through-10th finishing order.
+	// Use 0 for a rider not in the internal DB or a place not verified; those slots are skipped.
 	Top10RiderIDs []int64
+	// Top10GapSecs holds the real gap to the winner for each slot (gapUnknown if not known).
+	Top10GapSecs []float64
 }
 
-// KnownRealRaces returns hardcoded 2024 season reference results for the six
-// classic one-day races that are seeded in the internal database.
+// KnownRealRaces returns 2024 reference results for the six seeded classics.
+//
+// Verified November 2026 against ProCyclingStats, Cyclingnews and CyclingStage
+// race reports. Places that sources disagreed on are left as 0 / gapUnknown.
+// Riders not in data/riders.csv (e.g. Mozzato, Pidcock, Bardet, Teuns) are 0.
 func KnownRealRaces() []RealRaceEntry {
+	const u = gapUnknown
 	return []RealRaceEntry{
 		{
 			DisplayName:  "Strade Bianche 2024",
 			InternalName: "Strade Bianche",
-			// 1: Pogačar  2: van der Poel  3: Benoot  4: van Baarle
-			Top10RiderIDs: []int64{452, 28, 60, 338, 0, 0, 156, 0, 0, 0},
+			// 1 Pogačar  2 Skujiņš +2:44  3 Van Gils +2:47  4 Pidcock*  8 L.Martinez  9 Zana  10 Laporte
+			Top10RiderIDs: []int64{452, 193, 312, 0, 0, 0, 0, 44, 347, 421},
+			Top10GapSecs:  []float64{0, 164, 167, u, u, u, u, 288, 289, 317},
 		},
 		{
 			DisplayName:  "Milan-San Remo 2024",
 			InternalName: "Milan-San Remo",
-			// 1: Pogačar  2: Girmay  3: Philipsen  4: J.Milan  5: van Aert
-			Top10RiderIDs: []int64{452, 269, 17, 184, 429, 0, 0, 0, 0, 0},
+			// Bunch sprint: 1 Philipsen  2 Matthews  3 Pogačar  4 Pedersen  7 Van Gils  8 Stuyven  10 van der Poel
+			Top10RiderIDs: []int64{17, 366, 452, 190, 0, 0, 312, 336, 0, 28},
+			Top10GapSecs:  []float64{0, 0, 0, 0, u, u, 0, 0, u, 0},
 		},
 		{
 			DisplayName:  "Tour of Flanders 2024",
 			InternalName: "Tour of Flanders",
-			// 1: Pogačar  2: van der Poel  3: Stuyven  4: van Aert  5: Pedersen
-			Top10RiderIDs: []int64{452, 28, 336, 429, 190, 0, 0, 0, 0, 0},
+			// 1 van der Poel solo; group at +1:02: 2 Mozzato*  3 Politt  4 Bjerg  5 Morgado  6 Sheffield  7 Naesen  9 Bettiol
+			Top10RiderIDs: []int64{28, 0, 453, 436, 446, 163, 78, 0, 493, 0},
+			Top10GapSecs:  []float64{0, 62, 62, 62, 62, 62, 62, 62, 62, 62},
 		},
 		{
 			DisplayName:  "Paris-Roubaix 2024",
 			InternalName: "Paris-Roubaix",
-			// 1: van der Poel  2: van Aert  3: Pedersen  4: Benoot  6: van Baarle
-			Top10RiderIDs: []int64{28, 429, 190, 60, 0, 338, 0, 0, 0, 0},
+			// 1 van der Poel solo  2 Philipsen +3:00  3 Pedersen  4 Politt  6 G.Vermeersch +3:47  9 Wærenskjold  10 Mihkels
+			Top10RiderIDs: []int64{28, 17, 190, 453, 0, 314, 0, 0, 491, 101},
+			Top10GapSecs:  []float64{0, 180, 180, 180, u, 227, u, u, u, u},
 		},
 		{
 			DisplayName:  "Liege-Bastogne-Liege 2024",
 			InternalName: "Liege-Bastogne-Liege",
-			// 1: Pogačar  2: Evenepoel  3: Roglič
-			Top10RiderIDs: []int64{452, 294, 306, 0, 0, 0, 0, 0, 0, 0},
+			// 1 Pogačar  2 Bardet* +1:39  3 van der Poel +2:02  4 Van Gils  5 A.Paret-Peintre  6 Vansevenant  8 Lutsenko  9 Bilbao
+			Top10RiderIDs: []int64{452, 0, 28, 312, 79, 344, 0, 274, 33, 0},
+			Top10GapSecs:  []float64{0, 99, 122, 122, 122, 122, 122, 122, 122, 122},
 		},
 		{
 			DisplayName:  "Il Lombardia 2024",
 			InternalName: "Il Lombardia",
-			// 1: Pogačar  2: Evenepoel  3: Vingegaard
-			Top10RiderIDs: []int64{452, 294, 431, 0, 0, 0, 0, 0, 0, 0},
+			// 1 Pogačar  2 Evenepoel +3:16  3 Ciccone +4:31  8 Powless +4:58  9 Gaudu +4:58
+			Top10RiderIDs: []int64{452, 294, 177, 0, 0, 0, 0, 103, 125, 0},
+			Top10GapSecs:  []float64{0, 196, 271, u, u, u, u, 298, 298, 298},
 		},
 	}
 }
@@ -176,6 +191,7 @@ func RunRealRaceValidation(db *database.DB) []ValidationSummary {
 		posCnt := make(map[int64]int)
 		gapSum := make(map[int64]float64)
 		gapCnt := make(map[int64]int)
+		wins := make(map[int64]int)
 
 		for run := 0; run < realValidationRuns; run++ {
 			riders := selection.SelectStartList(allRiders, course, race, selCfg)
@@ -192,6 +208,9 @@ func RunRealRaceValidation(db *database.DB) []ValidationSummary {
 				simResults = SimulateRoadRace(cfg)
 			}
 			for _, res := range simResults {
+				if res.Position == 1 {
+					wins[res.RiderID]++
+				}
 				posSum[res.RiderID] += float64(res.Position)
 				posCnt[res.RiderID]++
 				gapSum[res.RiderID] += res.TimeGapSeconds
@@ -242,23 +261,33 @@ func RunRealRaceValidation(db *database.DB) []ValidationSummary {
 			top10Pct = float64(overlapCount) / float64(len(refTop10)) * 100
 		}
 
-		// ── Metric 3: Time-gap MAE ────────────────────────────────────────────
+		// ── Metric 3: Time-gap MAE vs real gaps ──────────────────────────────
 		var gapMAESum float64
+		gapN := 0
 		for _, m := range matched {
-			// Reference gaps are 0 for top finishers in a one-day race (we don't
-			// have real gap data), so we relax this to just penalise very large
-			// simulated gaps for highly placed riders.
-			gapMAESum += math.Abs(avgGap(m.riderID))
+			ref := entry.Top10GapSecs[m.refPos-1]
+			if ref == gapUnknown {
+				continue
+			}
+			gapMAESum += math.Abs(avgGap(m.riderID) - ref)
+			gapN++
 		}
-		gapMAE := gapMAESum / float64(len(matched))
+		gapMAE := 0.0
+		if gapN > 0 {
+			gapMAE = gapMAESum / float64(gapN)
+		}
 
-		// Pass if top-10 fractions are sufficient. Gap MAE is informational only:
-		// reference gaps for one-day classics are 0 so MAE is not a reliable signal.
-		passed := top10Pct >= realPassTop10Target
+		// ── Metric 4: Winner match rate ──────────────────────────────────────
+		winnerPct := 0.0
+		if w := entry.Top10RiderIDs[0]; w > 0 && realValidationRuns > 0 {
+			winnerPct = float64(wins[w]) / float64(realValidationRuns) * 100
+		}
+
+		passed := top10Pct >= realPassTop10Target && (gapN == 0 || gapMAE <= realPassGapMAE)
 
 		details := fmt.Sprintf(
-			"Matched %d riders | Corr %.2f | Top-10 overlap %.0f%% (≥%.0f%%) | Gap MAE %.0fs (info)",
-			len(matched), corr, top10Pct, realPassTop10Target, gapMAE,
+			"Matched %d | Corr %.2f | Top-10 overlap %.0f%% (≥%.0f%%) | Gap MAE %.0fs over %d (≤%.0fs) | Real winner wins %.0f%%",
+			len(matched), corr, top10Pct, realPassTop10Target, gapMAE, gapN, realPassGapMAE, winnerPct,
 		)
 
 		results = append(results, ValidationSummary{

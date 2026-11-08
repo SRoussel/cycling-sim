@@ -499,3 +499,221 @@
     box-shadow: 0 0 0 0 rgba(0, 0, 0, 0);
   }
 }
+
+/* ── Course progress header ── */
+.course-progress-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.course-progress-header h2 {
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.segment-badge {
+  flex: 1;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  background: var(--color-bg);
+  border: 1px solid var(--color-secondary);
+  border-radius: 999px;
+  padding: 0.2rem 0.65rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 45%;
+}
+
+.km-remaining {
+  margin-left: auto;
+  display: flex;
+  align-items: baseline;
+  gap: 0.25rem;
+  white-space: nowrap;
+}
+
+.km-remaining-value {
+  font-size: 1.6rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--color-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.km-remaining-label {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+/* ── Interactive HUD ── */
+.interactive-hud {
+  margin-bottom: 1.5rem;
+  border-left: 3px solid var(--color-primary);
+}
+
+.hud-groups-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.85rem;
+}
+
+.hud-group-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
+  padding: 0.35rem 0.65rem;
+  border-radius: 6px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-secondary);
+  min-width: 7rem;
+}
+
+.hud-group-chip.lead-group,
+.hud-group-chip.leader,
+.hud-group-chip.lead {
+  border-color: var(--color-success);
+}
+
+.hud-group-chip.chaser,
+.hud-group-chip.chasers,
+.hud-group-chip.chase {
+  border-color: var(--color-warning);
+}
+
+.hud-group-chip.peloton {
+  border-color: var(--color-secondary);
+}
+
+.hud-group-chip.dropped {
+  border-color: var(--color-danger);
+  opacity: 0.75;
+}
+
+.hud-chip-name {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text);
+}
+
+.hud-chip-gap {
+  font-size: 0.9rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+}
+
+.hud-chip-count {
+  font-size: 0.68rem;
+  color: var(--color-text-muted);
+}
+
+/* ── HUD rider strip ── */
+.hud-rider-strip {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.hud-rider-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.5rem 0.65rem;
+  border-radius: 6px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-secondary);
+}
+
+.hud-rider-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.hud-rider-name {
+  font-weight: 600;
+  font-size: 0.875rem;
+  white-space: nowrap;
+}
+
+.hud-rider-tel {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.hud-rider-btns {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+
+.hud-attack-btn {
+  padding: 0.45rem 0.85rem;
+  border-radius: 4px;
+  border: none;
+  background: var(--color-danger);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.1s;
+  white-space: nowrap;
+}
+
+.hud-attack-btn:hover:not(:disabled) {
+  opacity: 0.85;
+  transform: scale(1.03);
+}
+
+.hud-attack-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.hud-attack-btn.queued {
+  background: var(--color-warning);
+}
+
+.hud-attack-btn.accepted {
+  animation: commandAcceptedPulse 360ms ease-out;
+}
+
+.hud-tactic-select {
+  padding: 0.4rem 0.5rem;
+  border-radius: 4px;
+  border: 1px solid var(--color-secondary);
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  font-size: 0.78rem;
+}
+
+.hud-badge {
+  font-size: 0.68rem;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  border: 1px solid var(--color-secondary);
+  white-space: nowrap;
+}
+
+.hud-badge.cooldown {
+  color: var(--color-text-muted);
+}
+
+.hud-badge.queued {
+  color: var(--color-warning);
+  border-color: var(--color-warning);
+}

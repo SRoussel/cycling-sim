@@ -200,6 +200,8 @@ function Simulation() {
   ])
 
   const [groups, setGroups] = useState<RaceGroup[]>([])
+  const [currentSegmentName, setCurrentSegmentName] = useState<string>('')
+  const [kmTotal, setKmTotal] = useState<number>(0)
 
   const appendEvents = (lines: string[]) => {
     if (lines.length === 0) return
@@ -251,6 +253,9 @@ function Simulation() {
       setLiveProgress(true)
       setProgress(Math.min(100, payload.progress))
       setRouteKm(Math.max(0, payload.kmCovered || 0))
+      if (payload.kmTotal && payload.kmTotal > 0) {
+        setKmTotal(payload.kmTotal)
+      }
       setElapsedTime(Math.max(0, payload.elapsedTime || 0))
       const nextGroups: RaceGroup[] = payload.groups.map((group) => ({
         name: group.name,
@@ -292,6 +297,7 @@ function Simulation() {
       }
       if (payload.segmentName && payload.segmentName !== lastSegmentName.current) {
         lastSegmentName.current = payload.segmentName
+        setCurrentSegmentName(payload.segmentName)
         appendEvents([`Segment: ${payload.segmentName}`])
       }
       if (payload.events && payload.events.length > 0) {
@@ -667,6 +673,9 @@ function Simulation() {
     : 0
   const routePath = routeProfile ? profilePath(routeProfile.points || []) : ''
 
+  const effectiveTotalKm = kmTotal > 0 ? kmTotal : (routeProfile?.totalKm || raceDistance)
+  const kmRemaining = Math.max(0, effectiveTotalKm - routeKm)
+
   const sprintPhaseLabel = teamState?.sprintTrainPhase || 'idle'
 
   const sendSprintTrainOrder = async (nextOrder: number[]) => {
@@ -745,16 +754,23 @@ function Simulation() {
       </header>
 
       <section className="card course-progress">
-        <h2>Race Progress</h2>
+        <div className="course-progress-header">
+          <h2>Race Progress</h2>
+          {currentSegmentName && <span className="segment-badge">{currentSegmentName}</span>}
+          <div className="km-remaining">
+            <span className="km-remaining-value">{kmRemaining.toFixed(1)}</span>
+            <span className="km-remaining-label"> km to go</span>
+          </div>
+        </div>
         <div className="progress-bar">
           <div className="progress-fill" style={{ width: `${progress}%` }}></div>
           <div className="progress-marker" style={{ left: `${progress}%` }}>🚴</div>
         </div>
         <div className="progress-info">
-          <span>{Math.round(progress * raceDistance / 100)} km</span>
+          <span>{routeKm.toFixed(1)} km</span>
           <span>{formatRaceClock(elapsedTime)}</span>
           <span>{Math.round(progress)}%</span>
-          <span>{raceDistance} km</span>
+          <span>{effectiveTotalKm.toFixed(1)} km total</span>
         </div>
       </section>
 
@@ -775,6 +791,61 @@ function Simulation() {
           </div>
         )}
       </section>
+
+      {interactiveMode && sessionId && (
+        <section className="card interactive-hud">
+          <div className="hud-groups-strip">
+            {groups.map((g, i) => (
+              <div key={i} className={`hud-group-chip ${g.name.toLowerCase().replace(/\s+/g, '-')}`}>
+                <span className="hud-chip-name">{g.name}</span>
+                <span className="hud-chip-gap">{g.gap}</span>
+                <span className="hud-chip-count">{g.riders.length} riders</span>
+              </div>
+            ))}
+          </div>
+          <div className="hud-rider-strip">
+            {sortedTeamRiders.map((r) => {
+              const telemetry = telemetryForRider(r.id)
+              const groupName = riderGroups[r.id] || 'Unknown'
+              const isLocked = isRiderLocked(r.id)
+              return (
+                <div key={r.id} className="hud-rider-card">
+                  <div className="hud-rider-info">
+                    <span className="hud-rider-name">{r.name}</span>
+                    <span className={groupClassName(groupName)}>{groupName}</span>
+                    {telemetry && (
+                      <span className="hud-rider-tel">
+                        {Math.round(telemetry.speedKph)} kph · W' {Math.round(telemetry.wPrimePct)}%
+                      </span>
+                    )}
+                  </div>
+                  <div className="hud-rider-btns">
+                    <button
+                      className={`hud-attack-btn${riderOneShotQueued[r.id] ? ' queued' : ''}${acceptedButtons[`${r.id}:attack:oneshot`] ? ' accepted' : ''}`}
+                      onClick={() => sendCommand(r.id, 'attack', 'oneshot')}
+                      disabled={isLocked}
+                      title="One-shot attack burst"
+                    >⚡ Attack</button>
+                    <select
+                      className="hud-tactic-select"
+                      value={riderPersistentActions[r.id] || 'hold'}
+                      onChange={(e) => handleTacticChange(r.id, e.target.value)}
+                      disabled={isLocked}
+                    >
+                      <option value="hold">Hold</option>
+                      <option value="conserve">Conserve</option>
+                      <option value="chase">Chase</option>
+                      <option value="attack">Attack (sustain)</option>
+                    </select>
+                    {isLocked && <span className="hud-badge cooldown">⏳</span>}
+                    {riderOneShotQueued[r.id] && !isLocked && <span className="hud-badge queued">⚡ queued</span>}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </section>
+      )}
 
       <div className="sim-grid">
         <section className="card groups-panel">

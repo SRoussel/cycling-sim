@@ -417,7 +417,7 @@ func cmdValidate(db *database.DB) {
 		return passed
 	}
 	synth := simulation.RunValidationSuite()
-	real := simulation.RunRealRaceValidation(db)
+	real := append(simulation.RunRealRaceValidation(db), simulation.RunRealStageRaceValidation(db)...)
 	if real == nil {
 		fmt.Println("(no riders in DB: run 'cycling-sim seed' for real-race validation)")
 	}

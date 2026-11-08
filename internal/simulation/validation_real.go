@@ -316,6 +316,140 @@ func RunRealRaceValidation(db *database.DB) []ValidationSummary {
 	return results
 }
 
+// realStageRaceRuns is the number of full stage-race simulations per case.
+const realStageRaceRuns = 6
+
+// realStageRaceGapMAE is the pass bar for GC gap error (seconds); Grand Tour
+// gaps are an order of magnitude larger than one-day gaps.
+const realStageRaceGapMAE = 300.0
+
+// KnownRealStageRaces returns final GC references for seeded stage races.
+// The seeded courses are generic, so only the GC shape is comparable.
+func KnownRealStageRaces() []RealRaceEntry {
+	const u = gapUnknown
+	return []RealRaceEntry{
+		{
+			DisplayName:  "Tour de France 2024 (GC)",
+			InternalName: "Tour de France",
+			// 1 Pogačar  2 Vingegaard +6:17  3 Evenepoel +9:18  7 C.Rodríguez
+			// 8 Jorgenson  9 Gee* +27:21  10 Buitrago +29:03 (4-6 not verified)
+			Top10RiderIDs: []int64{452, 431, 294, 0, 0, 0, 161, 416, 0, 36},
+			Top10GapSecs:  []float64{0, 377, 558, u, u, u, u, u, 1641, 1743},
+		},
+	}
+}
+
+// RunRealStageRaceValidation simulates each known stage race several times
+// and compares the final GC with the reference.
+func RunRealStageRaceValidation(db *database.DB) []ValidationSummary {
+	if db == nil {
+		return nil
+	}
+	allRiders, err := db.ListRiders()
+	if err != nil || len(allRiders) == 0 {
+		return nil
+	}
+	srs, err := db.ListStageRaces()
+	if err != nil {
+		return nil
+	}
+	var out []ValidationSummary
+	for _, entry := range KnownRealStageRaces() {
+		var sr *model.StageRace
+		for i := range srs {
+			if srs[i].Name == entry.InternalName {
+				sr, _ = db.GetStageRace(srs[i].ID)
+				break
+			}
+		}
+		if sr == nil {
+			out = append(out, ValidationSummary{Name: entry.DisplayName, IsRealRace: true,
+				Details: fmt.Sprintf("Stage race %q not found. Run 'seed' first.", entry.InternalName)})
+			continue
+		}
+		stages := make([]StageConfig, 0, len(sr.Stages))
+		infos := make([]selection.StageInfo, 0, len(sr.Stages))
+		for _, st := range sr.Stages {
+			race, err1 := db.GetRace(st.RaceID)
+			if err1 != nil {
+				continue
+			}
+			course, err2 := db.GetCourse(race.CourseID)
+			if err2 != nil {
+				continue
+			}
+			stages = append(stages, StageConfig{Race: race, Course: course, StageNumber: st.StageNumber, RestDayBefore: st.RestDayBefore})
+			infos = append(infos, selection.StageInfo{Course: course, RaceType: race.RaceType})
+		}
+		riders := selection.SelectStageRaceStartList(allRiders, infos, selection.DefaultConfig(model.RaceTypeRoad, true, len(stages)))
+
+		wins := map[int64]int{}
+		top10 := map[int64]int{}
+		gapSum := map[int64]float64{}
+		gapN := map[int64]int{}
+		posSum := map[int64]float64{}
+		for run := 0; run < realStageRaceRuns; run++ {
+			_, standings := SimulateStageRace(sr, stages, riders, int64(run+1))
+			if len(standings) == 0 || len(standings[len(standings)-1]) == 0 {
+				continue
+			}
+			final := standings[len(standings)-1]
+			lead := final[0].TotalTimeSeconds
+			for _, g := range final {
+				if g.GCPosition == 1 {
+					wins[g.RiderID]++
+				}
+				if g.GCPosition <= 10 {
+					top10[g.RiderID]++
+				}
+				gapSum[g.RiderID] += g.TotalTimeSeconds - lead
+				gapN[g.RiderID]++
+				posSum[g.RiderID] += float64(g.GCPosition)
+			}
+		}
+		var matched []int64
+		var refPos []int
+		for i, id := range entry.Top10RiderIDs {
+			if id > 0 {
+				matched = append(matched, id)
+				refPos = append(refPos, i+1)
+			}
+		}
+		overlap, mae, n := 0.0, 0.0, 0
+		avgPos := map[int64]float64{}
+		for i, id := range matched {
+			overlap += float64(top10[id])
+			if gapN[id] > 0 {
+				avgPos[id] = posSum[id] / float64(gapN[id])
+			} else {
+				avgPos[id] = float64(len(riders) + 1)
+			}
+			if ref := entry.Top10GapSecs[refPos[i]-1]; ref != gapUnknown {
+				avg := 4 * 3600.0 // eliminated or missing: count as hours down
+				if gapN[id] > 0 {
+					avg = gapSum[id] / float64(gapN[id])
+				}
+				mae += math.Abs(avg - ref)
+				n++
+			}
+		}
+		overlap = overlap / float64(len(matched)*realStageRaceRuns) * 100
+		if n > 0 {
+			mae /= float64(n)
+		}
+		corr := validationSpearman(matched, avgPos)
+		winPct := float64(wins[entry.Top10RiderIDs[0]]) / realStageRaceRuns * 100
+		passed := overlap >= realPassTop10Target && mae <= realStageRaceGapMAE
+		out = append(out, ValidationSummary{
+			Name: entry.DisplayName, IsRealRace: true, Passed: passed,
+			Correlation: corr, Top10Accuracy: overlap, MeanTimeGapErrorSecs: mae, MatchedRiders: len(matched),
+			Details: fmt.Sprintf("Matched %d | Corr %.2f | GC top-10 overlap %.0f%% (≥%.0f%%) | GC gap MAE %.0fs over %d (≤%.0fs) | Real winner wins %.0f%%",
+				len(matched), corr, overlap, realPassTop10Target, mae, n, realStageRaceGapMAE, winPct),
+		})
+	}
+	return out
+}
+
 // findRaceByName finds an internal race by exact name, then falls back to
 // case-insensitive substring matching.
 func findRaceByName(races []model.Race, name string) *model.Race {

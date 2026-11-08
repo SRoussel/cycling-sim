@@ -115,12 +115,21 @@ func (f *StageFatigueState) ApplyRestDay() {
 	f.CumulativeFatigue *= 0.6
 }
 
+// Multi-day fatigue: a typical rider accumulates ~10 fatigue units over a
+// Grand Tour (after rest days), which should cost ~3-5% of threshold as seen
+// in Grand Tour power data. In-race fading is modelled separately by
+// DurabilityFactor, so this only carries what's left over night to night.
+const (
+	stageFatigueFTPPerUnit = 0.004
+	stageFatigueFloor      = 0.85
+)
+
 // EffectiveFTP returns the FTP adjusted for cumulative fatigue.
-// effectiveFTP = baseFTP * (1 - cumulativeFatigue * 0.01)
+// effectiveFTP = baseFTP * (1 - cumulativeFatigue * stageFatigueFTPPerUnit)
 func (f *StageFatigueState) EffectiveFTP(baseFTP int) int {
-	factor := 1.0 - f.CumulativeFatigue*0.01
-	if factor < 0.78 { // floor at 78% of base FTP
-		factor = 0.78
+	factor := 1.0 - f.CumulativeFatigue*stageFatigueFTPPerUnit
+	if factor < stageFatigueFloor {
+		factor = stageFatigueFloor
 	}
 	return int(math.Round(float64(baseFTP) * factor))
 }

@@ -264,9 +264,6 @@ func SimulateSegment(riders []*RiderState, segment *model.Segment, isTT bool, di
 				// Small breakaway group gets less draft benefit
 				draftFactor = math.Max(draftFactor, 0.65)
 			}
-			if segment.GradientPct > 5.0 {
-				draftFactor = math.Max(draftFactor, 0.85) // reduced draft on climbs
-			}
 			actualPower := powerForSpeed(groupSpeed, rs.Rider.TotalMassKg(),
 				rs.Rider.CdA*draftFactor, segment.GradientPct, segment.SurfaceType, rs.Rider.Handling)
 			if actualPower < 0 {

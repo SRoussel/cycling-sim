@@ -196,17 +196,7 @@ func FormGroups(riders []*RiderState, segment *model.Segment, isTT bool, remaini
 				return result
 			}
 
-			group := &Group{ID: 0, Riders: make([]*RiderState, len(rps))}
-			for i, rp := range rps {
-				rp.state.GroupID = 0
-				group.Riders[i] = rp.state
-			}
-			assignTeamPositions(rps)
-			leader := rps[0]
-			leaderSpeed := SpeedFromPower(leader.power, leader.state.Rider.TotalMassKg(),
-				leader.state.Rider.CdA, segment.GradientPct, segment.SurfaceType, leader.state.Rider.Handling)
-			group.Speed = leaderSpeed
-			return []*Group{group}
+			return followSplit(rps, segment, 0)
 		}
 
 		// Breakaway group (rides at front, reduced drafting)
@@ -275,80 +265,15 @@ func FormGroups(riders []*RiderState, segment *model.Segment, isTT bool, remaini
 			}
 			groups = append(groups, droppedGroups...)
 		} else {
-			// Non-technical: peloton stays together with team-aware positioning
-			pelotonGroup := &Group{ID: 1, Riders: make([]*RiderState, len(pelotonRPs)), Speed: pelotonSpeed}
-			for i, rp := range pelotonRPs {
-				rp.state.GroupID = 1
-				pelotonGroup.Riders[i] = rp.state
-			}
-			assignTeamPositions(pelotonRPs)
-			groups = append(groups, pelotonGroup)
+			// Non-technical: same physical follow rule as everywhere else.
+			groups = append(groups, followSplit(pelotonRPs, segment, len(groups))...)
 		}
 
 		return groups
 	}
 
-	// Climbing: split by W/kg — drafting benefit is minimal on climbs
-	sort.Slice(rps, func(i, j int) bool { return rps[i].wpw > rps[j].wpw })
-
-	var groups []*Group
-	currentGroup := &Group{ID: 0}
-
-	for i, rp := range rps {
-		if i == 0 {
-			rp.state.GroupID = 0
-			rp.state.GroupPosition = 1
-			currentGroup.Riders = append(currentGroup.Riders, rp.state)
-
-			// Leader's speed on the climb
-			pacePower := rp.power
-			// Climb pacing: groups rarely ride at the absolute max power of the single
-			// strongest rider for an entire segment; this was creating unrealistic
-			// multi-minute gaps to 4th/5th on summit finishes.
-			pacePower *= 0.93
-			speed := SpeedFromPower(pacePower, rp.state.Rider.TotalMassKg(),
-				rp.state.Rider.CdA, segment.GradientPct, segment.SurfaceType, rp.state.Rider.Handling)
-			currentGroup.Speed = speed
-			continue
-		}
-
-		// Can this rider stay with the current group?
-		// On climbs, calculate their individual speed and compare
-		riderSpeed := SpeedFromPower(rp.power, rp.state.Rider.TotalMassKg(),
-			rp.state.Rider.CdA, segment.GradientPct, segment.SurfaceType, rp.state.Rider.Handling)
-
-		// Allow a small drafting benefit even on climbs (reduced)
-		climbDraftFactor := 0.92 // enough to keep groups together longer
-		requiredPower := powerForSpeed(currentGroup.Speed, rp.state.Rider.TotalMassKg(),
-			rp.state.Rider.CdA*climbDraftFactor, segment.GradientPct, segment.SurfaceType, rp.state.Rider.Handling)
-
-		// On climbs, riders can (briefly) exceed FTP by spending W'. Without this,
-		// the model shatters too early and produces multi-minute GC gaps.
-		segTimeAtPace := SegmentTime(currentGroup.Speed, segment.DistanceKm)
-		wPrimeBurst := segTimeAtPace
-		if wPrimeBurst > 600 {
-			wPrimeBurst = 600
-		}
-		followPower := rp.power + rp.state.WPrime.AvailablePowerAboveFTP(wPrimeBurst)
-		if followPower >= requiredPower*0.99 {
-			// Can stay with group
-			rp.state.GroupID = currentGroup.ID
-			rp.state.GroupPosition = len(currentGroup.Riders) + 1
-			currentGroup.Riders = append(currentGroup.Riders, rp.state)
-		} else {
-			// Dropped — start new group
-			groups = append(groups, currentGroup)
-			newID := len(groups)
-			currentGroup = &Group{ID: newID, Speed: riderSpeed}
-			rp.state.GroupID = newID
-			rp.state.GroupPosition = 1
-			rp.state.Dropped = true
-			currentGroup.Riders = append(currentGroup.Riders, rp.state)
-		}
-	}
-	groups = append(groups, currentGroup)
-
-	return groups
+	// Climbs: attackers simply lead the tempo; the same follow rule applies.
+	return followSplit(rps, segment, 0)
 }
 
 // assignTeamPositions reorders riders in a group so domestiques ride at the front

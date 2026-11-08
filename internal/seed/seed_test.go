@@ -1,6 +1,7 @@
 package seed
 
 import (
+	"math"
 	"path/filepath"
 	"testing"
 
@@ -57,5 +58,30 @@ func TestClearDBFileMissingIsOK(t *testing.T) {
 	}
 	if err := ClearDBFile(""); err == nil {
 		t.Error("empty path should error")
+	}
+}
+
+func TestCourseSegmentsMatchStatedDistance(t *testing.T) {
+	db, err := database.OpenMemory()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	if _, err := Seed(db); err != nil {
+		t.Fatal(err)
+	}
+	courses, _ := db.ListCourses()
+	for _, c := range courses {
+		full, err := db.GetCourse(c.ID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		sum := 0.0
+		for _, s := range full.Segments {
+			sum += s.DistanceKm
+		}
+		if math.Abs(sum-full.TotalDistanceKm) > 0.2 {
+			t.Errorf("%s: segments sum to %.1f km, stated %.1f km", full.Name, sum, full.TotalDistanceKm)
+		}
 	}
 }

@@ -3,6 +3,7 @@ package seed
 import (
 	"encoding/csv"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -163,8 +164,36 @@ type courseData struct {
 	segments []model.Segment
 }
 
+// cd defines a course. Many course definitions only list the decisive
+// sections, so the segments would otherwise sum to less than the real race
+// distance. fitToDistance pads (or trims) the longest flat road segment so
+// the simulated distance matches distKm.
 func cd(name string, distKm float64, segments []model.Segment) courseData {
-	return courseData{course: model.Course{Name: name, TotalDistanceKm: distKm}, segments: segments}
+	return courseData{course: model.Course{Name: name, TotalDistanceKm: distKm}, segments: fitToDistance(segments, distKm)}
+}
+
+func fitToDistance(segments []model.Segment, distKm float64) []model.Segment {
+	sum := 0.0
+	for _, s := range segments {
+		sum += s.DistanceKm
+	}
+	delta := distKm - sum
+	if math.Abs(delta) < 0.05 {
+		return segments
+	}
+	best := -1
+	for i, s := range segments {
+		if s.SurfaceType == model.SurfaceRoad && math.Abs(s.GradientPct) < 1.0 &&
+			(best < 0 || s.DistanceKm > segments[best].DistanceKm) {
+			best = i
+		}
+	}
+	if best < 0 || segments[best].DistanceKm+delta < 1 {
+		return segments
+	}
+	out := append([]model.Segment(nil), segments...)
+	out[best].DistanceKm = math.Round((out[best].DistanceKm+delta)*10) / 10
+	return out
 }
 
 func seg(order int, name string, distKm, gradPct float64, surface model.SurfaceType, technical bool) model.Segment {

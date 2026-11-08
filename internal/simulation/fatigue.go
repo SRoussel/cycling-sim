@@ -17,6 +17,10 @@ type WPrimeState struct {
 // Endurance 70 → W'max = 20000 J
 // Endurance 90 → W'max = 24000 J
 // Endurance 50 → W'max = 16000 J
+// baseReconRate is the ReconRate of an average (Recovery 70) rider; a rider's
+// recovery time constant scales with baseReconRate/ReconRate.
+const baseReconRate = 0.03
+
 func NewWPrimeState(rider *model.Rider) *WPrimeState {
 	wMax := 20000.0 + float64(rider.Endurance-70)*200.0
 	if wMax < 15000 {
@@ -50,12 +54,13 @@ func (w *WPrimeState) Update(powerWatts float64, ftpWatts int, durationSeconds f
 			w.WPrimeCurrent = 0
 		}
 	} else {
-		// Reconstitution: exponential recovery toward WPrimeMax
-		// dW'/dt = reconRate * (WPrimeMax - WPrimeCurrent) * (1 - Power/FTP)
+		// Reconstitution (Skiba et al. 2012): exponential recovery toward
+		// WPrimeMax with time constant tau = 546·e^(-0.01·(CP-P)) + 316 s,
+		// i.e. ~5-9 minutes; the rider's Recovery attribute scales tau.
 		deficit := w.WPrimeMax - w.WPrimeCurrent
-		intensityFactor := 1.0 - powerWatts/ftp
-		recovery := deficit * (1.0 - math.Exp(-w.ReconRate*intensityFactor*durationSeconds))
-		w.WPrimeCurrent += recovery
+		tau := 546*math.Exp(-0.01*(ftp-math.Max(powerWatts, 0))) + 316
+		tau *= baseReconRate / w.ReconRate
+		w.WPrimeCurrent += deficit * (1.0 - math.Exp(-durationSeconds/tau))
 	}
 }
 

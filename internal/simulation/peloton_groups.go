@@ -82,7 +82,7 @@ func FormGroups(riders []*RiderState, segment *model.Segment, isTT bool, remaini
 			}
 			state.LastActions[rs.Rider.ID] = action
 		}
-		power, action = riderEffort(rs, action, segment, remainingDistance, state, driving[rs.Rider.Team], *params)
+		power, action = riderEffort(rs, action, segment, remainingDistance, state, driving[rs.Rider.Team], leaderTeams[rs.Rider.Team], *params)
 		if state != nil && state.Overrides != nil {
 			if effortMultiplier, ok := state.Overrides.EffortMultiplier(rs.Rider.ID); ok {
 				power *= effortMultiplier
@@ -147,14 +147,24 @@ func FormGroups(riders []*RiderState, segment *model.Segment, isTT bool, remaini
 	}
 	var groups []*Group
 	if len(attackers) > 0 && len(others) > 0 {
-		groups = followSplit(attackers, segment, 0)
+		groups = followSplit(attackers, segment, 0, false)
 		for _, g := range groups {
 			g.IsBreakaway = true
 		}
 	} else {
 		others = rps
 	}
-	return append(groups, followSplit(others, segment, len(groups))...)
+	// A group behind a break chases cooperatively.
+	chasing := false
+	if state != nil && state.HasBreakaway {
+		for _, rp := range others {
+			if !state.BreakawayRiders[rp.state.Rider.ID] {
+				chasing = true
+				break
+			}
+		}
+	}
+	return append(groups, followSplit(others, segment, len(groups), chasing)...)
 }
 
 // assignTeamPositions reorders riders in a group so domestiques ride at the front
@@ -254,10 +264,14 @@ func drivingTeams(riders []*RiderState, segment *model.Segment, state *RaceState
 // within this fraction of their limit (they may crack with fatigue or surges).
 const driveMargin = 0.03
 
+// leadOutKm is where domestiques stop pacing and empty themselves for their
+// leader or sprinter.
+const leadOutKm = 3.0
+
 // riderEffort decides how hard a rider rides this step. Each mode draws on W'
 // once, over one horizon: a burst spends it over this step, racing to the
 // line spreads it over the time left, and steady riding doesn't touch it.
-func riderEffort(rs *RiderState, action Action, segment *model.Segment, remainingKm float64, state *RaceState, teamDriving bool, params TacticsParams) (float64, Action) {
+func riderEffort(rs *RiderState, action Action, segment *model.Segment, remainingKm float64, state *RaceState, teamDriving bool, protectedTeammate bool, params TacticsParams) (float64, Action) {
 	r := rs.Rider
 	threshold := EffectivePower(r, rs.CurrentFTP(), segment, false)
 	burstOver := func(km float64) float64 {
@@ -291,9 +305,20 @@ func riderEffort(rs *RiderState, action Action, segment *model.Segment, remainin
 		return burstOver(segmentLeft), ActionChase
 	}
 	// Committed chases and racing to the line are sustained to the finish.
-	committedChase := action == ActionChase && state != nil &&
-		(state.BreakawayHasDangerous || state.SprintChaseActive || (state.HasBreakaway && phase == PhaseFinal))
-	if committedChase || phase == PhaseFinal {
+	// A committed chase needs something to chase: a dangerous rider up the
+	// road, or a break in the finale (sprint teams included). Without a break,
+	// "chasing" teams just control the tempo.
+	committedChase := action == ActionChase && state != nil && state.HasBreakaway &&
+		(state.BreakawayHasDangerous || state.SprintChaseActive || phase == PhaseFinal)
+	if committedChase {
+		return burstOver(remainingKm), action
+	}
+	if phase == PhaseFinal {
+		// A domestique riding for a teammate holds a controlled tempo and only
+		// empties himself in the lead-out; everyone else races to the line.
+		if rs.TeamRole == RoleDomestique && protectedTeammate && remainingKm > leadOutKm {
+			return threshold * TacticsPowerMultiplier(action, params), action
+		}
 		return burstOver(remainingKm), action
 	}
 	return steady() * TacticsPowerMultiplier(action, params), action

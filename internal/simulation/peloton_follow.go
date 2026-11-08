@@ -110,11 +110,23 @@ func shelteredFor(rs *RiderState, action Action, phase RacePhase) bool {
 // paceLineSpeed is the speed a group sustains when its strongest workers
 // rotate on the front. Sheltered riders only work when the group is too
 // small to protect them.
-func paceLineSpeed(rps []riderPower, segment *model.Segment) (speed, intensity float64, workerSet map[*RiderState]bool, k int) {
+func paceLineSpeed(rps []riderPower, segment *model.Segment, cooperative bool) (speed, intensity float64, workerSet map[*RiderState]bool, k int) {
+	// Workers are riders actively pulling: chasing, attacking or driving.
+	// In a big group everyone else is a passenger; a small group (no bigger
+	// than a rotation) shares the work. With nobody working, the
+	// non-sheltered riders set a tempo.
 	var workers []riderPower
 	for _, rp := range rps {
-		if !isSheltered(rp) {
+		if !isSheltered(rp) && (rp.action == ActionChase || rp.action == ActionAttack || len(rps) <= maxRotation) {
 			workers = append(workers, rp)
+		}
+	}
+	if len(workers) < 2 {
+		workers = workers[:0]
+		for _, rp := range rps {
+			if !isSheltered(rp) {
+				workers = append(workers, rp)
+			}
 		}
 	}
 	if len(workers) < 2 {
@@ -128,7 +140,12 @@ func paceLineSpeed(rps []riderPower, segment *model.Segment) (speed, intensity f
 	// With N workers sharing k slots, each is on the front only k/N of the
 	// time, so the rotation can spend W' N/k times faster while there:
 	// P_rot = FTP + (N/k)·W'/T. This is why big groups catch small breaks.
-	depth := float64(len(workers)) / float64(k)
+	// It needs cooperation: teams pooling legs to chase a break. In a lead-out
+	// teams compete for the front instead, so there's no pooling.
+	depth := 1.0
+	if cooperative {
+		depth = float64(len(workers)) / float64(k)
+	}
 	workerSet = make(map[*RiderState]bool, k)
 	var p, m, cda, handling, ftp float64
 	for _, w := range workers[:k] {
@@ -160,7 +177,7 @@ func paceLineSpeed(rps []riderPower, segment *model.Segment) (speed, intensity f
 // and form the next group from those remaining. Drafting only reduces aero
 // drag, so its benefit fades naturally as speed drops on climbs; descending
 // skill caps speed on the way down. One rule for every gradient.
-func followSplit(rps []riderPower, segment *model.Segment, firstID int) []*Group {
+func followSplit(rps []riderPower, segment *model.Segment, firstID int, cooperative bool) []*Group {
 	if len(rps) == 0 {
 		return nil
 	}
@@ -178,7 +195,7 @@ func followSplit(rps []riderPower, segment *model.Segment, firstID int) []*Group
 		// The pace comes from the riders doing the work: their rotation, and
 		// never slower than the strongest worker would ride on the front alone.
 		// Sheltered leaders follow; they don't set the tempo.
-		speed, intensity, workerSet, k := paceLineSpeed(remaining, segment)
+		speed, intensity, workerSet, k := paceLineSpeed(remaining, segment, cooperative)
 		linedOut := intensity >= linedOutIntensity
 		if s := strongestWorkerSpeed(remaining, solo); speed < s {
 			speed = s
@@ -196,14 +213,20 @@ func followSplit(rps []riderPower, segment *model.Segment, firstID int) []*Group
 		var members, rest []riderPower
 		for _, rp := range remaining {
 			r := rp.state.Rider
-			cdaFactor := groupDraft(len(members)+1, linedOut, segment.SurfaceType)
-			if workerSet[rp.state] && k > 1 {
-				cdaFactor = rotationFactor(k, segment.SurfaceType) // takes turns on the front
-			}
-			required := powerForSpeed(speed, r.TotalMassKg(), r.CdA*cdaFactor,
-				segment.GradientPct, segment.SurfaceType, r.Handling)
 			available := rp.power + rp.state.WPrime.AvailablePowerAboveFTP(segTime)
-			canHold := available >= required && SpeedCap(r, segment) >= speed
+			needs := func(cdaFactor float64) float64 {
+				return powerForSpeed(speed, r.TotalMassKg(), r.CdA*cdaFactor, segment.GradientPct, segment.SurfaceType, r.Handling)
+			}
+			canHold := false
+			if SpeedCap(r, segment) >= speed {
+				if workerSet[rp.state] && k > 1 && available >= needs(rotationFactor(k, segment.SurfaceType)) {
+					canHold = true // takes turns on the front
+				} else if available >= needs(groupDraft(len(members)+1, linedOut, segment.SurfaceType)) {
+					// Can't (or won't) take turns but can sit on: a passenger.
+					delete(workerSet, rp.state)
+					canHold = true
+				}
+			}
 			if len(members) == 0 || canHold {
 				members = append(members, rp)
 			} else {

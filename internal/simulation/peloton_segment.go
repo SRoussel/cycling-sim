@@ -194,6 +194,20 @@ func simulateStep(riders []*RiderState, segment *model.Segment, isTT bool, dista
 		groups = append(groups, clusterGroups...)
 	}
 
+	// Riders in the same group ride together: the back of the group closes up
+	// to its front (gaps inside contact distance don't persist).
+	if !isTT {
+		for _, g := range groups {
+			front := math.Inf(1)
+			for _, rs := range g.Riders {
+				front = math.Min(front, rs.TotalTime)
+			}
+			for _, rs := range g.Riders {
+				rs.TotalTime = front
+			}
+		}
+	}
+
 	startTimes := make(map[*RiderState]float64, len(activeRiders))
 	for _, rs := range activeRiders {
 		startTimes[rs] = rs.TotalTime

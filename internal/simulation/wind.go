@@ -78,3 +78,38 @@ func crosswindDraft(d float64, position int, seg *model.Segment, speed float64) 
 	}
 	return 1 - (1-d)*(1-gutterExposure(seg, speed))
 }
+
+// Reference rider for terrain classification: 70 kg, 5.5 W/kg, CdA 0.32.
+const (
+	refRiderMassKg = 78.0 // incl. bike
+	refRiderPower  = 385.0
+	refRiderCdA    = 0.32
+)
+
+// ClimbFactor is the share of a reference rider's power that goes into
+// lifting their weight on this segment (wind included): ~0 on the flat,
+// above ~0.6 on real climbs, negative downhill. It is the physical reason
+// climbs are selective: W/kg decides, and drafting barely helps.
+func ClimbFactor(seg *model.Segment) float64 {
+	v := segmentSpeed(refRiderPower, refRiderMassKg, refRiderCdA, seg, 70)
+	return ForceGravity(refRiderMassKg, seg.GradientPct) * v / refRiderPower
+}
+
+// Terrain classes by ClimbFactor (still-air gradient equivalents in comments).
+const (
+	terrainClimb   = 0.73  // a real climb (~5%)
+	terrainHill    = 0.65  // a hill (~4%)
+	terrainRolling = 0.60  // rolling (~3.5%)
+	terrainDrag    = 0.54  // a drag (~3%)
+	terrainFlat    = 0.40  // flat or nearly (~2%)
+	terrainDescent = -0.26 // descending (~-1%)
+)
+
+// climbOf returns the cached climb factor for the race state's current step,
+// computing it for segments outside a race.
+func climbOf(state *RaceState, seg *model.Segment) float64 {
+	if state != nil && state.Segment == seg && state.climbValid {
+		return state.Climb
+	}
+	return ClimbFactor(seg)
+}

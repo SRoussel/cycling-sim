@@ -321,7 +321,7 @@ func SimulateRoadRaceWithProgress(config RaceConfig, onProgress func(ProgressSna
 	}
 
 	lastSeg := &segments[len(segments)-1]
-	if lastSeg.GradientPct <= 2.0 && lastSeg.GradientPct >= -2.0 {
+	if c := ClimbFactor(lastSeg); c <= terrainFlat && c >= -terrainFlat { // flat finish: bunch sprint
 		sort.Slice(states, func(i, j int) bool {
 			return states[i].TotalTime < states[j].TotalTime
 		})

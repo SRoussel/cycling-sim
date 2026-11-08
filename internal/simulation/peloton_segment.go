@@ -154,8 +154,10 @@ func simulateStep(riders []*RiderState, segment *model.Segment, isTT bool, dista
 		state.KmRemaining = distanceRemaining
 		state.Phase = PhaseFromKm(distanceRemaining)
 		state.Segment = segment
+		state.Climb = ClimbFactor(segment)
+		state.climbValid = true
 		// Sprint trains only really matter on flat/rolling finishes.
-		state.SprintChaseActive = state.Phase == PhaseFinal && state.Rival.SprintTeamsChasing && segment.GradientPct < 3.0 && segment.SurfaceType != model.SurfaceCobbles
+		state.SprintChaseActive = state.Phase == PhaseFinal && state.Rival.SprintTeamsChasing && state.Climb < terrainDrag && segment.SurfaceType != model.SurfaceCobbles
 		if state.SprintChaseActive && !state.LastSprintChase {
 			state.LogEvent("sprint-chase", "sprinter teams drive the chase")
 		}

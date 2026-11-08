@@ -97,7 +97,7 @@ func breakawayProbability(rs *RiderState, segment *model.Segment, remainingKm fl
 	probability := baseProbability * wFactor
 
 	// Climbing ability boost on hills — climbers attack on climbs
-	if segment.GradientPct > 5.0 {
+	if ClimbFactor(segment) > terrainClimb {
 		climbFactor := 1.0 + float64(rs.Rider.ClimbingAbility-70)*0.03
 		if climbFactor < 0.5 {
 			climbFactor = 0.5
@@ -133,7 +133,7 @@ func breakawayProbability(rs *RiderState, segment *model.Segment, remainingKm fl
 	}
 	// Flat non-cobble road suppression: peloton always controls pace on flat.
 	// Close to the finish (≤15 km) this lifts to allow sprint-finish attacks.
-	if segment.GradientPct >= -1.0 && segment.GradientPct <= 2.0 &&
+	if isFlatish(segment) &&
 		segment.SurfaceType != model.SurfaceCobbles && remainingKm > 15 {
 		if remainingKm > 80 {
 			// Opening flat — almost no breakaway survives this far out
@@ -148,7 +148,7 @@ func breakawayProbability(rs *RiderState, segment *model.Segment, remainingKm fl
 	}
 	// Very far from finish on non-flat terrain (climbs/cobbles handled above)
 	if remainingKm > 100 &&
-		!(segment.GradientPct >= -1.0 && segment.GradientPct <= 2.0 && segment.SurfaceType != model.SurfaceCobbles) {
+		!(isFlatish(segment) && segment.SurfaceType != model.SurfaceCobbles) {
 		probability *= 0.7
 	}
 
@@ -160,4 +160,10 @@ func breakawayProbability(rs *RiderState, segment *model.Segment, remainingKm fl
 func DailyFormFactor(rider *model.Rider, rng *rand.Rand) float64 {
 	stddev := 0.02 * (1.0 - float64(rider.Consistency)/150.0)
 	return 1.0 + rng.NormFloat64()*stddev
+}
+
+// isFlatish reports flat or gently rolling terrain (neither climb nor descent).
+func isFlatish(seg *model.Segment) bool {
+	c := ClimbFactor(seg)
+	return c >= terrainDescent && c <= terrainFlat
 }

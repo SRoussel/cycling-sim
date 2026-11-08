@@ -143,57 +143,6 @@ func TestBreakawayAttemptTacticalAwareness(t *testing.T) {
 	t.Logf("low tactical: %d/%d, high tactical: %d/%d", lowAttacks, n, highAttacks, n)
 }
 
-// --- EvaluateBreakaway unit tests ---
-
-func TestEvaluateBreakawayPositiveGap(t *testing.T) {
-	// Breakaway at much higher power than peloton (accounting for draft)
-	// pelotonPower=350 → effective ≈ 350/0.7 = 500. breakaway needs > ~500 to gain.
-	gap := EvaluateBreakaway(600, 350, 10.0, 50.0, 2)
-	if gap <= 0 {
-		t.Errorf("breakaway with higher effective power should gain time, got gap=%.2f", gap)
-	}
-	t.Logf("600W break vs 350W peloton over 10km at 50km remaining: gap=%.1fs", gap)
-}
-
-func TestEvaluateBreakawayNoGapWhenWeaker(t *testing.T) {
-	// Breakaway power barely above peloton — after peloton draft adjustment, no gain
-	gap := EvaluateBreakaway(300, 350, 10.0, 50.0, 1)
-	if gap != 0 {
-		t.Errorf("weaker breakaway should not gain time, got gap=%.2f", gap)
-	}
-}
-
-func TestEvaluateBreakawayScalesWithDistance(t *testing.T) {
-	gap5km := EvaluateBreakaway(650, 350, 5.0, 50.0, 2)
-	gap20km := EvaluateBreakaway(650, 350, 20.0, 50.0, 2)
-	if gap20km <= gap5km {
-		t.Errorf("longer segment should produce larger gap: 5km=%.2f, 20km=%.2f", gap5km, gap20km)
-	}
-}
-
-func TestEvaluateBreakawayCooperation(t *testing.T) {
-	gapSolo := EvaluateBreakaway(650, 350, 10.0, 50.0, 1)
-	gapDuo := EvaluateBreakaway(650, 350, 10.0, 50.0, 2)
-	gapTrio := EvaluateBreakaway(650, 350, 10.0, 50.0, 3)
-
-	if gapDuo <= gapSolo {
-		t.Errorf("duo breakaway should gain more than solo: solo=%.2f, duo=%.2f", gapSolo, gapDuo)
-	}
-	if gapTrio <= gapDuo {
-		t.Errorf("trio breakaway should gain more than duo: duo=%.2f, trio=%.2f", gapDuo, gapTrio)
-	}
-}
-
-func TestEvaluateBreakawayChaseIntensifiesNearFinish(t *testing.T) {
-	gapFar := EvaluateBreakaway(650, 350, 10.0, 60.0, 2)
-	gapNear := EvaluateBreakaway(650, 350, 10.0, 15.0, 2)
-	if gapNear >= gapFar {
-		t.Errorf("gap near finish should be smaller: far=%.2f, near=%.2f", gapFar, gapNear)
-	}
-}
-
-// --- FormGroups integration tests ---
-
 func TestFormGroupsFlatWithBreakaway(t *testing.T) {
 	// Use a seed that produces some breakaway attempts
 	// We create riders with high tactical awareness to increase breakaway probability

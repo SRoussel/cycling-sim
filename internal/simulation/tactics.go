@@ -1,7 +1,6 @@
 package simulation
 
 import (
-	"math"
 	"math/rand"
 	"sort"
 
@@ -154,63 +153,6 @@ func breakawayProbability(rs *RiderState, segment *model.Segment, remainingKm fl
 	}
 
 	return probability
-}
-
-// EvaluateBreakaway determines the time gap a breakaway gains over a segment.
-// Returns gap in seconds (positive = breakaway gains time).
-// Models: power differential, drafting advantage of peloton, cooperation in breakaway,
-// and increasing peloton chase effort closer to the finish.
-func EvaluateBreakaway(breakawayPower float64, pelotonPower float64, segmentDistanceKm float64, remainingKm float64, breakawaySize int) float64 {
-	return EvaluateBreakawayWithCohesion(breakawayPower, pelotonPower, segmentDistanceKm, remainingKm, breakawaySize, 0.5, DefaultTacticsParams())
-}
-
-func EvaluateBreakawayWithCohesion(breakawayPower float64, pelotonPower float64, segmentDistanceKm float64, remainingKm float64, breakawaySize int, cohesion float64, params TacticsParams) float64 {
-	if pelotonPower <= 0 || breakawayPower <= 0 {
-		return 0
-	}
-
-	// Peloton has drafting advantage: leaders only need ~70% of solo power
-	// to maintain speed. (If this is too low, breakaways never stick.)
-	pelotonEffective := pelotonPower / 0.70
-
-	powerRatio := breakawayPower / pelotonEffective
-	if powerRatio <= 1.0 {
-		return 0 // breakaway can't gain time against organized peloton
-	}
-
-	// Base gap gain: ~seconds per km from power differential
-	gapPerKm := (powerRatio - 1.0) * 26.0
-	gapPerKm *= params.BreakawaySuccessBias
-
-	// Cooperation factor: solo breakaway is hardest, 2-4 riders can share turns
-	// Solo = 0.65, 2 riders = 1.0, 3-4 riders = 1.2, 5+ = 1.2 (cap)
-	coopFactor := math.Min(float64(breakawaySize), 4)*0.3 + 0.35
-	coopFactor *= 1.0 + params.BreakawayCohesionWeight*(cohesion-0.5)
-	if coopFactor < 0.4 {
-		coopFactor = 0.4
-	}
-	if coopFactor > 1.5 {
-		coopFactor = 1.5
-	}
-	gapPerKm *= coopFactor
-
-	// Distance-remaining decay: peloton organizes a more serious chase closer to finish
-	// Far from finish (>60km) → peloton is relaxed, breakaway gains easily
-	// Close to finish (<20km) → peloton chases hard, but breakaway can still win
-	chaseFactor := 1.0
-	if remainingKm < 20 {
-		chaseFactor = 0.7 + remainingKm/65.0 // 0.7 at finish, ~1.0 at 20km
-	} else if remainingKm < 40 {
-		chaseFactor = 0.85 + 0.15*(remainingKm-20)/20.0 // 0.85-1.0
-	}
-	gapPerKm *= chaseFactor
-
-	gap := gapPerKm * segmentDistanceKm
-	maxGap := math.Min(segmentDistanceKm*10.0, 90.0)
-	if gap > maxGap {
-		gap = maxGap
-	}
-	return gap
 }
 
 // DailyFormFactor generates a daily form multiplier for a rider.

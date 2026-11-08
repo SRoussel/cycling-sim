@@ -717,20 +717,8 @@ func interpolateProgressGroups(previous []ProgressGroup, current []ProgressGroup
 	return out
 }
 
-func progressGapThreshold(segment *model.Segment) float64 {
-	if segment == nil {
-		return 15.0
-	}
-	if segment.SurfaceType == model.SurfaceCobbles {
-		return 8.0
-	}
-	if segment.GradientPct > 5.0 {
-		return 6.0
-	}
-	if segment.GradientPct < -2.0 {
-		return 30.0
-	}
-	return 15.0
+func progressGapThreshold(_ *model.Segment) float64 {
+	return contactSeconds // display groups match the model's road contact
 }
 
 func groupName(index int, groupSize int) string {

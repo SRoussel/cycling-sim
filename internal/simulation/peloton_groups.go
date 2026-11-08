@@ -78,9 +78,12 @@ func FormGroups(riders []*RiderState, segment *model.Segment, isTT bool, remaini
 			power *= IntensityForPhase(state.Phase)
 		}
 		power *= TacticsPowerMultiplier(action, *params)
-		if action == ActionAttack {
-			// An attack is funded by W': spend what's available over the time
-			// this segment would take at the attacker's own speed.
+		// Committed efforts are funded by W': attacks, and chases that matter
+		// (a dangerous rider up the road, or sprint teams in the finale).
+		committedChase := action == ActionChase && state != nil && (state.BreakawayHasDangerous || state.SprintChaseActive)
+		if action == ActionAttack || committedChase {
+			// Spend the W' available over the time this segment would take at
+			// the rider's own speed.
 			r := rs.Rider
 			est := SegmentTime(SpeedFromPower(power, r.TotalMassKg(), r.CdA, segment.GradientPct, segment.SurfaceType, r.Handling), segment.DistanceKm)
 			power += rs.WPrime.AvailablePowerAboveFTP(est)

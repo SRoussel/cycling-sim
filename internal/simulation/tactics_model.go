@@ -72,28 +72,20 @@ type RaceState struct {
 }
 
 type TacticsParams struct {
-	AttackPowerBoost        float64
-	ChasePowerBoost         float64
-	ConservePowerPenalty    float64
-	AttackAggression        float64
-	ConserveWPrimeThresh    float64
-	BreakawayCohesionWeight float64
-	BreakawaySuccessBias    float64
-	GCChaseAggression       float64
-	SprintTrainEfficiency   float64
+	AttackPowerBoost     float64
+	ChasePowerBoost      float64
+	ConservePowerPenalty float64
+	AttackAggression     float64
+	ConserveWPrimeThresh float64
 }
 
 func DefaultTacticsParams() TacticsParams {
 	return TacticsParams{
-		AttackPowerBoost:        1.05,
-		ChasePowerBoost:         1.03,
-		ConservePowerPenalty:    0.97,
-		AttackAggression:        1.1,
-		ConserveWPrimeThresh:    0.18,
-		BreakawayCohesionWeight: 0.35,
-		BreakawaySuccessBias:    1.08,
-		GCChaseAggression:       1.15,
-		SprintTrainEfficiency:   1.1,
+		AttackPowerBoost:     1.05,
+		ChasePowerBoost:      1.03,
+		ConservePowerPenalty: 0.97,
+		AttackAggression:     1.1,
+		ConserveWPrimeThresh: 0.18,
 	}
 }
 
@@ -529,17 +521,4 @@ func clamp(value float64, min float64, max float64) float64 {
 		return max
 	}
 	return value
-}
-
-func BreakawayCohesion(riders []*RiderState) float64 {
-	if len(riders) == 0 {
-		return 0.5
-	}
-	sum := 0.0
-	for _, rs := range riders {
-		sum += float64(rs.Rider.TacticalAwareness)
-	}
-	avg := sum / float64(len(riders))
-	cohesion := 0.5 + (avg-70.0)/120.0
-	return math.Max(0.2, math.Min(0.9, cohesion))
 }

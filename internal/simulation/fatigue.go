@@ -176,3 +176,44 @@ func stageEffortFactor(timeGapSeconds float64) float64 {
 func StageStress(course *model.Course, raceType model.RaceType, timeGapSeconds float64) float64 {
 	return stageDifficulty(course, raceType) * stageEffortFactor(timeGapSeconds)
 }
+
+// Durability: a rider's sustainable power fades with the work done in a race.
+// Pro data shows roughly 1-4% loss per 1000 kJ depending on the rider, which
+// is why riders who spend hours in the wind (breakaways, domestiques) fade in
+// the finale while sheltered leaders don't.
+const (
+	durabilityLossPer1000kJ = 0.025 // average rider (Endurance 70)
+	durabilityMaxLoss       = 0.15
+)
+
+// DurabilityFactor returns the fraction of threshold still available after
+// workKJ of work, scaled by the rider's Endurance attribute.
+func DurabilityFactor(workKJ float64, endurance int) float64 {
+	rate := durabilityLossPer1000kJ * (1 - float64(endurance-70)*0.02)
+	if rate < 0.005 {
+		rate = 0.005
+	}
+	loss := rate * workKJ / 1000
+	if loss > durabilityMaxLoss {
+		loss = durabilityMaxLoss
+	}
+	return 1 - loss
+}
+
+// CurrentFTP is the rider's threshold right now: stage-race fatigue (in
+// EffectiveFTP), daily form and in-race durability combined.
+func (rs *RiderState) CurrentFTP() float64 {
+	return float64(rs.EffectiveFTP) * rs.FormFactor * DurabilityFactor(rs.WorkKJ, rs.Rider.Endurance)
+}
+
+// currentFTPInt is CurrentFTP rounded for W' bookkeeping.
+func (rs *RiderState) currentFTPInt() int {
+	return int(rs.CurrentFTP() + 0.5)
+}
+
+// addWork records work done (watts over seconds) for durability.
+func (rs *RiderState) addWork(powerWatts, seconds float64) {
+	if powerWatts > 0 && seconds > 0 {
+		rs.WorkKJ += powerWatts * seconds / 1000
+	}
+}

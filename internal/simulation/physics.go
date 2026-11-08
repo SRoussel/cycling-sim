@@ -137,6 +137,21 @@ func SpeedFromPower(powerWatts float64, totalMassKg float64, cda float64, gradie
 	return (lo + hi) / 2
 }
 
+// SpeedCap is the fastest a rider dares to go on this segment, set by
+// descending skill and how technical the road is. It only binds at descent
+// speeds, so it applies on every segment.
+func SpeedCap(r *model.Rider, segment *model.Segment) float64 {
+	return speedCapMPS(r.DescendingAbility, segment.IsTechnical)
+}
+
+func speedCapMPS(descendingAbility int, isTechnical bool) float64 {
+	maxKmh := 60.0 + float64(descendingAbility)*0.35 // 70 → ~85 km/h, 95 → ~93 km/h
+	if isTechnical {
+		maxKmh *= 0.80 // technical descents are ~20% slower
+	}
+	return maxKmh / 3.6
+}
+
 // DescentSpeed calculates speed on a descent, capped by descending ability and
 // technical difficulty. On descents, gravity assists, so the rider may be
 // going faster than their power alone would suggest.
@@ -145,15 +160,7 @@ func DescentSpeed(powerWatts float64, totalMassKg float64, cda float64, gradient
 	// First get the powered speed
 	speed := SpeedFromPower(powerWatts, totalMassKg, cda, gradientPct, surface, handling)
 
-	// Maximum descent speed based on ability (km/h)
-	// Ability 70 (average WT) → ~80 km/h max on non-technical
-	// Ability 95 → ~90 km/h max
-	// Ability 40 → ~70 km/h max
-	maxDescentKmh := 60.0 + float64(descendingAbility)*0.35
-	if isTechnical {
-		maxDescentKmh *= 0.80 // technical descents are ~20% slower
-	}
-	maxDescentMPS := maxDescentKmh / 3.6
+	maxDescentMPS := speedCapMPS(descendingAbility, isTechnical)
 
 	if speed > maxDescentMPS {
 		speed = maxDescentMPS

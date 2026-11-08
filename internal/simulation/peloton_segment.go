@@ -175,28 +175,7 @@ func SimulateSegment(riders []*RiderState, segment *model.Segment, isTT bool, di
 	for _, group := range groups {
 		var groupSpeed float64
 
-		if segment.GradientPct < -2.0 {
-			// Descent: each rider has individual speed capped by ability
-			for _, rs := range group.Riders {
-				basePower := float64(rs.EffectiveFTP) * rs.FormFactor * 0.5 // coast on descents
-				speed := DescentSpeed(basePower, rs.Rider.TotalMassKg(),
-					rs.Rider.CdA, segment.GradientPct, segment.SurfaceType,
-					rs.Rider.Handling, rs.Rider.DescendingAbility, segment.IsTechnical)
-				segTime := SegmentTime(speed, segment.DistanceKm)
-				rs.TotalTime += segTime
-
-				// W' recovery during descent (easy effort)
-				// Use handling-based fatigue on technical terrain
-				if segment.SurfaceType == model.SurfaceCobbles {
-					rs.WPrime.UpdateWithHandling(basePower, rs.EffectiveFTP, segTime, rs.Rider.Handling, true)
-				} else {
-					rs.WPrime.Update(basePower, rs.EffectiveFTP, segTime)
-				}
-			}
-			continue
-		}
-
-		// Normal segment: group travels together
+		// Every group travels together at its speed.
 		groupSpeed = group.Speed
 		if groupSpeed < minSpeedMPS {
 			groupSpeed = minSpeedMPS
@@ -214,7 +193,8 @@ func SimulateSegment(riders []*RiderState, segment *model.Segment, isTT bool, di
 				actualPower = 0
 			}
 
-			rs.WPrime.UpdateWithHandling(actualPower, rs.EffectiveFTP, segTime, rs.Rider.Handling, segment.SurfaceType == model.SurfaceCobbles)
+			rs.WPrime.UpdateWithHandling(actualPower, rs.currentFTPInt(), segTime, rs.Rider.Handling, segment.SurfaceType == model.SurfaceCobbles)
+			rs.addWork(actualPower, segTime)
 		}
 	}
 	if !isTT {

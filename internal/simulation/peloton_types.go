@@ -25,6 +25,7 @@ type RiderState struct {
 	DNF              bool     // did not finish (e.g., crash)
 	TotalPenalty     float64  // cumulative penalty time from incidents
 	TeamRole         TeamRole // role within team (leader, sprinter, domestique)
+	WorkKJ           float64  // work done so far this race (for durability)
 }
 
 // Calculate each rider's sustainable power for this segment.

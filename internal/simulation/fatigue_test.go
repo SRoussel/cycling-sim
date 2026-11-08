@@ -146,3 +146,21 @@ func TestHighRecoveryLessFatigue(t *testing.T) {
 			fHigh.CumulativeFatigue, fLow.CumulativeFatigue)
 	}
 }
+
+func TestDurabilityFadesWithWorkAndEndurance(t *testing.T) {
+	if f := DurabilityFactor(0, 70); f != 1 {
+		t.Errorf("no work should mean no fade, got %.3f", f)
+	}
+	avg := DurabilityFactor(4000, 70)
+	durable := DurabilityFactor(4000, 95)
+	fragile := DurabilityFactor(4000, 50)
+	if !(fragile < avg && avg < durable && durable < 1) {
+		t.Errorf("expected fragile < avg < durable < 1, got %.3f %.3f %.3f", fragile, avg, durable)
+	}
+	if avg < 0.88 || avg > 0.93 {
+		t.Errorf("average rider after 4000 kJ should keep ~90%%, got %.3f", avg)
+	}
+	if DurabilityFactor(1e6, 30) < 1-durabilityMaxLoss-1e-9 {
+		t.Error("fade must be capped")
+	}
+}

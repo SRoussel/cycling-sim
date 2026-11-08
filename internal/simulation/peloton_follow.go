@@ -1,6 +1,7 @@
 package simulation
 
 import (
+	"math"
 	"sort"
 
 	"cycling_sim/internal/model"
@@ -103,8 +104,8 @@ func paceLineSpeed(rps []riderPower, segment *model.Segment) float64 {
 // slower than its strongest rider alone); each follower must hold that pace
 // with their positional draft plus spendable W'. Riders who can't are dropped
 // and form the next group from those remaining. Drafting only reduces aero
-// drag, so its benefit fades naturally as speed drops on climbs: no gradient
-// thresholds.
+// drag, so its benefit fades naturally as speed drops on climbs; descending
+// skill caps speed on the way down. One rule for every gradient.
 func followSplit(rps []riderPower, segment *model.Segment, firstID int) []*Group {
 	if len(rps) == 0 {
 		return nil
@@ -112,7 +113,8 @@ func followSplit(rps []riderPower, segment *model.Segment, firstID int) []*Group
 	solo := make(map[*RiderState]float64, len(rps))
 	for _, rp := range rps {
 		r := rp.state.Rider
-		solo[rp.state] = SpeedFromPower(rp.power, r.TotalMassKg(), r.CdA, segment.GradientPct, segment.SurfaceType, r.Handling)
+		solo[rp.state] = math.Min(SpeedCap(r, segment),
+			SpeedFromPower(rp.power, r.TotalMassKg(), r.CdA, segment.GradientPct, segment.SurfaceType, r.Handling))
 	}
 	remaining := append([]riderPower(nil), rps...)
 	sort.SliceStable(remaining, func(i, j int) bool { return solo[remaining[i].state] > solo[remaining[j].state] })
@@ -123,6 +125,8 @@ func followSplit(rps []riderPower, segment *model.Segment, firstID int) []*Group
 		if s := solo[remaining[0].state]; speed < s {
 			speed = s
 		}
+		// Nobody in front goes faster than the front rider dares (descents).
+		speed = math.Min(speed, SpeedCap(remaining[0].state.Rider, segment))
 		g := &Group{ID: firstID + len(groups), Speed: speed}
 		segTime := SegmentTime(speed, segment.DistanceKm)
 		var members, rest []riderPower
@@ -131,7 +135,8 @@ func followSplit(rps []riderPower, segment *model.Segment, firstID int) []*Group
 			required := powerForSpeed(speed, r.TotalMassKg(), r.CdA*draftFor(len(members)+1, segment.SurfaceType),
 				segment.GradientPct, segment.SurfaceType, r.Handling)
 			available := rp.power + rp.state.WPrime.AvailablePowerAboveFTP(segTime)
-			if len(members) == 0 || available >= required {
+			canHold := available >= required && SpeedCap(r, segment) >= speed
+			if len(members) == 0 || canHold {
 				members = append(members, rp)
 			} else {
 				rest = append(rest, rp)

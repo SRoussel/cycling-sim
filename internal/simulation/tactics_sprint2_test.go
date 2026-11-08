@@ -207,7 +207,7 @@ func TestMountainAttackNotBlockedByBreakaway(t *testing.T) {
 
 // TestDomestiqueSacrificeClimbPower verifies that a domestique's power is boosted
 // when climbing with their team leader in the group.
-func TestDomestiqueSacrificeClimbPower(t *testing.T) {
+func TestDomestiqueDrivesWhenTerrainFavoursLeader(t *testing.T) {
 	dom := makeRider("Dom", 380, 72, 70, 60, 70, 70, 75, 72, 70, 70)
 	dom.ID = 1
 	dom.Team = "Team A"
@@ -216,23 +216,44 @@ func TestDomestiqueSacrificeClimbPower(t *testing.T) {
 	leader.ID = 2
 	leader.Team = "Team A"
 
-	// Scenario 1: flat stage (gradient 0.5%) — no sacrifice
+	// Flat: a sprinter is as fast as the climber, so there's no reason to drive.
 	flatSeg := &model.Segment{GradientPct: 0.5, DistanceKm: 20, SurfaceType: model.SurfaceRoad}
-	// Scenario 2: climb (gradient 6%) — sacrifice fires
+	// Climb: the climber's W/kg wins, so the team drives to drop the sprinter.
 	climbSeg := &model.Segment{GradientPct: 6.0, DistanceKm: 8, SurfaceType: model.SurfaceRoad}
 
-	flatPowers := measureDomestiquePowers(&dom, &leader, flatSeg, 100, 500)
-	climbPowers := measureDomestiquePowers(&dom, &leader, climbSeg, 100, 500)
+	flatAction := domestiqueAction(&dom, &leader, flatSeg, 40)
+	climbAction := domestiqueAction(&dom, &leader, climbSeg, 40)
+	earlyAction := domestiqueAction(&dom, &leader, climbSeg, 150)
 
-	avgFlat := avg(flatPowers)
-	avgClimb := avg(climbPowers)
-
-	t.Logf("Domestique avg power — flat: %.1fW, climb (with leader): %.1fW", avgFlat, avgClimb)
-
-	if avgClimb <= avgFlat {
-		t.Errorf("domestique should push harder on climbs (%.1fW) than flat (%.1fW) when leader is in group",
-			avgClimb, avgFlat)
+	if climbAction != ActionChase {
+		t.Errorf("domestique should drive (chase) on a climb favouring the leader, got %v", climbAction)
 	}
+	if flatAction == ActionChase {
+		t.Errorf("domestique should not drive on the flat")
+	}
+	if earlyAction == ActionChase {
+		t.Errorf("teams should not drive in the early phase")
+	}
+}
+
+// domestiqueAction runs FormGroups with a domestique, its climbing leader and
+// a rival sprinter, returning the domestique's chosen action.
+func domestiqueAction(dom, leader *model.Rider, seg *model.Segment, remaining float64) Action {
+	sprinter := makeSprinter("Rival")
+	sprinter.ID = 3
+	sprinter.Team = "Team B"
+	rng := rand.New(rand.NewSource(1))
+	domRS := &RiderState{Rider: dom, WPrime: NewWPrimeState(dom), FormFactor: 1.0, EffectiveFTP: dom.FTPWatts, TeamRole: RoleDomestique}
+	leaderRS := &RiderState{Rider: leader, WPrime: NewWPrimeState(leader), FormFactor: 1.0, EffectiveFTP: leader.FTPWatts, TeamRole: RoleLeader}
+	sprRS := &RiderState{Rider: &sprinter, WPrime: NewWPrimeState(&sprinter), FormFactor: 1.0, EffectiveFTP: sprinter.FTPWatts, TeamRole: RoleSprinter}
+	riders := []*RiderState{domRS, leaderRS, sprRS}
+	state := NewRaceState(riders, rng, false, false)
+	state.Segment = seg
+	state.KmRemaining = remaining
+	state.Phase = PhaseFromKm(remaining)
+	params := DefaultTacticsParams()
+	FormGroups(riders, seg, false, remaining, rng, state, &params)
+	return state.LastActions[dom.ID]
 }
 
 // measureDomestiquePowers runs FormGroups n times and returns the domestique's LastSegmentPower.

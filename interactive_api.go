@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"cycling_sim/internal/model"
-	"cycling_sim/internal/selection"
+	"cycling_sim/internal/service"
 	"cycling_sim/internal/simulation"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
@@ -49,26 +49,11 @@ func (a *App) PreviewRaceStartList(raceID int64) []RiderInfo {
 	if a.db == nil {
 		return nil
 	}
-	race, err := a.db.GetRace(raceID)
+	cfg, err := service.LoadRaceConfig(a.db, raceID, false, nil)
 	if err != nil {
 		return nil
 	}
-	course, err := a.db.GetCourse(race.CourseID)
-	if err != nil {
-		return nil
-	}
-	riders, err := a.db.ListRiders()
-	if err != nil {
-		return nil
-	}
-
-	config := selection.DefaultConfig(race.RaceType, false, 0)
-	selected := selection.SelectStartList(riders, course, race, config)
-	infos := make([]RiderInfo, 0, len(selected))
-	for _, r := range selected {
-		infos = append(infos, riderToInfo(r))
-	}
-	return sortRidersByTeamThenName(infos)
+	return ridersToSortedInfos(cfg.Riders)
 }
 
 // PreviewStageRaceStartList returns the selected start list for a stage race.
@@ -76,27 +61,30 @@ func (a *App) PreviewStageRaceStartList(stageRaceID int64) []RiderInfo {
 	if a.db == nil {
 		return nil
 	}
-	sr, err := a.db.GetStageRace(stageRaceID)
+	plan, err := service.PrepareStageRace(a.db, stageRaceID, false)
 	if err != nil {
 		return nil
 	}
-	allRiders, err := a.db.ListRiders()
-	if err != nil {
-		return nil
-	}
+	return ridersToSortedInfos(plan.Riders)
+}
 
-	stages, stageInfos, err := a.buildStageConfigs(sr, false)
-	if err != nil {
-		return nil
-	}
-
-	selConfig := selection.DefaultConfig(model.RaceTypeRoad, true, len(stages))
-	selected := selection.SelectStageRaceStartList(allRiders, stageInfos, selConfig)
-	infos := make([]RiderInfo, 0, len(selected))
-	for _, r := range selected {
+func ridersToSortedInfos(riders []model.Rider) []RiderInfo {
+	infos := make([]RiderInfo, 0, len(riders))
+	for _, r := range riders {
 		infos = append(infos, riderToInfo(r))
 	}
 	return sortRidersByTeamThenName(infos)
+}
+
+// splitTeam returns sorted infos for the whole field and for one team.
+func splitTeam(riders []model.Rider, team string) (all, mine []RiderInfo) {
+	var teamRiders []model.Rider
+	for _, r := range riders {
+		if r.Team == team {
+			teamRiders = append(teamRiders, r)
+		}
+	}
+	return ridersToSortedInfos(riders), ridersToSortedInfos(teamRiders)
 }
 
 func sortRidersByTeamThenName(infos []RiderInfo) []RiderInfo {
@@ -117,40 +105,28 @@ func (a *App) StartInteractiveSimulation(raceID int64, enableIncidents bool, con
 	}
 	controlledTeam = strings.TrimSpace(controlledTeam)
 
-	raceConfig, selected, err := a.loadRaceConfig(raceID, enableIncidents, nil)
-	if err != nil || len(selected) == 0 {
+	raceConfig, err := service.LoadRaceConfig(a.db, raceID, enableIncidents, nil)
+	if err != nil || len(raceConfig.Riders) == 0 {
 		return InteractiveSessionInfo{}
 	}
 	if controlledTeam == "" {
-		controlledTeam = selected[0].Team
+		controlledTeam = raceConfig.Riders[0].Team
 	}
 
 	sess := newInteractiveSession(controlledTeam)
 	a.putSession(sess)
 	raceConfig.ActionOverrides = sess
-
-	allInfos := make([]RiderInfo, 0, len(selected))
-	teamInfos := make([]RiderInfo, 0)
-	for _, r := range selected {
-		info := riderToInfo(r)
-		allInfos = append(allInfos, info)
-		if r.Team == controlledTeam {
-			teamInfos = append(teamInfos, info)
-		}
-	}
+	allInfos, teamInfos := splitTeam(raceConfig.Riders, controlledTeam)
 
 	go func() {
 		defer a.deleteSession(sess.id)
 		if a.ctx == nil {
 			return
 		}
-		if raceConfig.Race.RaceType == model.RaceTypeTT {
-			results := simulation.SimulateTT(raceConfig)
-			_ = a.db.SaveRaceResults(results)
-			runtime.EventsEmit(a.ctx, "interactive_simulation_complete", InteractiveComplete{SessionID: sess.id, RaceID: raceID})
-			return
+		results := service.RunRace(raceConfig, a.makeRaceProgressCallback(raceID, sess.id, sess.Pace))
+		if sess.IsStopped() {
+			return // abandoned by the user: don't overwrite saved results
 		}
-		results := simulation.SimulateRoadRaceWithProgress(raceConfig, a.makeRaceProgressCallback(raceID, sess.id, sess.Pace))
 		_ = a.db.SaveRaceResults(results)
 		runtime.EventsEmit(a.ctx, "interactive_simulation_complete", InteractiveComplete{SessionID: sess.id, RaceID: raceID})
 	}()
@@ -159,8 +135,8 @@ func (a *App) StartInteractiveSimulation(raceID int64, enableIncidents bool, con
 		SessionID:      sess.id,
 		RaceID:         raceID,
 		ControlledTeam: controlledTeam,
-		AllRiders:      sortRidersByTeamThenName(allInfos),
-		TeamRiders:     sortRidersByTeamThenName(teamInfos),
+		AllRiders:      allInfos,
+		TeamRiders:     teamInfos,
 	}
 }
 
@@ -171,54 +147,29 @@ func (a *App) StartInteractiveStageRace(stageRaceID int64, controlledTeam string
 	}
 	controlledTeam = strings.TrimSpace(controlledTeam)
 
-	sr, err := a.db.GetStageRace(stageRaceID)
+	plan, err := service.PrepareStageRace(a.db, stageRaceID, true)
 	if err != nil {
-		return InteractiveSessionInfo{}
-	}
-	if err := a.clearStageRaceData(stageRaceID); err != nil {
-		return InteractiveSessionInfo{}
-	}
-
-	allRiders, err := a.db.ListRiders()
-	if err != nil {
-		return InteractiveSessionInfo{}
-	}
-	stages, stageInfos, err := a.buildStageConfigs(sr, true)
-	if err != nil {
-		return InteractiveSessionInfo{}
-	}
-
-	selConfig := selection.DefaultConfig(model.RaceTypeRoad, true, len(stages))
-	selected := selection.SelectStageRaceStartList(allRiders, stageInfos, selConfig)
-	if len(selected) == 0 {
 		return InteractiveSessionInfo{}
 	}
 	if controlledTeam == "" {
-		controlledTeam = selected[0].Team
+		controlledTeam = plan.Riders[0].Team
 	}
 
 	sess := newInteractiveSession(controlledTeam)
 	a.putSession(sess)
-
-	allInfos := make([]RiderInfo, 0, len(selected))
-	teamInfos := make([]RiderInfo, 0)
-	for _, r := range selected {
-		info := riderToInfo(r)
-		allInfos = append(allInfos, info)
-		if r.Team == controlledTeam {
-			teamInfos = append(teamInfos, info)
-		}
-	}
+	allInfos, teamInfos := splitTeam(plan.Riders, controlledTeam)
 
 	go func() {
 		defer a.deleteSession(sess.id)
 		if a.ctx == nil {
 			return
 		}
-		progressCallback := a.makeStageRaceProgressCallback(stageRaceID, len(stages), sess.id, sess.Pace)
-		allResults, allStandings := simulation.SimulateStageRaceWithProgress(sr, stages, selected, 0, progressCallback, sess)
-		pointsByStage, komByStage, youthByStage := simulation.ComputeStageRaceCompetitions(sr.ID, stages, selected, allResults)
-		a.saveStageRaceData(stages, allResults, allStandings, pointsByStage, komByStage, youthByStage)
+		progress := a.makeStageRaceProgressCallback(stageRaceID, len(plan.Stages), sess.id, sess.Pace)
+		out := service.RunStageRace(plan, 0, progress, sess)
+		if sess.IsStopped() {
+			return // abandoned by the user: don't overwrite saved results
+		}
+		_ = service.SaveStageRaceOutput(a.db, out)
 		runtime.EventsEmit(a.ctx, "interactive_stage_race_complete", InteractiveComplete{SessionID: sess.id, StageRaceID: stageRaceID})
 	}()
 
@@ -226,8 +177,8 @@ func (a *App) StartInteractiveStageRace(stageRaceID int64, controlledTeam string
 		SessionID:      sess.id,
 		StageRaceID:    stageRaceID,
 		ControlledTeam: controlledTeam,
-		AllRiders:      sortRidersByTeamThenName(allInfos),
-		TeamRiders:     sortRidersByTeamThenName(teamInfos),
+		AllRiders:      allInfos,
+		TeamRiders:     teamInfos,
 	}
 }
 

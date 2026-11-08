@@ -9,7 +9,7 @@ import (
 	"cycling_sim/internal/database"
 	"cycling_sim/internal/model"
 	"cycling_sim/internal/seed"
-	"cycling_sim/internal/selection"
+	"cycling_sim/internal/service"
 	"cycling_sim/internal/simulation"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
@@ -371,24 +371,16 @@ func (a *App) RunSimulation(raceID int64, enableIncidents bool) RaceResults {
 	if a.db == nil {
 		return RaceResults{}
 	}
-	raceConfig, selected, err := a.loadRaceConfig(raceID, enableIncidents, nil)
+	raceConfig, err := service.LoadRaceConfig(a.db, raceID, enableIncidents, nil)
 	if err != nil {
 		return raceResultsError(err)
 	}
-
-	var simResults []model.RaceResult
-	if raceConfig.Race.RaceType == model.RaceTypeTT {
-		simResults = simulation.SimulateTT(raceConfig)
-	} else {
-		simResults = simulation.SimulateRoadRaceWithProgress(raceConfig, a.makeRaceProgressCallback(raceID, "", nil))
-	}
-
-	riderMap := buildRiderMap(selected)
+	simResults := service.RunRace(raceConfig, a.makeRaceProgressCallback(raceID, "", nil))
 	_ = a.db.SaveRaceResults(simResults)
 	return RaceResults{
 		RaceID:   raceID,
 		RaceName: raceConfig.Race.Name,
-		Results:  mapSimulationResults(simResults, riderMap),
+		Results:  mapSimulationResults(simResults, buildRiderMap(raceConfig.Riders)),
 	}
 }
 
@@ -397,40 +389,20 @@ func (a *App) RunStageRace(stageRaceID int64) []RaceResults {
 	if a.db == nil {
 		return nil
 	}
-	sr, err := a.db.GetStageRace(stageRaceID)
+	plan, err := service.PrepareStageRace(a.db, stageRaceID, true)
 	if err != nil {
 		return nil
 	}
-	if err := a.clearStageRaceData(stageRaceID); err != nil {
-		return nil
-	}
-	allRiders, err := a.db.ListRiders()
-	if err != nil {
-		return nil
-	}
-	stages, stageInfos, err := a.buildStageConfigs(sr, true)
-	if err != nil {
-		return nil
-	}
-	selConfig := selection.DefaultConfig(model.RaceTypeRoad, true, len(stages))
-	selected := selection.SelectStageRaceStartList(allRiders, stageInfos, selConfig)
-	if len(selected) == 0 {
-		return nil
-	}
+	out := service.RunStageRace(plan, 0, a.makeStageRaceProgressCallback(stageRaceID, len(plan.Stages), "", nil), nil)
+	_ = service.SaveStageRaceOutput(a.db, out)
 
-	allResults, allStandings := simulation.SimulateStageRaceWithProgress(
-		sr, stages, selected, 0,
-		a.makeStageRaceProgressCallback(stageRaceID, len(stages), "", nil), nil)
-	pointsByStage, komByStage, youthByStage := simulation.ComputeStageRaceCompetitions(sr.ID, stages, selected, allResults)
-	a.saveStageRaceData(stages, allResults, allStandings, pointsByStage, komByStage, youthByStage)
-
-	riderMap := buildRiderMap(selected)
-	finalResults := make([]RaceResults, 0, len(allResults))
-	for i, results := range allResults {
-		if i < len(stages) {
+	riderMap := buildRiderMap(plan.Riders)
+	finalResults := make([]RaceResults, 0, len(out.Results))
+	for i, results := range out.Results {
+		if i < len(plan.Stages) {
 			finalResults = append(finalResults, RaceResults{
-				RaceID:   stages[i].Race.ID,
-				RaceName: stages[i].Race.Name,
+				RaceID:   plan.Stages[i].Race.ID,
+				RaceName: plan.Stages[i].Race.Name,
 				Results:  mapSimulationResults(results, riderMap),
 			})
 		}
@@ -782,94 +754,6 @@ func (a *App) makeStageRaceProgressCallback(stageRaceID int64, stageCount int, s
 		if pace != nil {
 			pace()
 		}
-	}
-}
-
-// loadRaceConfig loads race/course/riders from DB and builds a RaceConfig ready for simulation.
-func (a *App) loadRaceConfig(raceID int64, enableIncidents bool, overrides simulation.ActionOverrideProvider) (simulation.RaceConfig, []model.Rider, error) {
-	race, err := a.db.GetRace(raceID)
-	if err != nil {
-		return simulation.RaceConfig{}, nil, err
-	}
-	course, err := a.db.GetCourse(race.CourseID)
-	if err != nil {
-		return simulation.RaceConfig{}, nil, err
-	}
-	allRiders, err := a.db.ListRiders()
-	if err != nil {
-		return simulation.RaceConfig{}, nil, err
-	}
-	cfg := selection.DefaultConfig(race.RaceType, false, 0)
-	selected := selection.SelectStartList(allRiders, course, race, cfg)
-	return simulation.RaceConfig{
-		Race:             race,
-		Course:           course,
-		Riders:           selected,
-		Seed:             0,
-		IncidentsEnabled: enableIncidents,
-		ActionOverrides:  overrides,
-	}, selected, nil
-}
-
-// buildStageConfigs builds StageConfig and StageInfo slices from a stage race.
-// If clearResults is true, existing race results for each stage are cleared first.
-func (a *App) buildStageConfigs(sr *model.StageRace, clearResults bool) ([]simulation.StageConfig, []selection.StageInfo, error) {
-	stages := make([]simulation.StageConfig, 0, len(sr.Stages))
-	stageInfos := make([]selection.StageInfo, 0, len(sr.Stages))
-	for _, s := range sr.Stages {
-		race, err := a.db.GetRace(s.RaceID)
-		if err != nil {
-			return nil, nil, err
-		}
-		if clearResults {
-			if err := a.db.ClearRaceResults(race.ID); err != nil {
-				return nil, nil, err
-			}
-		}
-		course, err := a.db.GetCourse(race.CourseID)
-		if err != nil {
-			return nil, nil, err
-		}
-		stages = append(stages, simulation.StageConfig{
-			Race:          race,
-			Course:        course,
-			StageNumber:   s.StageNumber,
-			RestDayBefore: s.RestDayBefore,
-		})
-		stageInfos = append(stageInfos, selection.StageInfo{Course: course, RaceType: race.RaceType})
-	}
-	return stages, stageInfos, nil
-}
-
-// clearStageRaceData removes all prior standings for a stage race.
-func (a *App) clearStageRaceData(stageRaceID int64) error {
-	if err := a.db.ClearGCStandings(stageRaceID); err != nil {
-		return err
-	}
-	_ = a.db.ClearPointsStandings(stageRaceID)
-	_ = a.db.ClearMountainsStandings(stageRaceID)
-	_ = a.db.ClearYouthStandings(stageRaceID)
-	return nil
-}
-
-// saveStageRaceData persists all stage race simulation outputs to the database.
-func (a *App) saveStageRaceData(stages []simulation.StageConfig, allResults [][]model.RaceResult, allStandings [][]model.GCStanding, pointsByStage [][]model.PointsStanding, komByStage [][]model.MountainsStanding, youthByStage [][]model.YouthStanding) {
-	for i, results := range allResults {
-		if i < len(stages) {
-			_ = a.db.SaveRaceResults(results)
-		}
-	}
-	for _, standings := range allStandings {
-		_ = a.db.SaveGCStandings(standings)
-	}
-	for _, ps := range pointsByStage {
-		_ = a.db.SavePointsStandings(ps)
-	}
-	for _, ks := range komByStage {
-		_ = a.db.SaveMountainsStandings(ks)
-	}
-	for _, ys := range youthByStage {
-		_ = a.db.SaveYouthStandings(ys)
 	}
 }
 

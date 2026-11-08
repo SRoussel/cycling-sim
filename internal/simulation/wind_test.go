@@ -72,3 +72,30 @@ func TestCrosswindSplitsFlatRace(t *testing.T) {
 		t.Errorf("crosswind should split the field more than calm air (%.0f vs %.0f)", windy, calm)
 	}
 }
+
+func TestProtectedRidersMoveUpInCrosswind(t *testing.T) {
+	build := func() []riderPower {
+		var rps []riderPower
+		for i := 0; i < 30; i++ {
+			r := makeRider("R", 380, 70, 70, 70, 70, 70, 70, 70, 70, 70)
+			r.ID = int64(i + 1)
+			r.Team = []string{"A", "B", "C"}[i%3]
+			rs := &RiderState{Rider: &r, TeamRole: RoleDomestique}
+			if i < 3 {
+				rs.TeamRole = RoleLeader // one leader per team
+			}
+			rps = append(rps, riderPower{state: rs})
+		}
+		return rps
+	}
+	calm := build()
+	assignTeamPositions(calm, false)
+	windy := build()
+	assignTeamPositions(windy, true)
+	if p := calm[0].state.GroupPosition; p <= echelonCapacity {
+		t.Errorf("in calm air the leader should sit deep in the bunch, got position %d", p)
+	}
+	if p := windy[0].state.GroupPosition; p > len(windy)-3 {
+		t.Errorf("in a crosswind the leader should move up, got position %d", p)
+	}
+}

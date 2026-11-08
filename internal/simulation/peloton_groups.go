@@ -3,6 +3,7 @@ package simulation
 import (
 	"fmt"
 	"math/rand"
+	"sort"
 
 	"cycling_sim/internal/model"
 )
@@ -170,7 +171,7 @@ func FormGroups(riders []*RiderState, segment *model.Segment, isTT bool, remaini
 // assignTeamPositions reorders riders in a group so domestiques ride at the front
 // (low position = more wind) to shelter their team's leader/sprinter.
 // Only applies on flat/rolling terrain where drafting matters.
-func assignTeamPositions(rps []riderPower) {
+func assignTeamPositions(rps []riderPower, crosswind bool) {
 	if len(rps) == 1 {
 		rps[0].state.GroupPosition = 1 // alone in the wind
 	}
@@ -209,19 +210,20 @@ func assignTeamPositions(rps []riderPower) {
 		}
 	}
 
-	// Order: domestiques at front (in the wind), then other riders, then protected riders (sheltered)
+	// Order: domestiques at front (in the wind), then other riders, then
+	// protected riders (sheltered deep in the bunch). In a crosswind the deep
+	// bunch is the gutter, so each team rides as a unit with its protected
+	// riders right behind a couple of domestiques (see crosswindTeamOrder).
+	order := [][]riderPower{frontDomestiques, others, protectedRiders}
+	if crosswind {
+		order = crosswindTeamOrder(frontDomestiques, protectedRiders, others)
+	}
 	pos := 1
-	for _, rp := range frontDomestiques {
-		rp.state.GroupPosition = pos
-		pos++
-	}
-	for _, rp := range others {
-		rp.state.GroupPosition = pos
-		pos++
-	}
-	for _, rp := range protectedRiders {
-		rp.state.GroupPosition = pos
-		pos++
+	for _, part := range order {
+		for _, rp := range part {
+			rp.state.GroupPosition = pos
+			pos++
+		}
 	}
 }
 
@@ -327,4 +329,39 @@ func phaseOf(state *RaceState) RacePhase {
 		return PhaseEarly
 	}
 	return state.Phase
+}
+
+// crosswindTeamOrder lines teams up for an echelon: strongest teams first,
+// each with up to two domestiques directly ahead of its protected riders;
+// remaining domestiques and unattached riders follow.
+func crosswindTeamOrder(domestiques, protected, others []riderPower) [][]riderPower {
+	byTeam := map[string][]riderPower{}
+	strength := map[string]float64{}
+	var teams []string
+	for _, rp := range protected {
+		t := rp.state.Rider.Team
+		if _, ok := byTeam[t]; !ok {
+			teams = append(teams, t)
+		}
+		byTeam[t] = append(byTeam[t], rp)
+	}
+	domByTeam := map[string][]riderPower{}
+	for _, rp := range domestiques {
+		t := rp.state.Rider.Team
+		domByTeam[t] = append(domByTeam[t], rp)
+		strength[t] += rp.power
+	}
+	sort.SliceStable(teams, func(i, j int) bool { return strength[teams[i]] > strength[teams[j]] })
+	var front, rest []riderPower
+	for _, t := range teams {
+		doms := domByTeam[t]
+		n := len(doms)
+		if n > 2 {
+			n = 2
+		}
+		front = append(front, doms[:n]...)
+		front = append(front, byTeam[t]...)
+		rest = append(rest, doms[n:]...)
+	}
+	return [][]riderPower{front, rest, others}
 }

@@ -238,7 +238,7 @@ func followSplit(rps []riderPower, segment *model.Segment, firstID int, cooperat
 				m.state.Dropped = true
 			}
 		}
-		assignTeamPositions(members) // domestiques ride in the wind for their leaders
+		assignTeamPositions(members, gutterExposure(segment, speed) > 0.3) // domestiques ride in the wind for their leaders
 		for _, m := range members {
 			m.state.GroupID = g.ID
 			g.Riders = append(g.Riders, m.state)

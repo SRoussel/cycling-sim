@@ -342,6 +342,15 @@ function StageRaceSimulation() {
     setListenerReady(true)
   }, [])
 
+  // Stop the backend session when it is replaced or the page unmounts, so an
+  // abandoned interactive race doesn't keep running and overwrite saved results.
+  useEffect(() => {
+    if (!sessionId) return
+    return () => {
+      void App.StopInteractiveSession(sessionId)
+    }
+  }, [sessionId])
+
   useEffect(() => {
     return () => {
       if (telemetryRafRef.current !== null) {

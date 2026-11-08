@@ -64,9 +64,9 @@ func (db *DB) CreateSegment(s *model.Segment) error {
 		return fmt.Errorf("invalid segment: %w", err)
 	}
 	result, err := db.Exec(`
-		INSERT INTO segments (course_id, segment_order, name, distance_km, gradient_pct, surface_type, is_technical)
-		VALUES (?, ?, ?, ?, ?, ?, ?)`,
-		s.CourseID, s.SegmentOrder, s.Name, s.DistanceKm, s.GradientPct, string(s.SurfaceType), boolToInt(s.IsTechnical))
+		INSERT INTO segments (course_id, segment_order, name, distance_km, gradient_pct, surface_type, is_technical, heading_deg)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		s.CourseID, s.SegmentOrder, s.Name, s.DistanceKm, s.GradientPct, string(s.SurfaceType), boolToInt(s.IsTechnical), s.HeadingDeg)
 	if err != nil {
 		return fmt.Errorf("inserting segment: %w", err)
 	}
@@ -81,7 +81,7 @@ func (db *DB) CreateSegment(s *model.Segment) error {
 // GetSegments returns all segments for a course, ordered.
 func (db *DB) GetSegments(courseID int64) ([]model.Segment, error) {
 	rows, err := db.Query(`
-		SELECT id, course_id, segment_order, name, distance_km, gradient_pct, surface_type, is_technical
+		SELECT id, course_id, segment_order, name, distance_km, gradient_pct, surface_type, is_technical, heading_deg
 		FROM segments WHERE course_id = ? ORDER BY segment_order`, courseID)
 	if err != nil {
 		return nil, fmt.Errorf("getting segments for course %d: %w", courseID, err)
@@ -93,7 +93,7 @@ func (db *DB) GetSegments(courseID int64) ([]model.Segment, error) {
 		var s model.Segment
 		var surface string
 		var tech int
-		if err := rows.Scan(&s.ID, &s.CourseID, &s.SegmentOrder, &s.Name, &s.DistanceKm, &s.GradientPct, &surface, &tech); err != nil {
+		if err := rows.Scan(&s.ID, &s.CourseID, &s.SegmentOrder, &s.Name, &s.DistanceKm, &s.GradientPct, &surface, &tech, &s.HeadingDeg); err != nil {
 			return nil, fmt.Errorf("scanning segment: %w", err)
 		}
 		s.SurfaceType = model.SurfaceType(surface)

@@ -98,6 +98,36 @@ func ForceAero(cda float64, speedMPS float64) float64 {
 //
 // Returns speed in m/s.
 func SpeedFromPower(powerWatts float64, totalMassKg float64, cda float64, gradientPct float64, surface model.SurfaceType, handling int) float64 {
+	return SpeedFromPowerWind(powerWatts, totalMassKg, cda, gradientPct, surface, handling, 0)
+}
+
+// SpeedFromPowerWind is SpeedFromPower with a headwind (m/s, negative for a
+// tailwind): aerodynamic drag depends on air speed v+w, not ground speed.
+func SpeedFromPowerWind(powerWatts float64, totalMassKg float64, cda float64, gradientPct float64, surface model.SurfaceType, handling int, headwindMPS float64) float64 {
+	if headwindMPS == 0 {
+		return speedFromPowerCalm(powerWatts, totalMassKg, cda, gradientPct, surface, handling)
+	}
+	fStatic := ForceGravity(totalMassKg, gradientPct) + ForceRolling(totalMassKg, gradientPct, surface, handling)
+	f := func(v float64) float64 {
+		air := v + headwindMPS
+		return (0.5*cda*airDensity*air*math.Abs(air)+fStatic)*v - powerWatts
+	}
+	lo, hi := minSpeedMPS, 40.0
+	for f(hi) < 0 && hi < 200 {
+		hi *= 2
+	}
+	for i := 0; i < 100 && hi-lo > 1e-8; i++ {
+		mid := (lo + hi) / 2
+		if f(mid) < 0 {
+			lo = mid
+		} else {
+			hi = mid
+		}
+	}
+	return (lo + hi) / 2
+}
+
+func speedFromPowerCalm(powerWatts float64, totalMassKg float64, cda float64, gradientPct float64, surface model.SurfaceType, handling int) float64 {
 	fGrav := ForceGravity(totalMassKg, gradientPct)
 	fRoll := ForceRolling(totalMassKg, gradientPct, surface, handling)
 

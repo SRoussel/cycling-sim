@@ -3,6 +3,7 @@ package seed
 import (
 	"encoding/csv"
 	"fmt"
+	"hash/fnv"
 	"math"
 	"os"
 	"path/filepath"
@@ -190,7 +191,36 @@ type courseData struct {
 // distance. fitToDistance pads (or trims) the longest flat road segment so
 // the simulated distance matches distKm.
 func cd(name string, distKm float64, segments []model.Segment) courseData {
-	return courseData{course: model.Course{Name: name, TotalDistanceKm: distKm}, segments: fitToDistance(segments, distKm)}
+	return courseData{course: model.Course{Name: name, TotalDistanceKm: distKm}, segments: withHeadings(name, fitToDistance(segments, distKm))}
+}
+
+// withHeadings assigns synthetic but stable segment headings: a random walk
+// seeded by the course name, turning up to 90° between segments, so wind
+// exposure varies along the route. Replace with real course geometry when
+// available.
+func withHeadings(course string, segments []model.Segment) []model.Segment {
+	out := append([]model.Segment(nil), segments...)
+	heading := float64(hashString(course) % 360)
+	for i := range out {
+		if i > 0 {
+			turn := float64(hashString(fmt.Sprintf("%s#%d", course, i))%181) - 90
+			heading = math.Mod(heading+turn+360, 360)
+		}
+		out[i].HeadingDeg = heading
+	}
+	return out
+}
+
+// syntheticWindDirection gives a race a stable wind direction (compass
+// degrees the wind blows from) when the seed data doesn't specify one.
+func syntheticWindDirection(race string) float64 {
+	return float64(hashString("wind:"+race) % 360)
+}
+
+func hashString(s string) uint32 {
+	h := fnv.New32a()
+	h.Write([]byte(s))
+	return h.Sum32()
 }
 
 func fitToDistance(segments []model.Segment, distKm float64) []model.Segment {
@@ -423,6 +453,9 @@ func seedRaces(db *database.DB, cIDs map[string]int64) (map[string]int64, int) {
 		if races[i].CourseID == 0 {
 			warnings++
 			continue
+		}
+		if races[i].WindDirectionDeg == 0 {
+			races[i].WindDirectionDeg = syntheticWindDirection(races[i].Name)
 		}
 		if err := db.CreateRace(&races[i]); err != nil {
 			warnings++

@@ -209,10 +209,12 @@ func (db *DB) migrate() error {
 		return err
 	}
 
-	// Lightweight migrations for older DB files.
-	if _, err := db.Exec(`ALTER TABLE riders ADD COLUMN age INTEGER NOT NULL DEFAULT 28`); err != nil {
-		// Ignore if column already exists.
-		if !strings.Contains(strings.ToLower(err.Error()), "duplicate column") {
+	// Lightweight migrations for older DB files (ignored if already applied).
+	for _, stmt := range []string{
+		`ALTER TABLE riders ADD COLUMN age INTEGER NOT NULL DEFAULT 28`,
+		`ALTER TABLE segments ADD COLUMN heading_deg REAL NOT NULL DEFAULT 0`,
+	} {
+		if _, err := db.Exec(stmt); err != nil && !strings.Contains(strings.ToLower(err.Error()), "duplicate column") {
 			return err
 		}
 	}

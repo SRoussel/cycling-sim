@@ -52,20 +52,21 @@ const lineShelterPosition = 5
 
 // groupDraft returns the CdA multiplier for a position in a group, given its
 // formation.
-func groupDraft(position int, linedOut bool, surface model.SurfaceType) float64 {
-	if linedOut && position > lineShelterPosition {
-		position = lineShelterPosition
+func groupDraft(position int, linedOut bool, seg *model.Segment, speed float64) float64 {
+	p := position
+	if linedOut && p > lineShelterPosition {
+		p = lineShelterPosition
 	}
-	return draftFor(position, surface)
+	return crosswindDraft(draftFor(p, seg.SurfaceType), position, seg, speed)
 }
 
 // riderCdAFactor is the CdA multiplier a group member actually rides at:
 // workers average their turns in the rotation, others sit at their position.
-func riderCdAFactor(rs *RiderState, g *Group, surface model.SurfaceType) float64 {
+func riderCdAFactor(rs *RiderState, g *Group, seg *model.Segment) float64 {
 	if g.Workers[rs] && g.Rotation > 1 {
-		return rotationFactor(g.Rotation, surface)
+		return rotationFactor(g.Rotation, seg.SurfaceType)
 	}
-	return groupDraft(rs.GroupPosition, g.LinedOut, surface)
+	return groupDraft(rs.GroupPosition, g.LinedOut, seg, g.Speed)
 }
 
 // draftFor returns the CdA multiplier for a rider at a position in a group.
@@ -162,8 +163,7 @@ func paceLineSpeed(rps []riderPower, segment *model.Segment, cooperative bool) (
 		handling += float64(w.state.Rider.Handling)
 	}
 	n := float64(k)
-	speed = SpeedFromPower(p/n, m/n, cda/n*rotationFactor(k, segment.SurfaceType),
-		segment.GradientPct, segment.SurfaceType, int(handling/n))
+	speed = segmentSpeed(p/n, m/n, cda/n*rotationFactor(k, segment.SurfaceType), segment, int(handling/n))
 	if ftp > 0 {
 		intensity = p / ftp
 	}
@@ -185,7 +185,7 @@ func followSplit(rps []riderPower, segment *model.Segment, firstID int, cooperat
 	for _, rp := range rps {
 		r := rp.state.Rider
 		solo[rp.state] = math.Min(SpeedCap(r, segment),
-			SpeedFromPower(rp.power, r.TotalMassKg(), r.CdA, segment.GradientPct, segment.SurfaceType, r.Handling))
+			segmentSpeed(rp.power, r.TotalMassKg(), r.CdA, segment, r.Handling))
 	}
 	remaining := append([]riderPower(nil), rps...)
 	sort.SliceStable(remaining, func(i, j int) bool { return solo[remaining[i].state] > solo[remaining[j].state] })
@@ -215,13 +215,13 @@ func followSplit(rps []riderPower, segment *model.Segment, firstID int, cooperat
 			r := rp.state.Rider
 			available := rp.power + rp.state.WPrime.AvailablePowerAboveFTP(segTime)
 			needs := func(cdaFactor float64) float64 {
-				return powerForSpeed(speed, r.TotalMassKg(), r.CdA*cdaFactor, segment.GradientPct, segment.SurfaceType, r.Handling)
+				return segmentPower(speed, r.TotalMassKg(), r.CdA*cdaFactor, segment, r.Handling)
 			}
 			canHold := false
 			if SpeedCap(r, segment) >= speed {
 				if workerSet[rp.state] && k > 1 && available >= needs(rotationFactor(k, segment.SurfaceType)) {
 					canHold = true // takes turns on the front
-				} else if available >= needs(groupDraft(len(members)+1, linedOut, segment.SurfaceType)) {
+				} else if available >= needs(groupDraft(len(members)+1, linedOut, segment, speed)) {
 					// Can't (or won't) take turns but can sit on: a passenger.
 					delete(workerSet, rp.state)
 					canHold = true

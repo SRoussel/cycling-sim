@@ -136,6 +136,9 @@ func SimulateSegment(riders []*RiderState, segment *model.Segment, isTT bool, di
 		if state != nil {
 			state.SegmentKmLeft = segment.DistanceKm - float64(i)*step.DistanceKm
 		}
+		if step.WindMPS > 0 {
+			setWindComponents(&step, stepHeading(segment, i))
+		}
 		simulateStep(riders, &step, isTT, distanceRemaining-float64(i)*step.DistanceKm, rng, state, params, incidentsEnabled...)
 	}
 }
@@ -227,9 +230,8 @@ func simulateStep(riders []*RiderState, segment *model.Segment, isTT bool, dista
 			rs.TotalTime += segTime
 
 			// Power this rider actually produces at the group's speed.
-			draftFactor := riderCdAFactor(rs, group, segment.SurfaceType)
-			actualPower := powerForSpeed(groupSpeed, rs.Rider.TotalMassKg(),
-				rs.Rider.CdA*draftFactor, segment.GradientPct, segment.SurfaceType, rs.Rider.Handling)
+			draftFactor := riderCdAFactor(rs, group, segment)
+			actualPower := segmentPower(groupSpeed, rs.Rider.TotalMassKg(), rs.Rider.CdA*draftFactor, segment, rs.Rider.Handling)
 			if actualPower < 0 {
 				actualPower = 0
 			}

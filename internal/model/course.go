@@ -39,6 +39,14 @@ type Segment struct {
 	GradientPct  float64
 	SurfaceType  SurfaceType
 	IsTechnical  bool
+	HeadingDeg   float64 // direction of travel, 0=N, 90=E (compass degrees)
+
+	// Wind relative to this segment, set by the simulation for a given race
+	// (not stored). Headwind is negative for a tailwind.
+	HeadwindMPS  float64
+	CrosswindMPS float64
+	WindMPS      float64 // race wind speed
+	WindFromDeg  float64 // direction the race wind blows from
 }
 
 // Validate checks segment fields.

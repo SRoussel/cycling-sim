@@ -247,11 +247,9 @@ func drivingTeams(riders []*RiderState, segment *model.Segment, state *RaceState
 			continue
 		}
 		r := rs.Rider
-		pace := SpeedFromPower(EffectivePower(r, rs.CurrentFTP(), segment, false),
-			r.TotalMassKg(), r.CdA, segment.GradientPct, segment.SurfaceType, r.Handling)
+		pace := segmentSpeed(EffectivePower(r, rs.CurrentFTP(), segment, false), r.TotalMassKg(), r.CdA, segment, r.Handling)
 		segTime := SegmentTime(pace, segment.DistanceKm)
-		required := powerForSpeed(pace, f.TotalMassKg(), f.CdA*draftFor(3, segment.SurfaceType),
-			segment.GradientPct, segment.SurfaceType, f.Handling)
+		required := segmentPower(pace, f.TotalMassKg(), f.CdA*groupDraft(3, false, segment, pace), segment, f.Handling)
 		available := finisherFTP + finisher.WPrime.AvailablePowerAboveFTP(segTime)
 		if required >= available*(1-driveMargin) {
 			out[r.Team] = true
@@ -275,7 +273,7 @@ func riderEffort(rs *RiderState, action Action, segment *model.Segment, remainin
 	r := rs.Rider
 	threshold := EffectivePower(r, rs.CurrentFTP(), segment, false)
 	burstOver := func(km float64) float64 {
-		v := SpeedFromPower(threshold, r.TotalMassKg(), r.CdA, segment.GradientPct, segment.SurfaceType, r.Handling)
+		v := segmentSpeed(threshold, r.TotalMassKg(), r.CdA, segment, r.Handling)
 		return threshold + rs.WPrime.AvailablePowerAboveFTP(SegmentTime(v, km))
 	}
 	phase := PhaseEarly

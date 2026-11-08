@@ -32,6 +32,9 @@ func SimulateTT(config RaceConfig) []model.RaceResult {
 	states := initStates(config.Riders, rng)
 
 	segments := config.Course.Segments
+	if config.Race != nil {
+		segments = WithWind(segments, config.Race.WindSpeedKmh, config.Race.WindDirectionDeg)
+	}
 
 	// TT pacing: TTAbility affects how evenly power is distributed
 	for _, rs := range states {
@@ -57,8 +60,7 @@ func SimulateTT(config RaceConfig) []model.RaceResult {
 				speed = DescentSpeed(power, rs.Rider.TotalMassKg(), ttCdA,
 					seg.GradientPct, seg.SurfaceType, rs.Rider.Handling, rs.Rider.DescendingAbility, seg.IsTechnical)
 			} else {
-				speed = SpeedFromPower(power, rs.Rider.TotalMassKg(), ttCdA,
-					seg.GradientPct, seg.SurfaceType, rs.Rider.Handling)
+				speed = segmentSpeed(power, rs.Rider.TotalMassKg(), ttCdA, seg, rs.Rider.Handling)
 			}
 
 			segTime := SegmentTime(speed, seg.DistanceKm)

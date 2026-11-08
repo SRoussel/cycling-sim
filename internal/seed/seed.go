@@ -35,7 +35,11 @@ func Seed(db *database.DB) (Result, error) {
 	}
 
 	csvPath := findDataFile("riders.csv")
-	riderCount, err := loadRidersFromCSV(db, csvPath)
+	overrides, err := LoadOverrides(findDataFile("rider_overrides.csv"))
+	if err != nil {
+		return res, err
+	}
+	riderCount, err := loadRidersFromCSV(db, csvPath, overrides)
 	if err != nil {
 		return res, err
 	}
@@ -91,7 +95,7 @@ func findDataFile(name string) string {
 }
 
 // loadRidersFromCSV reads riders from a CSV file and inserts them into the database.
-func loadRidersFromCSV(db *database.DB, path string) (int, error) {
+func loadRidersFromCSV(db *database.DB, path string, overrides map[string]RiderOverride) (int, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return 0, fmt.Errorf("opening %s: %w", path, err)
@@ -148,6 +152,11 @@ func loadRidersFromCSV(db *database.DB, path string) (int, error) {
 			Consistency:       consistency,
 			TacticalAwareness: acceleration,
 			Handling:          handling,
+		}
+		if o, ok := overrides[normalizeName(rider.Name)]; ok {
+			if err := o.Apply(&rider); err != nil {
+				return count, err
+			}
 		}
 		if err := db.CreateRider(&rider); err != nil {
 			continue

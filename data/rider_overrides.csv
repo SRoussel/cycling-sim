@@ -1,0 +1,61 @@
+# Rider attribute overrides, applied on top of riders.csv at seed time (matched by Name).
+# Blank cells keep the base value. Source: "curated" = hand-estimated from public rider
+# profiles (weight, specialty, typical threshold W/kg) in Nov 2026; "derived" rows are
+# written by `cycling-sim derive-ratings` from imported race results.
+# Re-seed (clear + seed) after editing.
+Name,Weight_kg,FTP_watts,Sprint_watts,Climbing,Sprint,TT,Descending,Endurance,Consistency,Tactical,Handling,Source
+# --- Grand Tour / climbers (threshold W/kg in comment) ---
+Tadej Pogačar,66,455,1500,99,82,94,92,97,95,95,90,curated (6.89 W/kg)
+Jonas Vingegaard,60,412,,97,58,92,,95,90,,,curated (6.87 W/kg)
+Remco Evenepoel,61,402,,90,66,97,,90,85,,,curated (6.59 W/kg)
+Primož Roglič,65,410,1350,92,72,90,,,,,,curated (6.31 W/kg)
+João Almeida,63,395,,87,62,86,,,,,,curated (6.27 W/kg)
+Juan Ayuso,63,400,,89,65,86,,,,,,curated (6.35 W/kg)
+Carlos Rodríguez,62,385,,88,55,82,,,,,,curated (6.21 W/kg)
+Enric Mas,60,375,,88,55,76,,,,,,curated (6.25 W/kg)
+Giulio Ciccone,58,360,1250,88,62,72,,,,,,curated (6.21 W/kg)
+Sepp Kuss,61,375,,88,52,76,,,,,,curated (6.15 W/kg)
+Richard Carapaz,62,385,,89,60,76,,,,,,curated (6.21 W/kg)
+Jai Hindley,59,368,,88,58,78,,,,,,curated (6.24 W/kg)
+Ben O'Connor,68,418,,88,58,82,,,,,,curated (6.15 W/kg)
+Mikel Landa,60,375,,89,48,72,,,,,,curated (6.25 W/kg)
+Adam Yates,58,362,,89,52,76,,,,,,curated (6.24 W/kg)
+Santiago Buitrago,62,375,,86,58,74,,,,,,curated (6.05 W/kg)
+Einer Rubio,62,370,,85,55,72,,,,,,curated (5.97 W/kg)
+Sergio Higuita,61,365,1400,84,72,74,,,,,,curated (5.98 W/kg)
+Felix Gall,63,395,1150,90,52,80,,,,,,curated (6.27 W/kg)
+Lenny Martinez,52,320,1050,88,60,72,,,,,,curated (6.15 W/kg)
+Cian Uijtdebroeks,64,380,,85,52,78,,,,,,curated (5.94 W/kg)
+Aleksandr Vlasov,68,405,1300,86,62,82,,,,,,curated (5.96 W/kg)
+Jefferson Alveiro Cepeda,62,380,1250,85,58,74,,,,,,curated (6.13 W/kg)
+David Gaudu,53,330,1150,86,62,72,,,,,,curated (6.23 W/kg)
+Neilson Powless,66,400,1400,84,70,80,,,,,,curated (6.06 W/kg)
+Pello Bilbao,61,380,1400,86,70,82,,,,,,curated (6.23 W/kg)
+Alexey Lutsenko,70,410,1350,83,68,82,,,,,,curated (5.86 W/kg)
+# --- Puncheurs ---
+Maxim Van Gils,67,405,1550,86,84,78,,,,,,curated (6.04 W/kg)
+Lennert Van Eetvelt,63,390,1350,86,75,78,,,,,,curated (6.19 W/kg)
+Aurélien Paret-Peintre,62,380,1300,86,72,76,,,,,,curated (6.13 W/kg)
+Mauri Vansevenant,63,380,1300,84,68,76,,,,,,curated (6.03 W/kg)
+Filippo Zana,64,385,1300,84,68,78,,,,,,curated (6.02 W/kg)
+Ben Healy,65,400,1450,85,72,84,,,,,,curated (6.15 W/kg)
+Michael Matthews,73,415,1650,80,89,80,,,,,,curated
+Alberto Bettiol,69,410,1450,80,72,85,,,,,82,curated
+Toms Skujiņš,70,410,1450,82,75,82,,,,,82,curated
+Tiesj Benoot,74,415,1500,80,72,85,,,,,84,curated
+# --- Classics / cobbles ---
+Mathieu van der Poel,75,450,1750,82,92,85,95,95,92,95,99,curated (6.00 W/kg)
+Wout van Aert,78,445,1800,80,92,93,,,,,96,curated
+Mads Pedersen,76,430,1750,70,90,85,,,,,90,curated
+Nils Politt,80,445,1600,68,80,88,88,,,,88,curated
+Jasper Stuyven,78,425,1650,72,80,84,,,,,86,curated
+Christophe Laporte,76,425,1650,72,84,85,,,,,85,curated
+Matej Mohorič,71,410,1450,80,74,85,97,,,,86,curated
+Mikkel Bjerg,80,445,1500,65,70,90,,,,,78,curated
+Oliver Naesen,74,410,,,,,,,,,88,curated
+Gianni Vermeersch,72,400,,,,,,,,,90,curated
+# --- Sprinters ---
+Jasper Philipsen,76,395,1900,55,97,62,,,,,85,curated
+Biniam Girmay,70,395,1750,65,90,65,,,,,,curated
+Jonathan Milan,84,440,2000,40,95,80,,,,,,curated
+Søren Wærenskjold,82,440,1800,55,86,85,,,,,,curated

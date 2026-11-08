@@ -63,6 +63,12 @@ func updateBreakawayState(state *RaceState, clusters [][]*RiderState) {
 	}
 	state.HasBreakaway = isBreak
 	state.BreakawayActive = isBreak
+	state.BreakawayRiders = map[int64]bool{}
+	for _, c := range clusters[:main] {
+		for _, rs := range c {
+			state.BreakawayRiders[rs.Rider.ID] = true
+		}
+	}
 	state.BreakawayGap = 0
 	state.BreakawayHasDangerous = false
 	if !isBreak {
@@ -113,8 +119,29 @@ func resolveCatches(groups []*Group, startTimes map[*RiderState]float64) {
 	}
 }
 
-// SimulateSegment processes all riders through a segment, returning their times.
+// maxStepKm is the longest distance simulated without riders re-deciding.
+// Short steps let the race react on realistic timescales (a few minutes)
+// instead of once per course segment, which can be tens of km.
+const maxStepKm = 2.0
+
+// SimulateSegment advances all riders through a segment in short steps.
 func SimulateSegment(riders []*RiderState, segment *model.Segment, isTT bool, distanceRemaining float64, rng *rand.Rand, state *RaceState, params *TacticsParams, incidentsEnabled ...bool) {
+	n := int(math.Ceil(segment.DistanceKm / maxStepKm))
+	if n < 1 {
+		n = 1
+	}
+	step := *segment
+	step.DistanceKm = segment.DistanceKm / float64(n)
+	for i := 0; i < n; i++ {
+		if state != nil {
+			state.SegmentKmLeft = segment.DistanceKm - float64(i)*step.DistanceKm
+		}
+		simulateStep(riders, &step, isTT, distanceRemaining-float64(i)*step.DistanceKm, rng, state, params, incidentsEnabled...)
+	}
+}
+
+// simulateStep processes all riders through one step of a segment.
+func simulateStep(riders []*RiderState, segment *model.Segment, isTT bool, distanceRemaining float64, rng *rand.Rand, state *RaceState, params *TacticsParams, incidentsEnabled ...bool) {
 	localParams := params
 	if localParams == nil {
 		defaultParams := DefaultTacticsParams()
@@ -186,7 +213,7 @@ func SimulateSegment(riders []*RiderState, segment *model.Segment, isTT bool, di
 			rs.TotalTime += segTime
 
 			// Power this rider actually produces at the group's speed.
-			draftFactor := draftFor(rs.GroupPosition, segment.SurfaceType)
+			draftFactor := riderCdAFactor(rs, group, segment.SurfaceType)
 			actualPower := powerForSpeed(groupSpeed, rs.Rider.TotalMassKg(),
 				rs.Rider.CdA*draftFactor, segment.GradientPct, segment.SurfaceType, rs.Rider.Handling)
 			if actualPower < 0 {

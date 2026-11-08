@@ -21,15 +21,20 @@ const (
 	// cobbleDraftRetention: fraction of the normal drafting benefit available on
 	// cobbles, where riders can't hold a wheel smoothly.
 	cobbleDraftRetention = 0.4
+
+	// linedOutIntensity: when the workers ride at this fraction of threshold
+	// or more, the group strings out single file and nobody gets the deep
+	// shelter of a packed bunch.
+	linedOutIntensity = 0.95
 )
 
 // Phase intensity: the fraction of sustainable power the front of a group
 // rides at when riders are simply holding position. Attacks and chases are
 // layered on top by TacticsPowerMultiplier. This is rider intent, not terrain.
+// In the final phase riders race to the line instead (see FormGroups).
 var phaseIntensity = map[RacePhase]float64{
 	PhaseEarly: 0.82,
 	PhaseMid:   0.90,
-	PhaseFinal: 0.97,
 }
 
 // IntensityForPhase returns the holding intensity for a race phase.
@@ -38,6 +43,29 @@ func IntensityForPhase(p RacePhase) float64 {
 		return v
 	}
 	return 1.0
+}
+
+// lineShelterPosition: in a single-file line riders beyond this position get
+// no extra shelter (CFD/wind-tunnel: ~35-40% saving 2nd wheel, ~45-50% further
+// back); only a packed bunch gives the deep shelter of DraftFactor's tail.
+const lineShelterPosition = 5
+
+// groupDraft returns the CdA multiplier for a position in a group, given its
+// formation.
+func groupDraft(position int, linedOut bool, surface model.SurfaceType) float64 {
+	if linedOut && position > lineShelterPosition {
+		position = lineShelterPosition
+	}
+	return draftFor(position, surface)
+}
+
+// riderCdAFactor is the CdA multiplier a group member actually rides at:
+// workers average their turns in the rotation, others sit at their position.
+func riderCdAFactor(rs *RiderState, g *Group, surface model.SurfaceType) float64 {
+	if g.Workers[rs] && g.Rotation > 1 {
+		return rotationFactor(g.Rotation, surface)
+	}
+	return groupDraft(rs.GroupPosition, g.LinedOut, surface)
 }
 
 // draftFor returns the CdA multiplier for a rider at a position in a group.
@@ -62,17 +90,27 @@ func rotationFactor(k int, surface model.SurfaceType) float64 {
 	return (1 + float64(k-1)*wheel) / float64(k)
 }
 
-// isSheltered reports whether a rider stays out of the rotation (protected
-// leaders/sprinters and riders conserving).
-func isSheltered(rp riderPower) bool {
-	role := rp.state.TeamRole
-	return role == RoleLeader || role == RoleSprinter || rp.action == ActionConserve
+// isSheltered reports whether a rider stays out of the rotation.
+func isSheltered(rp riderPower) bool { return rp.sheltered }
+
+// shelteredFor decides who sits in: riders conserving, sprinters (saving it
+// for the sprint), and team leaders until the final phase, when they race.
+func shelteredFor(rs *RiderState, action Action, phase RacePhase) bool {
+	switch {
+	case action == ActionConserve:
+		return true
+	case rs.TeamRole == RoleSprinter:
+		return true
+	case rs.TeamRole == RoleLeader:
+		return phase != PhaseFinal
+	}
+	return false
 }
 
 // paceLineSpeed is the speed a group sustains when its strongest workers
 // rotate on the front. Sheltered riders only work when the group is too
 // small to protect them.
-func paceLineSpeed(rps []riderPower, segment *model.Segment) float64 {
+func paceLineSpeed(rps []riderPower, segment *model.Segment) (speed, intensity float64, workerSet map[*RiderState]bool, k int) {
 	var workers []riderPower
 	for _, rp := range rps {
 		if !isSheltered(rp) {
@@ -83,25 +121,41 @@ func paceLineSpeed(rps []riderPower, segment *model.Segment) float64 {
 		workers = append([]riderPower(nil), rps...)
 	}
 	sort.SliceStable(workers, func(i, j int) bool { return workers[i].power > workers[j].power })
-	k := len(workers)
+	k = len(workers)
 	if k > maxRotation {
 		k = maxRotation
 	}
-	var p, m, cda, handling float64
+	// With N workers sharing k slots, each is on the front only k/N of the
+	// time, so the rotation can spend W' N/k times faster while there:
+	// P_rot = FTP + (N/k)·W'/T. This is why big groups catch small breaks.
+	depth := float64(len(workers)) / float64(k)
+	workerSet = make(map[*RiderState]bool, k)
+	var p, m, cda, handling, ftp float64
 	for _, w := range workers[:k] {
-		p += w.power
+		workerSet[w.state] = true
+		threshold := EffectivePower(w.state.Rider, w.state.CurrentFTP(), segment, false)
+		ftp += threshold
+		power := w.power
+		if power > threshold { // the W'-funded part scales with the pool depth
+			power = threshold + (power-threshold)*depth
+		}
+		p += power
 		m += w.state.Rider.TotalMassKg()
 		cda += w.state.Rider.CdA
 		handling += float64(w.state.Rider.Handling)
 	}
 	n := float64(k)
-	return SpeedFromPower(p/n, m/n, cda/n*rotationFactor(k, segment.SurfaceType),
+	speed = SpeedFromPower(p/n, m/n, cda/n*rotationFactor(k, segment.SurfaceType),
 		segment.GradientPct, segment.SurfaceType, int(handling/n))
+	if ftp > 0 {
+		intensity = p / ftp
+	}
+	return speed, intensity, workerSet, k
 }
 
 // followSplit splits riders into road groups with one physical rule on all
 // terrain. A group's pace comes from its rotating workers (and is never
-// slower than its strongest rider alone); each follower must hold that pace
+// slower than its strongest worker alone); each follower must hold that pace
 // with their positional draft plus spendable W'. Riders who can't are dropped
 // and form the next group from those remaining. Drafting only reduces aero
 // drag, so its benefit fades naturally as speed drops on climbs; descending
@@ -121,18 +175,32 @@ func followSplit(rps []riderPower, segment *model.Segment, firstID int) []*Group
 
 	var groups []*Group
 	for len(remaining) > 0 {
-		speed := paceLineSpeed(remaining, segment)
-		if s := solo[remaining[0].state]; speed < s {
+		// The pace comes from the riders doing the work: their rotation, and
+		// never slower than the strongest worker would ride on the front alone.
+		// Sheltered leaders follow; they don't set the tempo.
+		speed, intensity, workerSet, k := paceLineSpeed(remaining, segment)
+		linedOut := intensity >= linedOutIntensity
+		if s := strongestWorkerSpeed(remaining, solo); speed < s {
 			speed = s
+		}
+		// An attacker in the group drives the pace at their own burst speed.
+		for _, rp := range remaining {
+			if rp.action == ActionAttack && solo[rp.state] > speed {
+				speed = solo[rp.state]
+			}
 		}
 		// Nobody in front goes faster than the front rider dares (descents).
 		speed = math.Min(speed, SpeedCap(remaining[0].state.Rider, segment))
-		g := &Group{ID: firstID + len(groups), Speed: speed}
+		g := &Group{ID: firstID + len(groups), Speed: speed, LinedOut: linedOut, Workers: workerSet, Rotation: k}
 		segTime := SegmentTime(speed, segment.DistanceKm)
 		var members, rest []riderPower
 		for _, rp := range remaining {
 			r := rp.state.Rider
-			required := powerForSpeed(speed, r.TotalMassKg(), r.CdA*draftFor(len(members)+1, segment.SurfaceType),
+			cdaFactor := groupDraft(len(members)+1, linedOut, segment.SurfaceType)
+			if workerSet[rp.state] && k > 1 {
+				cdaFactor = rotationFactor(k, segment.SurfaceType) // takes turns on the front
+			}
+			required := powerForSpeed(speed, r.TotalMassKg(), r.CdA*cdaFactor,
 				segment.GradientPct, segment.SurfaceType, r.Handling)
 			available := rp.power + rp.state.WPrime.AvailablePowerAboveFTP(segTime)
 			canHold := available >= required && SpeedCap(r, segment) >= speed
@@ -156,4 +224,21 @@ func followSplit(rps []riderPower, segment *model.Segment, firstID int) []*Group
 		remaining = rest
 	}
 	return groups
+}
+
+// strongestWorkerSpeed is the solo speed of the fastest non-sheltered rider
+// (or of the fastest rider when everyone is sheltered).
+func strongestWorkerSpeed(rps []riderPower, solo map[*RiderState]float64) float64 {
+	best, bestAny := 0.0, 0.0
+	for _, rp := range rps {
+		v := solo[rp.state]
+		bestAny = math.Max(bestAny, v)
+		if !isSheltered(rp) {
+			best = math.Max(best, v)
+		}
+	}
+	if best == 0 {
+		return bestAny
+	}
+	return best
 }

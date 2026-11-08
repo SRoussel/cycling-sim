@@ -60,7 +60,7 @@ const maxBreakawaySize = 12
 // Returns true if the rider decides to attack.
 func BreakawayAttempt(rs *RiderState, segment *model.Segment, remainingKm float64, rng *rand.Rand, leaderInGroup ...bool) bool {
 	probability := breakawayProbability(rs, segment, remainingKm, leaderInGroup...)
-	return rng.Float64() < probability
+	return rng.Float64() < ScaleToDistance(probability, segment.DistanceKm)
 }
 
 func BreakawayAttemptWithParams(rs *RiderState, segment *model.Segment, remainingKm float64, rng *rand.Rand, leaderInGroup bool, params TacticsParams) bool {
@@ -72,7 +72,7 @@ func BreakawayAttemptWithParams(rs *RiderState, segment *model.Segment, remainin
 	if probability < 0.0 {
 		probability = 0.0
 	}
-	return rng.Float64() < probability
+	return rng.Float64() < ScaleToDistance(probability, segment.DistanceKm)
 }
 
 func breakawayProbability(rs *RiderState, segment *model.Segment, remainingKm float64, leaderInGroup ...bool) float64 {

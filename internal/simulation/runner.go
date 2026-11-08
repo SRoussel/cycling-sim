@@ -547,6 +547,19 @@ func SimulateStageRaceWithProgress(stageRace *model.StageRace, stages []StageCon
 			}
 		}
 
+		if cut := ApplyTimeCut(results, stage.Course, stage.Race.RaceType); cut > 0 && onProgress != nil {
+			onProgress(StageProgressSnapshot{
+				StageNumber:      stage.StageNumber,
+				StageName:        stage.Race.Name,
+				StageKmCovered:   stageKmTotal,
+				StageKmTotal:     stageKmTotal,
+				StageElapsedTime: stageElapsedForUpdate,
+				OverallKmCovered: overallKmCovered,
+				OverallKmTotal:   overallKmTotal,
+				OverallElapsed:   overallElapsed,
+				Events:           []string{fmt.Sprintf("%d riders outside the time limit", cut)},
+			})
+		}
 		allResults = append(allResults, results)
 
 		activeByID := make(map[int64]model.Rider, len(adjustedRiders))

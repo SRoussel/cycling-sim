@@ -39,6 +39,10 @@ func makeField() []model.Rider {
 		ar.ID = int64(15 + i)
 		riders = append(riders, ar)
 	}
+	// Real fields are made of teams, each with its own sprinter and leader.
+	for i := range riders {
+		riders[i].Team = fmt.Sprintf("Team %d", riders[i].ID%5)
+	}
 	return riders
 }
 

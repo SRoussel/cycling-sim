@@ -35,13 +35,17 @@ type riderPower struct {
 	wpw       float64 // watts per kg
 	breakaway bool
 	action    Action
+	sheltered bool // sits in the group instead of taking turns
 }
 
 // Group represents a cluster of riders traveling together.
 type Group struct {
 	ID          int
 	Riders      []*RiderState
-	Speed       float64 // group speed in m/s
-	GapTime     float64 // cumulative time gap from the race leader
-	IsBreakaway bool    // whether this is a breakaway group
+	Speed       float64              // group speed in m/s
+	GapTime     float64              // cumulative time gap from the race leader
+	IsBreakaway bool                 // whether this is a breakaway group
+	LinedOut    bool                 // riding single file (hard pace): no deep bunch shelter
+	Workers     map[*RiderState]bool // riders sharing the front in rotation
+	Rotation    int                  // how many riders rotate (≤ maxRotation)
 }

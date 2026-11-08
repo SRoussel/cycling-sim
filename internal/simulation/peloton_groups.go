@@ -42,10 +42,17 @@ func FormGroups(riders []*RiderState, segment *model.Segment, isTT bool, remaini
 	}
 
 	driving := drivingTeams(riders, segment, state)
+	// Shelter needs teammates: a protected rider with no domestique in the
+	// group has to take turns like everyone else.
+	helpers := map[string]int{}
+	for _, rs := range riders {
+		if rs.TeamRole == RoleDomestique {
+			helpers[rs.Rider.Team]++
+		}
+	}
 	rps := make([]riderPower, len(riders))
 	for i, rs := range riders {
-		basePower := rs.CurrentFTP()
-		power := EffectivePower(rs.Rider, basePower, segment, false)
+		var power float64
 		hasLeader := leaderTeams[rs.Rider.Team]
 		action := ActionHold
 		if state != nil && state.Overrides != nil {
@@ -75,36 +82,11 @@ func FormGroups(riders []*RiderState, segment *model.Segment, isTT bool, remaini
 			}
 			state.LastActions[rs.Rider.ID] = action
 		}
-		if action != ActionAttack && state != nil {
-			power *= IntensityForPhase(state.Phase)
-		}
-		power *= TacticsPowerMultiplier(action, *params)
-		// Committed efforts are funded by W': attacks, and chases that matter
-		// (a dangerous rider up the road, sprint teams in the finale, or any
-		// break still away in the final phase).
-		committedChase := action == ActionChase && state != nil &&
-			(state.BreakawayHasDangerous || state.SprintChaseActive || (state.HasBreakaway && state.Phase == PhaseFinal))
-		if action == ActionAttack || committedChase {
-			// Spend the W' available over the time this segment would take at
-			// the rider's own speed.
-			r := rs.Rider
-			est := SegmentTime(SpeedFromPower(power, r.TotalMassKg(), r.CdA, segment.GradientPct, segment.SurfaceType, r.Handling), segment.DistanceKm)
-			power += rs.WPrime.AvailablePowerAboveFTP(est)
-		}
+		power, action = riderEffort(rs, action, segment, remainingDistance, state, driving[rs.Rider.Team], *params)
 		if state != nil && state.Overrides != nil {
 			if effortMultiplier, ok := state.Overrides.EffortMultiplier(rs.Rider.ID); ok {
 				power *= effortMultiplier
 			}
-		}
-
-		// Team strategy: when this terrain favours the team's leader over the
-		// group's fastest finisher, domestiques drive the pace (a committed
-		// effort funded by W') to make the race hard and shed the sprinters.
-		if rs.TeamRole == RoleDomestique && driving[rs.Rider.Team] && action != ActionConserve && action != ActionAttack {
-			r := rs.Rider
-			est := SegmentTime(SpeedFromPower(power, r.TotalMassKg(), r.CdA, segment.GradientPct, segment.SurfaceType, r.Handling), segment.DistanceKm)
-			power = EffectivePower(r, rs.CurrentFTP(), segment, false) + rs.WPrime.AvailablePowerAboveFTP(est)
-			action = ActionChase
 		}
 		if state != nil && state.LastActions != nil {
 			state.LastActions[rs.Rider.ID] = action
@@ -132,6 +114,7 @@ func FormGroups(riders []*RiderState, segment *model.Segment, isTT bool, remaini
 			wpw:       power / rs.Rider.WeightKg,
 			breakaway: breakaway,
 			action:    action,
+			sheltered: shelteredFor(rs, action, phaseOf(state)) && (action == ActionConserve || helpers[rs.Rider.Team] > 0),
 		}
 	}
 
@@ -143,10 +126,18 @@ func FormGroups(riders []*RiderState, segment *model.Segment, isTT bool, remaini
 			breakawayLeaderTeams[rp.state.Rider.Team] = true
 		}
 	}
+	// An attack is let go (it rides away as its own group) only when it
+	// doesn't threaten the race. In the finale, or when a dangerous rider
+	// goes, the group responds at once: the attack sets the pace and whoever
+	// can hold the wheel stays with it (followSplit decides physically).
+	finale := state != nil && state.Phase == PhaseFinal
+	threatening := func(rp riderPower) bool {
+		return finale || (state != nil && state.Rival.DangerousRiders[rp.state.Rider.ID])
+	}
 	var attackers, others []riderPower
 	for _, rp := range rps {
 		// Domestiques don't join a move that contains their own leader.
-		joins := rp.breakaway && len(attackers) < maxBreakawaySize &&
+		joins := rp.breakaway && !threatening(rp) && len(attackers) < maxBreakawaySize &&
 			!(rp.state.TeamRole == RoleDomestique && breakawayLeaderTeams[rp.state.Rider.Team])
 		if joins {
 			attackers = append(attackers, rp)
@@ -170,6 +161,9 @@ func FormGroups(riders []*RiderState, segment *model.Segment, isTT bool, remaini
 // (low position = more wind) to shelter their team's leader/sprinter.
 // Only applies on flat/rolling terrain where drafting matters.
 func assignTeamPositions(rps []riderPower) {
+	if len(rps) == 1 {
+		rps[0].state.GroupPosition = 1 // alone in the wind
+	}
 	if len(rps) <= 1 {
 		return
 	}
@@ -259,3 +253,55 @@ func drivingTeams(riders []*RiderState, segment *model.Segment, state *RaceState
 // driveMargin: a team drives when its leader's pace would take the finisher to
 // within this fraction of their limit (they may crack with fatigue or surges).
 const driveMargin = 0.03
+
+// riderEffort decides how hard a rider rides this step. Each mode draws on W'
+// once, over one horizon: a burst spends it over this step, racing to the
+// line spreads it over the time left, and steady riding doesn't touch it.
+func riderEffort(rs *RiderState, action Action, segment *model.Segment, remainingKm float64, state *RaceState, teamDriving bool, params TacticsParams) (float64, Action) {
+	r := rs.Rider
+	threshold := EffectivePower(r, rs.CurrentFTP(), segment, false)
+	burstOver := func(km float64) float64 {
+		v := SpeedFromPower(threshold, r.TotalMassKg(), r.CdA, segment.GradientPct, segment.SurfaceType, r.Handling)
+		return threshold + rs.WPrime.AvailablePowerAboveFTP(SegmentTime(v, km))
+	}
+	phase := PhaseEarly
+	if state != nil {
+		phase = state.Phase
+	}
+	steady := func() float64 {
+		if phase == PhaseFinal {
+			return threshold
+		}
+		return threshold * IntensityForPhase(phase)
+	}
+
+	if action == ActionConserve {
+		return steady() * params.ConservePowerPenalty, action
+	}
+	segmentLeft := segment.DistanceKm
+	if state != nil && state.SegmentKmLeft > segmentLeft {
+		segmentLeft = state.SegmentKmLeft
+	}
+	// Attacks are bursts: W' spent over this step.
+	if action == ActionAttack {
+		return burstOver(segment.DistanceKm), action
+	}
+	// Domestiques of a driving team make the rest of this climb/sector hard.
+	if teamDriving && rs.TeamRole == RoleDomestique {
+		return burstOver(segmentLeft), ActionChase
+	}
+	// Committed chases and racing to the line are sustained to the finish.
+	committedChase := action == ActionChase && state != nil &&
+		(state.BreakawayHasDangerous || state.SprintChaseActive || (state.HasBreakaway && phase == PhaseFinal))
+	if committedChase || phase == PhaseFinal {
+		return burstOver(remainingKm), action
+	}
+	return steady() * TacticsPowerMultiplier(action, params), action
+}
+
+func phaseOf(state *RaceState) RacePhase {
+	if state == nil {
+		return PhaseEarly
+	}
+	return state.Phase
+}

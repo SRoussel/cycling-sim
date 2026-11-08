@@ -2,6 +2,7 @@ package simulation
 
 import (
 	"fmt"
+	"math"
 	"testing"
 	"time"
 
@@ -220,6 +221,7 @@ func TestValidation_SimpleCourse(t *testing.T) {
 		actualOrder = append(actualOrder, r.ID)
 	}
 
+	spreadTeams(riders, 3)
 	course := flatCourse()
 	race := &model.Race{ID: 1, Name: "Flat Test", CourseID: 1, RaceType: model.RaceTypeRoad}
 
@@ -264,8 +266,17 @@ func TestValidation_SimpleCourse(t *testing.T) {
 	t.Logf("  Sprinters avg positions: %.1f, %.1f, %.1f", riderAvgPos[0], riderAvgPos[1], riderAvgPos[2])
 	t.Logf("  Climbers avg positions: %.1f, %.1f, %.1f", riderAvgPos[7], riderAvgPos[8], riderAvgPos[9])
 
-	if correlation < 0.70 {
-		t.Errorf("Expected correlation >0.70, got %.3f on flat course", correlation)
+	// Sprinters must beat every non-sprinter on average. The order behind them
+	// isn't pure ability: domestiques burn out leading the finale and drop
+	// back, as in real bunch finishes, so we don't assert the full ranking.
+	worstSprinter := math.Max(riderAvgPos[0], math.Max(riderAvgPos[1], riderAvgPos[2]))
+	for i := 3; i < len(riderAvgPos); i++ {
+		if riderAvgPos[i] <= worstSprinter {
+			t.Errorf("non-sprinter %d (avg %.1f) beat a sprinter (worst sprinter avg %.1f) on a flat course", actualOrder[i], riderAvgPos[i], worstSprinter)
+		}
+	}
+	if correlation < 0.3 {
+		t.Errorf("ability ranking should still correlate with result, got %.3f", correlation)
 	}
 }
 

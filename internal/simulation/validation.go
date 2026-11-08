@@ -300,7 +300,7 @@ func baseValidationRider(name string, id int64, weightKg float64, ftp int, sprin
 	return model.Rider{
 		ID:                id,
 		Name:              name,
-		Team:              "Validation",
+		Team:              fmt.Sprintf("Team %d", id%10), // each team gets one rider of each type
 		Nationality:       "TST",
 		WeightKg:          weightKg,
 		HeightCm:          180,

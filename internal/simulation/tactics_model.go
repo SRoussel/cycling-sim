@@ -55,6 +55,8 @@ type RaceState struct {
 	LastActions           map[int64]Action
 	HasBreakaway          bool
 	BreakawayGap          float64
+	BreakawayRiders       map[int64]bool // riders in road groups ahead of the main group
+	SegmentKmLeft         float64        // distance to the end of the current course segment
 	BreakawayHasDangerous bool
 	SprintChaseActive     bool
 	BreakawayActive       bool
@@ -72,7 +74,6 @@ type RaceState struct {
 }
 
 type TacticsParams struct {
-	AttackPowerBoost     float64
 	ChasePowerBoost      float64
 	ConservePowerPenalty float64
 	AttackAggression     float64
@@ -81,7 +82,6 @@ type TacticsParams struct {
 
 func DefaultTacticsParams() TacticsParams {
 	return TacticsParams{
-		AttackPowerBoost:     1.05,
 		ChasePowerBoost:      1.03,
 		ConservePowerPenalty: 0.97,
 		AttackAggression:     1.1,
@@ -136,10 +136,39 @@ func NewRaceState(states []*RiderState, rng *rand.Rand, isStageRace bool, hasCob
 }
 
 func (rs *RaceState) LogEvent(eventType string, reason string) {
-	if rs == nil {
+	rs.Events = append(rs.Events, TacticsEvent{Type: eventType, Km: rs.KmRemaining, Reason: reason})
+}
+
+// logCondition logs a race-condition event once while it persists across
+// simulation steps (e.g. "technical sector").
+func (rs *RaceState) logCondition(eventType string, reason string) {
+	if n := len(rs.Events); n > 0 && rs.Events[n-1].Type == eventType && rs.Events[n-1].Reason == reason {
 		return
 	}
-	rs.Events = append(rs.Events, TacticsEvent{Type: eventType, Km: rs.KmRemaining, Reason: reason})
+	rs.LogEvent(eventType, reason)
+}
+
+// decisionRefKm is the distance over which tactical probabilities apply:
+// a probability p means "chance per 5 km", independent of how the course is
+// cut into segments or steps.
+const decisionRefKm = 5.0
+
+// ScaleToDistance converts a per-decisionRefKm probability to one for km.
+func ScaleToDistance(p, km float64) float64 {
+	if p <= 0 || km <= 0 {
+		return 0
+	}
+	if p >= 1 {
+		return 1
+	}
+	return 1 - math.Pow(1-p, km/decisionRefKm)
+}
+
+func perStep(p float64, state *RaceState) float64 {
+	if state == nil || state.Segment == nil {
+		return p
+	}
+	return ScaleToDistance(p, state.Segment.DistanceKm)
 }
 
 func PhaseFromKm(remainingKm float64) RacePhase {
@@ -242,7 +271,7 @@ func DecideAction(rs *RiderState, state *RaceState, hasLeader bool, rng *rand.Ra
 			attackProb = 0.90
 		}
 
-		if attackProb > 0 && rng.Float64() < attackProb {
+		if attackProb > 0 && rng.Float64() < perStep(attackProb, state) {
 			return ActionAttack
 		}
 	}
@@ -257,7 +286,8 @@ func DecideAction(rs *RiderState, state *RaceState, hasLeader bool, rng *rand.Ra
 		// Generic breakaway chase — applies everywhere, including non-leaders
 		// and leaders on flat/rolling terrain (mountain leaders already evaluated above).
 		isLeaderOnMountain := rs.TeamRole == RoleLeader && state.Segment != nil && state.Segment.GradientPct > 5.0
-		if !isLeaderOnMountain {
+		inBreak := state.BreakawayRiders[rs.Rider.ID]
+		if !isLeaderOnMountain && !inBreak {
 			// One-day classics on flat/rolling non-cobble terrain: the peloton
 			// always controls the pace when a breakaway forms (sprint teams drive
 			// the chase). This prevents unrealistic solo gaps on opening flats
@@ -278,7 +308,9 @@ func DecideAction(rs *RiderState, state *RaceState, hasLeader bool, rng *rand.Ra
 					return ActionChase
 				}
 			}
-			if state.HasBreakaway && (state.BreakawayGap > 20 || state.BreakawayHasDangerous) && state.Phase != PhaseEarly {
+			// A dangerous rider up the road is chased in any phase; other
+			// breaks only once the race is on.
+			if state.HasBreakaway && (state.BreakawayHasDangerous || (state.BreakawayGap > 20 && state.Phase != PhaseEarly)) {
 				return ActionChase
 			}
 		}
@@ -298,7 +330,7 @@ func DecideAction(rs *RiderState, state *RaceState, hasLeader bool, rng *rand.Ra
 					}
 				}
 			case ObjectiveBreakawayHunt:
-				if state.Phase == PhaseEarly && rng.Float64() < 0.05 {
+				if state.Phase == PhaseEarly && rng.Float64() < perStep(0.05, state) {
 					return ActionAttack
 				}
 			}
@@ -310,7 +342,7 @@ func DecideAction(rs *RiderState, state *RaceState, hasLeader bool, rng *rand.Ra
 	// ------------------------------------------------------------------
 	if state != nil && state.Segment != nil &&
 		state.Segment.GradientPct > 5.0 && rs.TeamRole == RoleLeader && !state.IsStageRace {
-		if rng.Float64() < 0.08 && wFrac > 0.35 {
+		if rng.Float64() < perStep(0.08, state) && wFrac > 0.35 {
 			return ActionAttack
 		}
 	}
@@ -330,7 +362,7 @@ func DecideAction(rs *RiderState, state *RaceState, hasLeader bool, rng *rand.Ra
 func TacticsPowerMultiplier(action Action, params TacticsParams) float64 {
 	switch action {
 	case ActionAttack:
-		return params.AttackPowerBoost
+		return 1.0 // attacks ride at full threshold; the extra comes from W'
 	case ActionChase:
 		return params.ChasePowerBoost
 	case ActionConserve:
@@ -347,27 +379,14 @@ func ApplyEventModifiers(params TacticsParams, state *RaceState) TacticsParams {
 	segment := state.Segment
 	if segment.SurfaceType == model.SurfaceCobbles || segment.IsTechnical {
 		params.AttackAggression *= 1.15
-		params.AttackPowerBoost *= 1.02
-		state.LogEvent("cobbles", "technical sector")
+		state.logCondition("cobbles", "technical sector")
 	}
 	if segment.GradientPct > 5.0 && state.KmRemaining < 15 {
 		params.AttackAggression *= 1.1
-		params.AttackPowerBoost *= 1.02
-		state.LogEvent("summit", "climb near finish")
+		state.logCondition("summit", "climb near finish")
 	}
 	if state.KmRemaining < 10 {
-		params.ChasePowerBoost *= 1.05
-		state.LogEvent("final", "final 10 km")
-	}
-	// Long flat non-cobble segments: nobody can sustain a 5% attack boost for
-	// many km. Scale the boost down proportionally with segment length so that
-	// a 90 km road section gives ~1% extra instead of 5%. Cobble selectors and
-	// climbs are explicitly excluded — those are where the race is decided.
-	if segment.DistanceKm > 5 &&
-		segment.GradientPct >= -1.0 && segment.GradientPct <= 2.5 &&
-		segment.SurfaceType != model.SurfaceCobbles {
-		scale := math.Min(1.0, 5.0/segment.DistanceKm)
-		params.AttackPowerBoost = 1.0 + (params.AttackPowerBoost-1.0)*scale
+		state.logCondition("final", "final 10 km")
 	}
 	return params
 }

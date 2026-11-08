@@ -39,7 +39,7 @@ func ApplyIncidents(riders []*RiderState, segment *model.Segment, rng *rand.Rand
 			probability *= handlingMod
 		}
 
-		if rng.Float64() > probability {
+		if rng.Float64() > ScaleToDistance(probability, segment.DistanceKm) {
 			continue // no incident for this rider
 		}
 

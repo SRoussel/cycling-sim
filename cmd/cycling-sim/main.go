@@ -3,11 +3,13 @@ package main
 import (
 	"fmt"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
 
 	"cycling_sim/internal/database"
+	"cycling_sim/internal/importer"
 	"cycling_sim/internal/model"
 	"cycling_sim/internal/seed"
 	"cycling_sim/internal/service"
@@ -57,6 +59,12 @@ func main() {
 		cmdRunStageRace(db, srID, seedVal)
 	case "validate":
 		cmdValidate(db)
+	case "import-results":
+		dir := "data/results"
+		if len(args) > 0 {
+			dir = args[0]
+		}
+		cmdImportResults(db, dir)
 	case "results":
 		raceID := idArg(args, 0, "Usage: cycling-sim results <race-id>")
 		cmdShowResults(db, raceID)
@@ -130,6 +138,10 @@ Commands:
   run-stage-race <stage-race-id> Simulate a stage race
                                  (both accept --seed N for reproducible runs)
   validate                       Run synthetic + real-race (2024) validation
+  import-results [dir]           Derive ratings from saved result pages in
+                                 dir/<sprint|hilly|mountain|cobbles|tt>/
+                                 (default data/results); writes
+                                 data/rider_derived.csv. Re-seed to apply.
   results <race-id>              Show race results
   gc <stage-race-id> <stage>     Show GC standings after a stage
 
@@ -412,4 +424,67 @@ func cmdValidate(db *database.DB) {
 	p1 := print("Synthetic fields", synth)
 	p2 := print("Real races (2024)", real)
 	fmt.Printf("Passed %d/%d synthetic, %d/%d real\n", p1, len(synth), p2, len(real))
+}
+
+func cmdImportResults(db *database.DB, dir string) {
+	lib, err := importer.LoadDir(dir)
+	if err != nil {
+		fatalf("Error reading %s: %v\n", dir, err)
+	}
+	for f, why := range lib.Skipped {
+		fmt.Printf("  skipped %s: %s\n", f, why)
+	}
+	if len(lib.Files) == 0 {
+		fmt.Printf("No result files found. Save results pages (FirstCycling or ProCyclingStats,\n"+
+			"browser \"Save page as\") or CSVs (position,rider[,gap]) into %s/<profile>/,\n"+
+			"where <profile> is one of: %s\n", dir, strings.Join(importer.Profiles, ", "))
+		return
+	}
+	for _, p := range importer.Profiles {
+		if lib.Races[p] > 0 {
+			fmt.Printf("  %-9s %d race files\n", p, lib.Races[p])
+		}
+	}
+	riders, err := db.ListRiders()
+	if err != nil || len(riders) == 0 {
+		fatalf("No riders in the database: run 'cycling-sim seed' first\n")
+	}
+
+	known := map[string]bool{}
+	for _, r := range riders {
+		known[importer.NameKey(r.Name)] = true
+	}
+	unmatched := map[string]int{}
+	for _, byName := range lib.Results {
+		for key, positions := range byName {
+			if !known[key] {
+				unmatched[lib.Names[key]] += len(positions)
+			}
+		}
+	}
+	if len(unmatched) > 0 {
+		type um struct {
+			name string
+			n    int
+		}
+		var list []um
+		for n, c := range unmatched {
+			list = append(list, um{n, c})
+		}
+		sort.Slice(list, func(i, j int) bool { return list[i].n > list[j].n })
+		fmt.Printf("  %d rider names not in the database (most frequent):", len(list))
+		for i := 0; i < len(list) && i < 8; i++ {
+			fmt.Printf(" %s(%d)", list[i].name, list[i].n)
+		}
+		fmt.Println()
+	}
+
+	ratings := importer.Derive(lib, riders)
+	out := seed.DataPath("rider_derived.csv")
+	note := fmt.Sprintf("%d result files in %s", len(lib.Files), dir)
+	if err := importer.WriteDerived(out, ratings, note); err != nil {
+		fatalf("Error writing %s: %v\n", out, err)
+	}
+	fmt.Printf("Derived ratings for %d riders -> %s\n", len(ratings), out)
+	fmt.Println("Apply with: cycling-sim clear && cycling-sim seed  (curated rider_overrides.csv still wins)")
 }

@@ -35,11 +35,16 @@ func Seed(db *database.DB) (Result, error) {
 	}
 
 	csvPath := findDataFile("riders.csv")
-	overrides, err := LoadOverrides(findDataFile("rider_overrides.csv"))
+	// Derived ratings (from imported results) first, then curated overrides.
+	derived, err := LoadOverrides(findDataFile("rider_derived.csv"))
 	if err != nil {
 		return res, err
 	}
-	riderCount, err := loadRidersFromCSV(db, csvPath, overrides)
+	curated, err := LoadOverrides(findDataFile("rider_overrides.csv"))
+	if err != nil {
+		return res, err
+	}
+	riderCount, err := loadRidersFromCSV(db, csvPath, derived, curated)
 	if err != nil {
 		return res, err
 	}
@@ -75,6 +80,11 @@ func ClearDBFile(dbPath string) error {
 	return nil
 }
 
+// DataPath returns where a data file lives (next to riders.csv).
+func DataPath(name string) string {
+	return filepath.Join(filepath.Dir(findDataFile("riders.csv")), name)
+}
+
 // findDataFile locates a data file relative to the binary or source directory.
 func findDataFile(name string) string {
 	candidates := []string{
@@ -95,7 +105,7 @@ func findDataFile(name string) string {
 }
 
 // loadRidersFromCSV reads riders from a CSV file and inserts them into the database.
-func loadRidersFromCSV(db *database.DB, path string, overrides map[string]RiderOverride) (int, error) {
+func loadRidersFromCSV(db *database.DB, path string, layers ...map[string]RiderOverride) (int, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return 0, fmt.Errorf("opening %s: %w", path, err)
@@ -153,9 +163,11 @@ func loadRidersFromCSV(db *database.DB, path string, overrides map[string]RiderO
 			TacticalAwareness: acceleration,
 			Handling:          handling,
 		}
-		if o, ok := overrides[normalizeName(rider.Name)]; ok {
-			if err := o.Apply(&rider); err != nil {
-				return count, err
+		for _, overrides := range layers {
+			if o, ok := overrides[normalizeName(rider.Name)]; ok {
+				if err := o.Apply(&rider); err != nil {
+					return count, err
+				}
 			}
 		}
 		if err := db.CreateRider(&rider); err != nil {

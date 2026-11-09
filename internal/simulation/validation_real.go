@@ -39,7 +39,7 @@ const (
 	realMinMatchedRiders = 3
 
 	// realValidationRuns is the number of simulation runs (seeds) per race.
-	realValidationRuns = 20
+	realValidationRuns = 60
 )
 
 // gapUnknown marks a reference slot whose time gap is not known.
@@ -294,7 +294,7 @@ func RunRealRaceValidationFor(db *database.DB, allRiders []model.Rider, entries 
 		for _, m := range matched {
 			refIDs = append(refIDs, m.riderID)
 		}
-		for run := 0; run < runs; run++ {
+		allRuns := parallelRuns(runs, func(run int) []model.RaceResult {
 			riders := withStarters(selection.SelectStartList(pool, course, race, selCfg), pool, refIDs)
 			cfg := RaceConfig{
 				Race:   race,
@@ -302,12 +302,12 @@ func RunRealRaceValidationFor(db *database.DB, allRiders []model.Rider, entries 
 				Riders: riders,
 				Seed:   int64(run + 1),
 			}
-			var simResults []model.RaceResult
 			if race.RaceType == model.RaceTypeTT {
-				simResults = SimulateTT(cfg)
-			} else {
-				simResults = SimulateRoadRace(cfg)
+				return SimulateTT(cfg)
 			}
+			return SimulateRoadRace(cfg)
+		})
+		for _, simResults := range allRuns {
 			for _, res := range simResults {
 				if res.Position == 1 {
 					wins[res.RiderID]++
@@ -412,7 +412,7 @@ func RunRealRaceValidationFor(db *database.DB, allRiders []model.Rider, entries 
 }
 
 // realStageRaceRuns is the number of full stage-race simulations per case.
-const realStageRaceRuns = 6
+const realStageRaceRuns = 32
 
 // realStageRaceGapMAE is the pass bar for GC gap error (seconds); Grand Tour
 // gaps are an order of magnitude larger than one-day gaps.
@@ -512,8 +512,11 @@ func RunRealStageRaceValidationFor(db *database.DB, allRiders []model.Rider, ent
 		gapSum := map[int64]float64{}
 		gapN := map[int64]int{}
 		posSum := map[int64]float64{}
-		for run := 0; run < runs; run++ {
+		allRuns := parallelRuns(runs, func(run int) [][]model.GCStanding {
 			_, standings := SimulateStageRace(sr, stages, riders, int64(run+1))
+			return standings
+		})
+		for _, standings := range allRuns {
 			if len(standings) == 0 || len(standings[len(standings)-1]) == 0 {
 				continue
 			}

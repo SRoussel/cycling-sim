@@ -32,9 +32,11 @@ type Options struct {
 	Log      func(format string, args ...any)
 }
 
-// DefaultOptions are a reasonable trade-off between noise and run time.
+// DefaultOptions are a reasonable trade-off between noise and run time (runs
+// within a pass use all CPUs). With 4 stage-race runs a pass, the Tour gap
+// error swung 140-460 s between passes; 24 runs keep it steady.
 func DefaultOptions() Options {
-	return Options{Iterations: 12, Runs: 20, StageRuns: 4, MaxChange: 0.08}
+	return Options{Iterations: 12, Runs: 40, StageRuns: 24, MaxChange: 0.08}
 }
 
 // Step sizes: how many seconds of gap error ask for a 1% threshold change.

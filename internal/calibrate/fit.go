@@ -57,10 +57,11 @@ type Adjustment struct {
 	Name     string
 	Scale    float64 // multiplies the threshold from the earlier rating layers
 	WKg      float64 // fitted threshold W/kg
+	ClimbWKg float64 // fitted W/kg on a climb (climbing ability applied)
 	Evidence []string
 	// Implausible is set when the fit pushes a rider above the strongest
-	// unfitted rider's W/kg: the fit is then compensating for something the
-	// model gets wrong (tactics, role), not measuring the rider.
+	// unfitted rider's climbing W/kg: the fit is then compensating for
+	// something the model gets wrong (tactics, role), not measuring the rider.
 	Implausible bool
 }
 
@@ -124,12 +125,15 @@ func Fit(db *database.DB, base []model.Rider, opt Options) ([]Adjustment, error)
 			break
 		}
 	}
+	climb := func(r model.Rider, ftp float64) float64 {
+		return ftp * simulation.ModifierFactor(r.ClimbingAbility) / r.WeightKg
+	}
 	byID := map[int64]model.Rider{}
-	maxWKg := 0.0
+	maxClimb := 0.0
 	for _, r := range base {
 		byID[r.ID] = r
 		if r.WeightKg > 0 {
-			maxWKg = math.Max(maxWKg, float64(r.FTPWatts)/r.WeightKg)
+			maxClimb = math.Max(maxClimb, climb(r, float64(r.FTPWatts)))
 		}
 	}
 	var out []Adjustment
@@ -137,11 +141,13 @@ func Fit(db *database.DB, base []model.Rider, opt Options) ([]Adjustment, error)
 		if math.Abs(s-1) < 0.002 {
 			continue
 		}
+		s = math.Round(s*1e4) / 1e4 // the precision Write stores, so seeding reproduces it
 		r := byID[id]
 		a := Adjustment{RiderID: id, Name: r.Name, Scale: s, Evidence: evidence[id]}
 		if r.WeightKg > 0 {
 			a.WKg = float64(r.FTPWatts) * s / r.WeightKg
-			a.Implausible = a.WKg > maxWKg && s > 1
+			a.ClimbWKg = climb(r, float64(r.FTPWatts)*s)
+			a.Implausible = a.ClimbWKg > maxClimb && s > 1
 		}
 		out = append(out, a)
 	}

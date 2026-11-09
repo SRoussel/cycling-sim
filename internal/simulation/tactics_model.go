@@ -48,16 +48,19 @@ type TeamState struct {
 }
 
 type RaceState struct {
-	KmRemaining           float64
-	Phase                 RacePhase
-	Segment               *model.Segment
-	IsStageRace           bool
-	LastActions           map[int64]Action
-	HasBreakaway          bool
-	BreakawayGap          float64
-	BreakawayRiders       map[int64]bool // riders in road groups ahead of the main group
-	SegmentKmLeft         float64        // distance to the end of the current course segment
-	Climb                 float64        // ClimbFactor of the current step
+	KmRemaining     float64
+	Phase           RacePhase
+	Segment         *model.Segment
+	IsStageRace     bool
+	LastActions     map[int64]Action
+	HasBreakaway    bool
+	BreakawayGap    float64
+	BreakawayRiders map[int64]bool // riders in road groups ahead of the main group
+	SegmentKmLeft   float64        // distance to the end of the current course segment
+	// Ahead lists riders in road groups ahead of the group being decided, with
+	// their lead over it in seconds (set per road group each step).
+	Ahead                 map[*RiderState]float64
+	Climb                 float64 // ClimbFactor of the current step
 	BreakawayHasDangerous bool
 	SprintChaseActive     bool
 	BreakawayActive       bool
@@ -541,4 +544,20 @@ func clamp(value float64, min float64, max float64) float64 {
 		return max
 	}
 	return value
+}
+
+// gcRivalAhead reports whether a stage-race leader has a GC rival up the road:
+// a leader ahead who would finish the stage ahead of them on GC if the gap
+// held. Such a rider limits their losses instead of sitting in.
+func (s *RaceState) gcRivalAhead(rs *RiderState) bool {
+	if s == nil || !s.IsStageRace || rs.TeamRole != RoleLeader || len(s.Ahead) == 0 {
+		return false
+	}
+	mine := s.GCGaps[rs.Rider.ID]
+	for other, lead := range s.Ahead {
+		if other.TeamRole == RoleLeader && other.Rider.Team != rs.Rider.Team && s.GCGaps[other.Rider.ID] < mine+lead {
+			return true
+		}
+	}
+	return false
 }

@@ -47,7 +47,8 @@ Guiding rule: express behaviour as physics or rider intent, never as hardcoded g
 - **Stage fatigue**: `cumulativeFatigue += stress·(1 − recovery/150)`, FTP × (1 − 0.004·fatigue), floor 85% (~4% over a Grand Tour). Time cuts by climbing density (waived if >20% outside).
 - **Wind**: segments have headings (synthetic in seed data); headwind enters the solver; crosswind removes gutter shelter beyond a 10-rider echelon by yaw angle; roads meander ±60° per step.
 - **Terrain**: `ClimbFactor` (share of power lifting weight) classifies terrain for tactics.
-- **Team strategy**: a team drives when its leader's threshold pace would break the group's fastest finisher even in the draft. Leaders race in the finale; shelter needs a teammate.
+- **Team strategy**: a team drives when its leader's threshold pace would break the group's fastest finisher even in the draft; its domestiques then set the pace the leader can hold on the wheel at threshold (`leaderTempoSpeed`), not an all-out effort. Leaders race in the finale; shelter needs a teammate.
+- **Stage races** (`AssignCoLeaders`, `gcRivalAhead`): domestiques who are among the 10 strongest climbers in the field, or in the GC top 10, become co-leaders. A GC leader with a rival up the road who would pass them on GC limits losses (chases to the line); chasing GC leaders take turns instead of sitting in.
 
 ## Database
 SQLite with WAL mode, foreign keys enabled. Schema auto-migrates on open. Use `CYCLING_SIM_DB` env var to set path (default: `cycling_sim.db`).
@@ -76,5 +77,5 @@ SQLite with WAL mode, foreign keys enabled. Schema auto-migrates on open. Use `C
 - `data/riders.csv`: ~370 of 521 riders share templated ability profiles; ratings are the main realism bottleneck.
 - Rating layers at seed time: `riders.csv` → `rider_derived.csv` (from `cycling-sim import-results`, saved pages in `data/results/<profile>/`) → `rider_overrides.csv` (curated; GC tier calibrated to 2024 Tour gaps). Never scrape FirstCycling/PCS (robots.txt / bot protection).
 - `cycling-sim validate` scores synthetic fields, six 2024 classics and the 2024 Tour GC (verified non-starters excluded via `DidNotStart`; reference riders always start), a 2023 hold-out (never fitted) and winners' average speeds.
-- `data/rider_fitted.csv` (optional, from `fit-ratings`) is a 4th layer of `FTP_scale` multipliers. None is committed: fitting the classics overfits (2023 hold-out gets worse), and the Tour fit pushes GC domestiques (Jorgenson, C. Rodríguez) above Pogačar's W/kg because the model lacks co-leader tactics. The fitter flags such implausible W/kg.
-- Known gaps: seeded classic courses have far too little climbing (Liège ~1,870 m of climbing vs ~4,000 m real), so hilly races run ~13% too fast; GC domestiques lose too much time in Grand Tours.
+- `data/rider_fitted.csv` (from `fit-ratings`, Tour GC only) is a 4th layer of `FTP_scale` multipliers (≤ ±4%). Don't fit the classics: with 1-2 results per rider it overfits (the 2023 hold-out gets worse). The fitter flags riders pushed above the strongest rider's climbing W/kg — that means it is compensating for a model gap (as it did before co-leader tactics), so fix the model instead.
+- Known gaps: seeded classic courses have far too little climbing (Liège ~1,870 m of climbing vs ~4,000 m real), so hilly races run ~13% too fast and flat ones ~11% too slow.

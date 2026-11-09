@@ -95,15 +95,20 @@ func rotationFactor(k int, surface model.SurfaceType) float64 {
 func isSheltered(rp riderPower) bool { return rp.sheltered }
 
 // shelteredFor decides who sits in: riders conserving, sprinters (saving it
-// for the sprint), and team leaders until the final phase, when they race.
-func shelteredFor(rs *RiderState, action Action, phase RacePhase) bool {
+// for the sprint), and team leaders until the final phase, when they race, or
+// until they chase in a stage race.
+func shelteredFor(rs *RiderState, action Action, state *RaceState) bool {
+	phase := phaseOf(state)
 	switch {
 	case action == ActionConserve:
 		return true
 	case rs.TeamRole == RoleSprinter:
 		return true
 	case rs.TeamRole == RoleLeader:
-		return phase != PhaseFinal
+		// In a stage race a chasing GC leader takes turns (time lost now is
+		// lost for good); in a one-day race they wait for the finale.
+		stageChase := state != nil && state.IsStageRace && action == ActionChase
+		return phase != PhaseFinal && !stageChase
 	}
 	return false
 }

@@ -235,6 +235,7 @@ func SimulateRoadRaceWithProgress(config RaceConfig, onProgress func(ProgressSna
 	raceState := NewRaceState(states, rng, config.Race != nil && model.IsStageRaceStageName(config.Race.Name), hasCobbles)
 	raceState.Overrides = config.ActionOverrides
 	raceState.GCGaps = config.GCGaps
+	AssignCoLeaders(states, config.GCGaps, raceState.IsStageRace)
 	eventIndex := 0
 	routeProfile := buildRouteProfile(config.Course)
 

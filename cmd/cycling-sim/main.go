@@ -518,10 +518,10 @@ func cmdFitRatings(db *database.DB, path string, classics bool) {
 		ftp[a.RiderID] = int(math.Round(float64(baseFTP[a.RiderID]) * a.Scale)) // ...apply new ones
 		flag := ""
 		if a.Implausible {
-			flag = "  ← above the strongest rider's W/kg: likely compensating for tactics"
+			flag = "  ← climbs faster than the strongest rider: likely compensating for tactics"
 			implausible++
 		}
-		fmt.Printf("  %-28s %+5.1f%%  (%d W, %.2f W/kg)%s\n", a.Name, (a.Scale-1)*100, ftp[a.RiderID], a.WKg, flag)
+		fmt.Printf("  %-28s %+5.1f%%  (%d W, %.2f W/kg, %.2f on climbs)%s\n", a.Name, (a.Scale-1)*100, ftp[a.RiderID], a.WKg, a.ClimbWKg, flag)
 	}
 	if implausible > 0 {
 		fmt.Printf("Warning: %d rider(s) fitted to implausible W/kg; review before keeping %s.\n", implausible, path)

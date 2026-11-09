@@ -178,8 +178,18 @@ func simulateStep(riders []*RiderState, segment *model.Segment, isTT bool, dista
 	// Form groups within each cluster independently
 	var groups []*Group
 	groupIDOffset := 0
+	var ahead []*RiderState
 	for _, cluster := range clusters {
+		if state != nil {
+			state.Ahead = make(map[*RiderState]float64, len(ahead))
+			if len(cluster) > 0 {
+				for _, a := range ahead {
+					state.Ahead[a] = cluster[0].TotalTime - a.TotalTime
+				}
+			}
+		}
 		clusterGroups := FormGroups(cluster, segment, isTT, distanceRemaining, rng, state, localParams)
+		ahead = append(ahead, cluster...)
 		for _, g := range clusterGroups {
 			g.ID += groupIDOffset
 			for _, rs := range g.Riders {

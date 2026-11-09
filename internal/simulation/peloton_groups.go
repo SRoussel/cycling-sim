@@ -2,6 +2,7 @@ package simulation
 
 import (
 	"fmt"
+	"math"
 	"math/rand"
 	"sort"
 
@@ -115,7 +116,7 @@ func FormGroups(riders []*RiderState, segment *model.Segment, isTT bool, remaini
 			wpw:       power / rs.Rider.WeightKg,
 			breakaway: breakaway,
 			action:    action,
-			sheltered: shelteredFor(rs, action, phaseOf(state)) && (action == ActionConserve || helpers[rs.Rider.Team] > 0),
+			sheltered: shelteredFor(rs, action, state) && (action == ActionConserve || helpers[rs.Rider.Team] > 0),
 		}
 	}
 
@@ -227,12 +228,13 @@ func assignTeamPositions(rps []riderPower, crosswind bool) {
 	}
 }
 
-// drivingTeams returns the teams that want to make this segment hard: their
-// leader is present and a pace at the leader's threshold would put the
-// group's fastest finisher at their limit, even sitting in the draft. On flat
-// roads drafting makes that impossible, so nobody drives; on climbs W/kg wins.
-func drivingTeams(riders []*RiderState, segment *model.Segment, state *RaceState) map[string]bool {
-	out := map[string]bool{}
+// drivingTeams returns the teams that want to make this segment hard, each
+// with the leader they ride for: their leader is present and a pace at the
+// leader's threshold would put the group's fastest finisher at their limit,
+// even sitting in the draft. On flat roads drafting makes that impossible, so
+// nobody drives; on climbs W/kg wins.
+func drivingTeams(riders []*RiderState, segment *model.Segment, state *RaceState) map[string]*RiderState {
+	out := map[string]*RiderState{}
 	if state == nil || state.Phase == PhaseEarly || len(riders) < 3 {
 		return out
 	}
@@ -254,10 +256,33 @@ func drivingTeams(riders []*RiderState, segment *model.Segment, state *RaceState
 		required := segmentPower(pace, f.TotalMassKg(), f.CdA*groupDraft(3, false, segment, pace), segment, f.Handling)
 		available := finisherFTP + finisher.WPrime.AvailablePowerAboveFTP(segTime)
 		if required >= available*(1-driveMargin) {
-			out[r.Team] = true
+			if cur := out[r.Team]; cur == nil || climbingWKg(r) > climbingWKg(cur.Rider) {
+				out[r.Team] = rs // co-leaders: ride for the strongest
+			}
 		}
 	}
 	return out
+}
+
+// leaderTempoSpeed is the speed at which a leader sitting second wheel rides
+// exactly at threshold on this segment.
+func leaderTempoSpeed(leader *RiderState, segment *model.Segment) float64 {
+	r := leader.Rider
+	threshold := EffectivePower(r, leader.CurrentFTP(), segment, false)
+	cda := r.CdA * draftFor(2, segment.SurfaceType)
+	lo, hi := minSpeedMPS, SpeedCap(r, segment)
+	if segmentPower(hi, r.TotalMassKg(), cda, segment, r.Handling) <= threshold {
+		return hi
+	}
+	for i := 0; i < 50; i++ {
+		mid := (lo + hi) / 2
+		if segmentPower(mid, r.TotalMassKg(), cda, segment, r.Handling) < threshold {
+			lo = mid
+		} else {
+			hi = mid
+		}
+	}
+	return lo
 }
 
 // driveMargin: a team drives when its leader's pace would take the finisher to
@@ -271,7 +296,7 @@ const leadOutKm = 3.0
 // riderEffort decides how hard a rider rides this step. Each mode draws on W'
 // once, over one horizon: a burst spends it over this step, racing to the
 // line spreads it over the time left, and steady riding doesn't touch it.
-func riderEffort(rs *RiderState, action Action, segment *model.Segment, remainingKm float64, state *RaceState, teamDriving bool, protectedTeammate bool, params TacticsParams) (float64, Action) {
+func riderEffort(rs *RiderState, action Action, segment *model.Segment, remainingKm float64, state *RaceState, driveFor *RiderState, protectedTeammate bool, params TacticsParams) (float64, Action) {
 	r := rs.Rider
 	threshold := EffectivePower(r, rs.CurrentFTP(), segment, false)
 	burstOver := func(km float64) float64 {
@@ -289,6 +314,11 @@ func riderEffort(rs *RiderState, action Action, segment *model.Segment, remainin
 		return threshold * IntensityForPhase(phase)
 	}
 
+	// A GC rider with a rival up the road limits their losses: they chase to
+	// the line (and take turns, see shelteredFor).
+	if state.gcRivalAhead(rs) {
+		return burstOver(remainingKm), ActionChase
+	}
 	if action == ActionConserve {
 		return steady() * params.ConservePowerPenalty, action
 	}
@@ -300,9 +330,13 @@ func riderEffort(rs *RiderState, action Action, segment *model.Segment, remainin
 	if action == ActionAttack {
 		return burstOver(segment.DistanceKm), action
 	}
-	// Domestiques of a driving team make the rest of this climb/sector hard.
-	if teamDriving && rs.TeamRole == RoleDomestique {
-		return burstOver(segmentLeft), ActionChase
+	// Domestiques of a driving team set the hardest pace their leader can
+	// hold on the wheel at threshold: hard for everyone weaker, comfortable
+	// for the leader. They can't exceed what they can sustain to the top.
+	if driveFor != nil && rs.TeamRole == RoleDomestique {
+		v := leaderTempoSpeed(driveFor, segment)
+		need := segmentPower(v, r.TotalMassKg(), r.CdA, segment, r.Handling)
+		return math.Min(need, burstOver(segmentLeft)), ActionChase
 	}
 	// Committed chases and racing to the line are sustained to the finish.
 	// A committed chase needs something to chase: a dangerous rider up the

@@ -51,23 +51,19 @@ func TestDraftingPowerSavings(t *testing.T) {
 }
 
 func TestDraftFactors(t *testing.T) {
-	tests := []struct {
-		pos      int
-		expected float64
-	}{
-		{1, 1.0},
-		{2, 0.65},
-		{3, 0.55},
-		{5, 0.55},
-		{6, 0.40},
-		{15, 0.40},
-		{16, 0.25},
-		{100, 0.25},
+	if DraftFactor(1) != 1 || math.Abs(DraftFactor(2)-0.65) > 1e-9 {
+		t.Fatalf("front %.2f, second wheel %.2f", DraftFactor(1), DraftFactor(2))
 	}
-	for _, tt := range tests {
-		if got := DraftFactor(tt.pos); got != tt.expected {
-			t.Errorf("DraftFactor(%d) = %.2f, want %.2f", tt.pos, got, tt.expected)
+	for p := 2; p < 60; p++ {
+		if DraftFactor(p+1) >= DraftFactor(p) {
+			t.Fatalf("shelter must deepen with position: %d %.3f → %.3f", p, DraftFactor(p), DraftFactor(p+1))
 		}
+	}
+	if d := DraftFactor(5); d < 0.45 || d > 0.55 {
+		t.Errorf("DraftFactor(5) = %.2f, want ~0.50", d)
+	}
+	if d := DraftFactor(100); math.Abs(d-0.25) > 0.01 {
+		t.Errorf("DraftFactor(100) = %.2f, want ~0.25", d)
 	}
 }
 

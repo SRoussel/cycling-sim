@@ -10,14 +10,6 @@ import (
 	"cycling_sim/internal/model"
 )
 
-// powerForSpeed calculates the power needed to sustain a given speed.
-func powerForSpeed(speedMPS float64, totalMassKg float64, cda float64, gradientPct float64, surface model.SurfaceType, handling int) float64 {
-	fGrav := ForceGravity(totalMassKg, gradientPct)
-	fRoll := ForceRolling(totalMassKg, gradientPct, surface, handling)
-	fAero := ForceAero(cda, speedMPS)
-	return speedMPS * (fGrav + fRoll + fAero)
-}
-
 // partitionByTimeGap splits riders into road clusters: riders within
 // contactSeconds of the rider ahead are in contact and ride as one road group.
 // Returns clusters sorted by leader time (fastest cluster first).
@@ -154,8 +146,7 @@ func simulateStep(riders []*RiderState, segment *model.Segment, isTT bool, dista
 		state.KmRemaining = distanceRemaining
 		state.Phase = PhaseFromKm(distanceRemaining)
 		state.Segment = segment
-		state.Climb = ClimbFactor(segment)
-		state.climbValid = true
+		state.Climb = climbOf(segment)
 		// Sprint trains only really matter on flat/rolling finishes.
 		state.SprintChaseActive = state.Phase == PhaseFinal && state.Rival.SprintTeamsChasing && state.Climb < terrainDrag && segment.SurfaceType != model.SurfaceCobbles
 		if state.SprintChaseActive && !state.LastSprintChase {
@@ -238,7 +229,7 @@ func simulateStep(riders []*RiderState, segment *model.Segment, isTT bool, dista
 				actualPower = 0
 			}
 
-			rs.WPrime.UpdateWithHandling(actualPower, rs.currentFTPInt(), segTime, rs.Rider.Handling, segment.SurfaceType == model.SurfaceCobbles)
+			rs.WPrime.UpdateWithHandling(actualPower, rs.thresholdIntOn(segment), segTime, rs.Rider.Handling, segment.SurfaceType == model.SurfaceCobbles)
 			rs.addWork(actualPower, segTime)
 		}
 	}

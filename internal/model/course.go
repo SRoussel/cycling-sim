@@ -47,6 +47,12 @@ type Segment struct {
 	CrosswindMPS float64
 	WindMPS      float64 // race wind speed
 	WindFromDeg  float64 // direction the race wind blows from
+
+	// Terrain, set by the simulation when a course is prepared (not stored).
+	ElevationM float64 // altitude at the segment's midpoint
+	AirDensity float64 // kg/m³ at that altitude; 0 means sea level
+	Climb      float64 // cached climb factor (share of power lifting weight)
+	ClimbSet   bool    // Climb is valid for the current wind
 }
 
 // Validate checks segment fields.

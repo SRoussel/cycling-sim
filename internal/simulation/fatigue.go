@@ -220,9 +220,11 @@ func (rs *RiderState) CurrentFTP() float64 {
 	return float64(rs.EffectiveFTP) * rs.FormFactor * DurabilityFactor(rs.WorkKJ, rs.Rider.Endurance)
 }
 
-// currentFTPInt is CurrentFTP rounded for W' bookkeeping.
-func (rs *RiderState) currentFTPInt() int {
-	return int(rs.CurrentFTP() + 0.5)
+// thresholdIntOn is the rider's critical power on a segment, rounded for W'
+// bookkeeping. It is the same threshold the rider paces at (terrain ability
+// and altitude included), so riding at threshold neither drains nor refills W'.
+func (rs *RiderState) thresholdIntOn(seg *model.Segment) int {
+	return int(EffectivePower(rs.Rider, rs.CurrentFTP(), seg, false) + 0.5)
 }
 
 // addWork records work done (watts over seconds) for durability.

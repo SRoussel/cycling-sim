@@ -96,7 +96,7 @@ func FormGroups(riders []*RiderState, segment *model.Segment, isTT bool, remaini
 		// W' depletion limits power
 		if rs.WPrime.FractionRemaining() < 0.1 {
 			// Can't sustain above FTP when W' is very low
-			maxPower := rs.CurrentFTP()
+			maxPower := EffectivePower(rs.Rider, rs.CurrentFTP(), segment, false)
 			if power > maxPower {
 				power = maxPower
 			}

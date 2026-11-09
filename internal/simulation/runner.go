@@ -220,10 +220,7 @@ func SimulateRoadRaceWithProgress(config RaceConfig, onProgress func(ProgressSna
 	rng := rngFromSeed(config.Seed)
 
 	states := initStates(config.Riders, rng)
-	segments := config.Course.Segments
-	if config.Race != nil {
-		segments = WithWind(segments, config.Race.WindSpeedKmh, config.Race.WindDirectionDeg)
-	}
+	segments := PrepareSegments(config.Course.Segments, config.Race, 0)
 	if len(segments) == 0 {
 		return nil
 	}

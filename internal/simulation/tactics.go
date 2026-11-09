@@ -22,7 +22,7 @@ func SprintFinish(riders []*RiderState, rng *rand.Rand) {
 	results := make([]sprintResult, len(riders))
 	for i, rs := range riders {
 		// Sprint power with modifier and randomness
-		sprintPower := SprintPower(rs.Rider) * rs.FormFactor
+		sprintPower := FatiguedSprintPower(rs) * rs.FormFactor
 		// Add sprint-specific randomness (sprints are volatile)
 		sprintPower *= 1.0 + rng.NormFloat64()*0.03
 

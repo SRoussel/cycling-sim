@@ -19,20 +19,22 @@ const (
 	HandlingEffectPerPoint = 0.022
 )
 
-// DraftFactor returns the aerodynamic drag reduction based on position in group.
+// Drafting: the CdA multiplier rises from the second wheel's value towards a
+// packed bunch's deep shelter smoothly with position (wind tunnel / CFD:
+// ~35% saving on one wheel, ~50% a few riders back, ~75% deep in a bunch).
+const (
+	draftSecondWheel = 0.65 // CdA multiplier on one wheel
+	draftDeepBunch   = 0.25 // deep inside a packed bunch
+	draftDecayRiders = 6.4  // riders over which shelter deepens by 1/e
+)
+
+// DraftFactor returns the aerodynamic drag multiplier for a position in a
+// group (1 = on the front, no shelter).
 func DraftFactor(position int) float64 {
-	switch {
-	case position <= 1:
+	if position <= 1 {
 		return 1.0
-	case position == 2:
-		return 0.65
-	case position <= 5:
-		return 0.55
-	case position <= 15:
-		return 0.40
-	default:
-		return 0.25
 	}
+	return draftDeepBunch + (draftSecondWheel-draftDeepBunch)*math.Exp(-float64(position-2)/draftDecayRiders)
 }
 
 // ForceGravity returns the gravitational force component along the slope.
@@ -104,6 +106,10 @@ func SpeedFromPower(powerWatts float64, totalMassKg float64, cda float64, gradie
 // SpeedFromPowerWind is SpeedFromPower with a headwind (m/s, negative for a
 // tailwind): aerodynamic drag depends on air speed v+w, not ground speed.
 func SpeedFromPowerWind(powerWatts float64, totalMassKg float64, cda float64, gradientPct float64, surface model.SurfaceType, handling int, headwindMPS float64) float64 {
+	return speedFromPowerAir(powerWatts, totalMassKg, cda, gradientPct, surface, handling, headwindMPS)
+}
+
+func speedFromPowerAir(powerWatts float64, totalMassKg float64, cda float64, gradientPct float64, surface model.SurfaceType, handling int, headwindMPS float64) float64 {
 	if headwindMPS == 0 {
 		return speedFromPowerCalm(powerWatts, totalMassKg, cda, gradientPct, surface, handling)
 	}
@@ -205,20 +211,19 @@ func ModifierFactor(ability int) float64 {
 	return 1.0 + float64(ability-70)*0.002
 }
 
-// EffectivePower calculates a rider's effective power output for a segment,
-// applying the relevant ability modifier. Handling does NOT affect power —
-// it affects rolling resistance via HandlingFactor in ForceRolling.
+// EffectivePower calculates a rider's effective power output for a segment:
+// the ability modifier for the terrain and the altitude. Climbing ability
+// blends in with the climb factor (how much of the effort is lifting weight),
+// so there's no gradient at which it switches on.
 func EffectivePower(rider *model.Rider, basePower float64, segment *model.Segment, isTT bool) float64 {
-	var modifier int
-	switch {
-	case isTT:
-		modifier = rider.TTAbility
-	case segment.GradientPct > 4.0:
-		modifier = rider.ClimbingAbility
-	default:
-		modifier = 70
+	var factor float64
+	if isTT {
+		factor = ModifierFactor(rider.TTAbility)
+	} else {
+		w := math.Max(0, math.Min(1, climbOf(segment)/terrainClimb))
+		factor = 1 + (ModifierFactor(rider.ClimbingAbility)-1)*w
 	}
-	power := basePower * ModifierFactor(modifier)
+	power := basePower * factor * AltitudePowerFactor(segment.ElevationM)
 	if !isTT && segment.SurfaceType == model.SurfaceCobbles {
 		// Reduce effective power for poor handlers on cobbles.
 		handlingFactor := 1.0 + float64(rider.Handling-70)*0.006
@@ -233,9 +238,26 @@ func EffectivePower(rider *model.Rider, basePower float64, segment *model.Segmen
 	return power
 }
 
-// SprintPower calculates a rider's sprint power output.
+// SprintPower calculates a rider's fresh sprint power output.
 func SprintPower(rider *model.Rider) float64 {
 	return float64(rider.MaxSprintWatts) * ModifierFactor(rider.SprintAbility)
+}
+
+// sprintWPrimeShare: how much of peak sprint power depends on anaerobic
+// reserves left (an emptied rider loses this fraction).
+const sprintWPrimeShare = 0.10
+
+// FatiguedSprintPower is the sprint power a rider has left at the finish:
+// peak power fades with the day's work like threshold does (durability; pro
+// data show sprint power falling several % after 3-4000 kJ) and with how
+// deep the rider has dug into W'.
+func FatiguedSprintPower(rs *RiderState) float64 {
+	wFrac := 1.0
+	if rs.WPrime != nil {
+		wFrac = rs.WPrime.FractionRemaining()
+	}
+	return SprintPower(rs.Rider) * DurabilityFactor(rs.WorkKJ, rs.Rider.Endurance) *
+		(1 - sprintWPrimeShare*(1-wFrac))
 }
 
 // SegmentTime calculates the time in seconds for a rider to traverse a segment.

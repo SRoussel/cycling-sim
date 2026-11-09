@@ -38,6 +38,7 @@ func setWindComponents(seg *model.Segment, headingDeg float64) {
 	rel := (seg.WindFromDeg - headingDeg) * math.Pi / 180
 	seg.HeadwindMPS = seg.WindMPS * math.Cos(rel)
 	seg.CrosswindMPS = math.Abs(seg.WindMPS * math.Sin(rel))
+	refreshClimb(seg)
 }
 
 // meanderMaxDeg: real roads wander around a segment's overall heading, so
@@ -50,14 +51,23 @@ func stepHeading(seg *model.Segment, i int) float64 {
 }
 
 // segmentSpeed is SpeedFromPower on a segment, including its headwind.
+// It includes headwind and the air density at the segment's altitude.
 func segmentSpeed(power, massKg, cda float64, seg *model.Segment, handling int) float64 {
-	return SpeedFromPowerWind(power, massKg, cda, seg.GradientPct, seg.SurfaceType, handling, seg.HeadwindMPS)
+	return speedFromPowerAir(power, massKg, cda*densityRatio(seg), seg.GradientPct, seg.SurfaceType, handling, seg.HeadwindMPS)
+}
+
+// densityRatio scales drag for altitude: thinner air acts like a smaller CdA.
+func densityRatio(seg *model.Segment) float64 {
+	if seg == nil || seg.AirDensity <= 0 {
+		return 1
+	}
+	return seg.AirDensity / airDensity
 }
 
 // segmentPower is the power needed to hold speed on a segment, with headwind.
 func segmentPower(speed, massKg, cda float64, seg *model.Segment, handling int) float64 {
 	air := speed + seg.HeadwindMPS
-	fAero := 0.5 * cda * airDensity * air * math.Abs(air)
+	fAero := 0.5 * cda * densityRatio(seg) * airDensity * air * math.Abs(air)
 	return speed * (ForceGravity(massKg, seg.GradientPct) + ForceRolling(massKg, seg.GradientPct, seg.SurfaceType, handling) + fAero)
 }
 
@@ -91,8 +101,16 @@ const (
 // above ~0.6 on real climbs, negative downhill. It is the physical reason
 // climbs are selective: W/kg decides, and drafting barely helps.
 func ClimbFactor(seg *model.Segment) float64 {
-	v := segmentSpeed(refRiderPower, refRiderMassKg, refRiderCdA, seg, 70)
-	return ForceGravity(refRiderMassKg, seg.GradientPct) * v / refRiderPower
+	p := refRiderPower * AltitudePowerFactor(seg.ElevationM)
+	v := segmentSpeed(p, refRiderMassKg, refRiderCdA, seg, 70)
+	return ForceGravity(refRiderMassKg, seg.GradientPct) * v / p
+}
+
+// refreshClimb caches a segment's climb factor (after wind/terrain changes).
+func refreshClimb(seg *model.Segment) {
+	seg.ClimbSet = false
+	seg.Climb = ClimbFactor(seg)
+	seg.ClimbSet = true
 }
 
 // Terrain classes by ClimbFactor (still-air gradient equivalents in comments).
@@ -105,11 +123,11 @@ const (
 	terrainDescent = -0.26 // descending (~-1%)
 )
 
-// climbOf returns the cached climb factor for the race state's current step,
-// computing it for segments outside a race.
-func climbOf(state *RaceState, seg *model.Segment) float64 {
-	if state != nil && state.Segment == seg && state.climbValid {
-		return state.Climb
+// climbOf returns a segment's climb factor, cached when the segment was
+// prepared for a race and computed otherwise.
+func climbOf(seg *model.Segment) float64 {
+	if seg.ClimbSet {
+		return seg.Climb
 	}
 	return ClimbFactor(seg)
 }

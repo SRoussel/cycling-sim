@@ -58,7 +58,6 @@ type RaceState struct {
 	BreakawayRiders       map[int64]bool // riders in road groups ahead of the main group
 	SegmentKmLeft         float64        // distance to the end of the current course segment
 	Climb                 float64        // ClimbFactor of the current step
-	climbValid            bool
 	BreakawayHasDangerous bool
 	SprintChaseActive     bool
 	BreakawayActive       bool
@@ -208,7 +207,7 @@ func DecideAction(rs *RiderState, state *RaceState, hasLeader bool, rng *rand.Ra
 	// This block only fires when gradient < 3.5 (never on real mountains).
 	// ------------------------------------------------------------------
 	if state != nil && state.IsStageRace && rs.TeamRole == RoleLeader && state.Segment != nil {
-		if state.Segment.SurfaceType != model.SurfaceCobbles && climbOf(state, state.Segment) < terrainRolling {
+		if state.Segment.SurfaceType != model.SurfaceCobbles && climbOf(state.Segment) < terrainRolling {
 			if !state.HasBreakaway || (!state.BreakawayHasDangerous && state.Phase != PhaseFinal) {
 				if state.Phase != PhaseFinal || rng.Float64() < 0.85 {
 					return ActionConserve
@@ -223,7 +222,7 @@ func DecideAction(rs *RiderState, state *RaceState, hasLeader bool, rng *rand.Ra
 	// leader can launch a counter-attack even when a breakaway is active.
 	// ------------------------------------------------------------------
 	if state != nil && state.Segment != nil &&
-		climbOf(state, state.Segment) > terrainHill && rs.TeamRole == RoleLeader && state.IsStageRace {
+		climbOf(state.Segment) > terrainHill && rs.TeamRole == RoleLeader && state.IsStageRace {
 
 		isFavorite := state.Rival.DangerousRiders[rs.Rider.ID]
 
@@ -237,7 +236,7 @@ func DecideAction(rs *RiderState, state *RaceState, hasLeader bool, rng *rand.Ra
 		if isFavorite {
 			// Top GC contenders: measured attacks in the final climbing km.
 			// km<15 on a real climb (>5%) is the realistic attack window.
-			if state.KmRemaining < 15 && climbOf(state, state.Segment) > terrainClimb && wFrac > 0.40 {
+			if state.KmRemaining < 15 && climbOf(state.Segment) > terrainClimb && wFrac > 0.40 {
 				attackProb = 0.08
 				if state.KmRemaining < 8 {
 					attackProb = 0.12
@@ -287,7 +286,7 @@ func DecideAction(rs *RiderState, state *RaceState, hasLeader bool, rng *rand.Ra
 		}
 		// Generic breakaway chase — applies everywhere, including non-leaders
 		// and leaders on flat/rolling terrain (mountain leaders already evaluated above).
-		isLeaderOnMountain := rs.TeamRole == RoleLeader && state.Segment != nil && climbOf(state, state.Segment) > terrainClimb
+		isLeaderOnMountain := rs.TeamRole == RoleLeader && state.Segment != nil && climbOf(state.Segment) > terrainClimb
 		inBreak := state.BreakawayRiders[rs.Rider.ID]
 		if !isLeaderOnMountain && !inBreak {
 			// One-day classics on flat/rolling non-cobble terrain: the peloton
@@ -295,7 +294,7 @@ func DecideAction(rs *RiderState, state *RaceState, hasLeader bool, rng *rand.Ra
 			// the chase). This prevents unrealistic solo gaps on opening flats
 			// and rolling terrain like the Poggio (3.7%).
 			onFlatOrRolling := state.Segment != nil &&
-				climbOf(state, state.Segment) >= terrainDescent && climbOf(state, state.Segment) < terrainClimb &&
+				climbOf(state.Segment) >= terrainDescent && climbOf(state.Segment) < terrainClimb &&
 				state.Segment.SurfaceType != model.SurfaceCobbles
 			if state.HasBreakaway && onFlatOrRolling && !state.IsStageRace {
 				return ActionChase
@@ -324,7 +323,7 @@ func DecideAction(rs *RiderState, state *RaceState, hasLeader bool, rng *rand.Ra
 				}
 			case ObjectiveGCProtection:
 				if rs.TeamRole == RoleLeader {
-					if state.Segment != nil && state.Segment.SurfaceType != model.SurfaceCobbles && climbOf(state, state.Segment) < terrainRolling && state.Phase != PhaseFinal {
+					if state.Segment != nil && state.Segment.SurfaceType != model.SurfaceCobbles && climbOf(state.Segment) < terrainRolling && state.Phase != PhaseFinal {
 						return ActionConserve
 					}
 					if state.HasBreakaway && (state.BreakawayGap > 25 || state.BreakawayHasDangerous) && state.Phase != PhaseEarly {
@@ -343,7 +342,7 @@ func DecideAction(rs *RiderState, state *RaceState, hasLeader bool, rng *rand.Ra
 	// One-day race mountain attacks (simpler: no GC mindset needed).
 	// ------------------------------------------------------------------
 	if state != nil && state.Segment != nil &&
-		climbOf(state, state.Segment) > terrainClimb && rs.TeamRole == RoleLeader && !state.IsStageRace {
+		climbOf(state.Segment) > terrainClimb && rs.TeamRole == RoleLeader && !state.IsStageRace {
 		if rng.Float64() < perStep(0.08, state) && wFrac > 0.35 {
 			return ActionAttack
 		}
@@ -383,7 +382,7 @@ func ApplyEventModifiers(params TacticsParams, state *RaceState) TacticsParams {
 		params.AttackAggression *= 1.15
 		state.logCondition("cobbles", "technical sector")
 	}
-	if climbOf(state, segment) > terrainClimb && state.KmRemaining < 15 {
+	if climbOf(segment) > terrainClimb && state.KmRemaining < 15 {
 		params.AttackAggression *= 1.1
 		state.logCondition("summit", "climb near finish")
 	}

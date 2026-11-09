@@ -16,6 +16,7 @@ import (
 	"cycling_sim/internal/seed"
 	"cycling_sim/internal/service"
 	"cycling_sim/internal/simulation"
+	"cycling_sim/internal/stagefile"
 )
 
 func main() {
@@ -61,6 +62,11 @@ func main() {
 		cmdRunStageRace(db, srID, seedVal)
 	case "validate":
 		cmdValidate(db, len(args) > 0 && (args[0] == "-v" || args[0] == "--verbose"))
+	case "import-stages":
+		if len(args) == 0 {
+			fatalf("Usage: cycling-sim import-stages <stage-files-dir>\n")
+		}
+		cmdImportStages(db, args[0])
 	case "apply-ratings":
 		n, err := seed.ApplyRatings(db)
 		if err != nil {
@@ -161,6 +167,9 @@ Commands:
                                  dir/<sprint|hilly|mountain|cobbles|tt>/
                                  (default data/results); writes
                                  data/rider_derived.csv. Re-seed to apply.
+  import-stages <dir>            Import real route profiles for the courses in
+                                 data/stage_sources.csv from a local stage-file
+                                 dir; writes data/local/ and updates the DB
   apply-ratings                  Re-apply riders.csv + rating layers to the
                                  riders in the DB, keeping saved results
   fit-ratings [--classics] [file] Fit rider thresholds to the 2024 Tour GC
@@ -480,6 +489,49 @@ func cmdValidate(db *database.DB, verbose bool) {
 	p4 := print("Race speeds", speeds)
 	fmt.Printf("Passed %d/%d synthetic, %d/%d real, %d/%d hold-out, %d/%d speeds\n",
 		p1, len(synth), p2, len(real), p3, len(holdout), p4, len(speeds))
+}
+
+func cmdImportStages(db *database.DB, dir string) {
+	sources, err := stagefile.LoadSources(seed.DataPath("stage_sources.csv"))
+	if err != nil {
+		fatalf("Error reading stage_sources.csv: %v\n", err)
+	}
+	courses, err := db.ListCourses()
+	if err != nil || len(courses) == 0 {
+		fatalf("No courses in the database: run 'cycling-sim seed' first.\n")
+	}
+	dist := map[string]float64{}
+	ids := map[string]int64{}
+	for _, c := range courses {
+		dist[c.Name] = c.TotalDistanceKm
+		ids[c.Name] = c.ID
+	}
+	profiles, problems := stagefile.Build(dir, sources, dist)
+	for _, p := range problems {
+		fmt.Printf("  skipped %s\n", p)
+	}
+	if len(profiles) == 0 {
+		fatalf("No stage files could be imported from %s.\n", dir)
+	}
+	out := seed.DataPath(seed.LocalProfilesFile)
+	if err := stagefile.Save(out, profiles); err != nil {
+		fatalf("Error writing %s: %v\n", out, err)
+	}
+	for _, p := range profiles {
+		segs := seed.CourseSegments(p.Course, dist[p.Course], p.ModelSegments())
+		if err := db.ReplaceSegments(ids[p.Course], segs); err != nil {
+			fatalf("Error updating %s: %v\n", p.Course, err)
+		}
+		cob := 0.0
+		for _, s := range segs {
+			if s.SurfaceType == model.SurfaceCobbles {
+				cob += s.DistanceKm
+			}
+		}
+		fmt.Printf("  %-24s <- %-32s %3d segments, %5.0f m climbing, %4.1f km cobbles/gravel\n",
+			p.Course, p.Stage, len(segs), stagefile.ClimbingM(segs), cob)
+	}
+	fmt.Printf("Wrote %s (local only, not committed) and updated %d courses in the database.\n", out, len(profiles))
 }
 
 func cmdFitRatings(db *database.DB, path string, classics bool) {

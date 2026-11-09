@@ -3,6 +3,7 @@ package database
 import (
 	"cycling_sim/internal/model"
 	"fmt"
+	"math"
 )
 
 // CreateCourse inserts a course and returns it with the assigned ID.
@@ -108,4 +109,38 @@ func boolToInt(b bool) int {
 		return 1
 	}
 	return 0
+}
+
+// ReplaceSegments replaces a course's segments (and updates its distance to
+// their sum) in one transaction. Nothing else references segment rows.
+func (db *DB) ReplaceSegments(courseID int64, segs []model.Segment) error {
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	if _, err := tx.Exec("DELETE FROM segments WHERE course_id = ?", courseID); err != nil {
+		tx.Rollback()
+		return err
+	}
+	total := 0.0
+	for i, s := range segs {
+		s.CourseID = courseID
+		s.SegmentOrder = i + 1
+		if err := s.Validate(); err != nil {
+			tx.Rollback()
+			return fmt.Errorf("segment %d: %w", i+1, err)
+		}
+		if _, err := tx.Exec(`INSERT INTO segments (course_id, segment_order, name, distance_km, gradient_pct, surface_type, is_technical, heading_deg)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, s.CourseID, s.SegmentOrder, s.Name, s.DistanceKm, s.GradientPct,
+			string(s.SurfaceType), boolToInt(s.IsTechnical), s.HeadingDeg); err != nil {
+			tx.Rollback()
+			return err
+		}
+		total += s.DistanceKm
+	}
+	if _, err := tx.Exec("UPDATE courses SET total_distance_km = ? WHERE id = ?", math.Round(total*10)/10, courseID); err != nil {
+		tx.Rollback()
+		return err
+	}
+	return tx.Commit()
 }

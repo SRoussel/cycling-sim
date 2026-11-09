@@ -11,3 +11,6 @@ gui/dist/
 build/
 *.test
 *.out
+
+# derived from locally installed third-party files (not ours to redistribute)
+data/local/

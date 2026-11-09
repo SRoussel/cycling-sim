@@ -14,6 +14,7 @@ import (
 	"cycling_sim/internal/database"
 	"cycling_sim/internal/model"
 	"cycling_sim/internal/simulation"
+	"cycling_sim/internal/stagefile"
 )
 
 type Result struct {
@@ -230,7 +231,17 @@ type courseData struct {
 // distance. fitToDistance pads (or trims) the longest flat road segment so
 // the simulated distance matches distKm.
 func cd(name string, distKm float64, segments []model.Segment) courseData {
-	return courseData{course: model.Course{Name: name, TotalDistanceKm: distKm}, segments: withHeadings(name, fitToDistance(segments, distKm))}
+	return courseData{course: model.Course{Name: name, TotalDistanceKm: distKm}, segments: CourseSegments(name, distKm, segments)}
+}
+
+// LocalProfilesFile holds course profiles derived from locally installed
+// stage files (never committed: the source files belong to their authors).
+const LocalProfilesFile = "local/course_profiles.json"
+
+// CourseSegments finalises a course's segments: fitted to its distance, with
+// stable synthetic headings.
+func CourseSegments(name string, distKm float64, segments []model.Segment) []model.Segment {
+	return withHeadings(name, fitToDistance(segments, distKm))
 }
 
 // withHeadings assigns synthetic but stable segment headings: a random walk
@@ -332,6 +343,15 @@ func seedCourses(db *database.DB) (map[string]int64, int) {
 		cd("Vuelta Mountain Stage", 175, []model.Segment{road(1, "Road section", 40, 0.5), road(2, "Puerto climb", 12, 6.2), road(3, "Descent", 14, -5.5), road(4, "Valley road", 25, 0.3), road(5, "Cat 1 climb", 14, 7.0), road(6, "Descent", 12, -5.5), road(7, "Valley road", 15, 0.3), road(8, "Cat 1 summit finish", 12, 7.5)}),
 		cd("Vuelta Steep Summit", 155, []model.Segment{road(1, "Valley approach", 35, 0.3), road(2, "Cat 1 climb", 10, 7.2), road(3, "Descent", 12, -6.0), road(4, "Valley road", 20, 0.3), road(5, "Cat 1 climb", 12, 7.5), road(6, "Descent", 14, -5.5), road(7, "Short valley", 5, 0.3), road(8, "Angliru / Lagos finish", 12.5, 9.8)}),
 		cd("Short Prologue TT", 5, []model.Segment{road(1, "Urban circuit", 5, 0.3)}),
+	}
+	// Real route profiles imported from locally installed stage files
+	// (cycling-sim import-stages) replace the hand-written segments.
+	if local, err := stagefile.Load(DataPath(LocalProfilesFile)); err == nil {
+		for k := range courses {
+			if p, ok := local[courses[k].course.Name]; ok {
+				courses[k].segments = CourseSegments(courses[k].course.Name, courses[k].course.TotalDistanceKm, p.ModelSegments())
+			}
+		}
 	}
 
 	ids := make(map[string]int64)

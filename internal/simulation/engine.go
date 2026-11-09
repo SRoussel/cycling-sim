@@ -19,6 +19,10 @@ type RaceConfig struct {
 	// GCGaps maps rider ID → cumulative GC deficit in seconds vs. the current leader.
 	// Set by the stage race runner before each stage. Nil for standalone races.
 	GCGaps map[int64]float64
+	// TeamPlan maps rider ID → a draw in [0,1) made once per stage race:
+	// whether a team frees a strong domestique to ride for GC (see
+	// AssignCoLeaders). Nil: the hard top-10 rule.
+	TeamPlan map[int64]float64
 }
 
 // SimulateRoadRace runs a complete road race simulation and returns results.

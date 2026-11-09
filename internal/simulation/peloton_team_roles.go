@@ -1,6 +1,7 @@
 package simulation
 
 import (
+	"math"
 	"sort"
 
 	"cycling_sim/internal/model"
@@ -67,6 +68,20 @@ func AssignTeamRoles(states []*RiderState) {
 // gcPlacesProtected: teams protect a top-10 GC place.
 const gcPlacesProtected = 10
 
+// planSpread: how sharply a team's decision to free a domestique falls off
+// with his climbing rank in the field (in places). Teams don't cut at exactly
+// 10th: the 8th-best climber is usually freed (~84%), the 12th sometimes
+// (~27%), the 15th rarely (~5%). Without it a ±1% rating change flipped a
+// rider between leader and domestique and moved him ~500 s on GC.
+const planSpread = 1.5
+
+// freedByPlan reports whether a team frees a domestique ranked rank (1 = the
+// strongest climber in the field) given the plan draw u in [0,1).
+func freedByPlan(rank int, u float64) bool {
+	p := 1 / (1 + math.Exp((float64(rank)-(gcPlacesProtected+0.5))/planSpread))
+	return u < p
+}
+
 // climbingWKg is a rider's threshold W/kg on a real climb.
 func climbingWKg(r *model.Rider) float64 {
 	if r.WeightKg <= 0 {
@@ -94,7 +109,7 @@ func topIDs(ids []int64, score func(int64) float64, n int) map[int64]bool {
 // (co-)leaders in a stage race: the strongest climbers in the field and, once
 // there is a GC, riders in its top 10. gcGaps (rider → seconds behind the GC
 // leader) may be nil before the first stage.
-func AssignCoLeaders(states []*RiderState, gcGaps map[int64]float64, stageRace bool) {
+func AssignCoLeaders(states []*RiderState, gcGaps map[int64]float64, plan map[int64]float64, stageRace bool) {
 	if !stageRace {
 		return
 	}
@@ -126,7 +141,17 @@ func AssignCoLeaders(states []*RiderState, gcGaps map[int64]float64, stageRace b
 			ids = append(ids, rs.Rider.ID)
 		}
 	}
-	strongest := topIDs(ids, func(id int64) float64 { return -wkg[id] }, gcPlacesProtected)
+	topIDs(ids, func(id int64) float64 { return -wkg[id] }, 0) // sorts strongest first
+	rank := make(map[int64]int, len(ids))
+	for i, id := range ids {
+		rank[id] = i + 1
+	}
+	freed := func(id int64) bool {
+		if plan == nil {
+			return rank[id] <= gcPlacesProtected
+		}
+		return freedByPlan(rank[id], plan[id])
+	}
 	topGC := map[int64]bool{}
 	if len(gcGaps) > 0 {
 		gcIDs := make([]int64, 0, len(gcGaps))
@@ -136,7 +161,7 @@ func AssignCoLeaders(states []*RiderState, gcGaps map[int64]float64, stageRace b
 		topGC = topIDs(gcIDs, func(id int64) float64 { return gcGaps[id] }, gcPlacesProtected)
 	}
 	for _, rs := range states {
-		if rs.TeamRole == RoleDomestique && (strongest[rs.Rider.ID] || topGC[rs.Rider.ID]) {
+		if rs.TeamRole == RoleDomestique && (freed(rs.Rider.ID) || topGC[rs.Rider.ID]) {
 			rs.TeamRole = RoleLeader
 		}
 	}

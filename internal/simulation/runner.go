@@ -3,6 +3,7 @@ package simulation
 import (
 	"fmt"
 	"math"
+	"math/rand"
 	"sort"
 
 	"cycling_sim/internal/model"
@@ -235,7 +236,7 @@ func SimulateRoadRaceWithProgress(config RaceConfig, onProgress func(ProgressSna
 	raceState := NewRaceState(states, rng, config.Race != nil && model.IsStageRaceStageName(config.Race.Name), hasCobbles)
 	raceState.Overrides = config.ActionOverrides
 	raceState.GCGaps = config.GCGaps
-	AssignCoLeaders(states, config.GCGaps, raceState.IsStageRace)
+	AssignCoLeaders(states, config.GCGaps, config.TeamPlan, raceState.IsStageRace)
 	eventIndex := 0
 	routeProfile := buildRouteProfile(config.Course)
 
@@ -383,6 +384,13 @@ func SimulateRoadRaceWithProgress(config RaceConfig, onProgress func(ProgressSna
 
 func SimulateStageRaceWithProgress(stageRace *model.StageRace, stages []StageConfig, riders []model.Rider, seed int64, onProgress func(StageProgressSnapshot), overrides ActionOverrideProvider) ([][]model.RaceResult, [][]model.GCStanding) {
 	rng := rngFromSeed(seed)
+	// Team plans are made once, before the race (own RNG, so stage seeds
+	// don't depend on them).
+	planRNG := rand.New(rand.NewSource(rng.Int63()))
+	plan := make(map[int64]float64, len(riders))
+	for _, r := range riders {
+		plan[r.ID] = planRNG.Float64()
+	}
 
 	fatigueMap := make(map[int64]*StageFatigueState)
 	for i := range riders {
@@ -470,6 +478,7 @@ func SimulateStageRaceWithProgress(stageRace *model.StageRace, stages []StageCon
 			Seed:            rng.Int63(),
 			ActionOverrides: overrides,
 			GCGaps:          gcGaps,
+			TeamPlan:        plan,
 		}
 
 		var results []model.RaceResult

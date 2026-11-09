@@ -22,11 +22,11 @@ func TestAssignCoLeaders(t *testing.T) {
 	}
 	weak := states[len(states)-1]
 
-	AssignCoLeaders(states, nil, false)
+	AssignCoLeaders(states, nil, nil, false)
 	if states[1].TeamRole != RoleDomestique {
 		t.Fatal("one-day races keep a single leader")
 	}
-	AssignCoLeaders(states, nil, true)
+	AssignCoLeaders(states, nil, nil, true)
 	if states[1].TeamRole != RoleLeader {
 		t.Error("a top-10 climber in the field should be a co-leader in a stage race")
 	}
@@ -38,7 +38,7 @@ func TestAssignCoLeaders(t *testing.T) {
 	for i := int64(10); i < 19; i++ {
 		gaps[i] = 3600
 	}
-	AssignCoLeaders(states, gaps, true)
+	AssignCoLeaders(states, gaps, nil, true)
 	if weak.TeamRole != RoleLeader {
 		t.Error("a rider in the GC top 10 should ride for their own GC")
 	}
@@ -107,8 +107,33 @@ func TestStageRaceLeaderIsBestClimber(t *testing.T) {
 	for i := int64(10); i < 30; i++ { // twenty stronger riders elsewhere
 		states = append(states, stateFor(i, fmt.Sprint("T", i), 460, 62, RoleLeader))
 	}
-	AssignCoLeaders(states, nil, true)
+	AssignCoLeaders(states, nil, nil, true)
 	if climber.TeamRole != RoleLeader || old.TeamRole != RoleDomestique {
 		t.Errorf("roles: climber %v, old leader %v; want leader, domestique", climber.TeamRole, old.TeamRole)
+	}
+}
+
+// With a team plan, freeing a domestique falls off smoothly with climbing
+// rank instead of cutting at exactly 10th.
+func TestFreedByPlanIsSmooth(t *testing.T) {
+	share := func(rank int) float64 {
+		n := 0
+		for i := 0; i < 1000; i++ {
+			if freedByPlan(rank, (float64(i)+0.5)/1000) {
+				n++
+			}
+		}
+		return float64(n) / 1000
+	}
+	prev := 1.0
+	for rank := 1; rank <= 20; rank++ {
+		p := share(rank)
+		if p > prev || prev-p > 0.2 {
+			t.Errorf("rank %d: freed %.2f after %.2f; want a smooth decline", rank, p, prev)
+		}
+		prev = p
+	}
+	if share(5) < 0.9 || share(16) > 0.1 {
+		t.Errorf("freed: rank 5 %.2f, rank 16 %.2f", share(5), share(16))
 	}
 }

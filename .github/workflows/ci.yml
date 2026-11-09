@@ -1,0 +1,79 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  go:
+    name: Go (fmt, vet, test)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      # The Wails desktop app (package main) links GTK/WebKit via cgo.
+      - name: Install GTK/WebKit headers
+        run: sudo apt-get update && sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev
+
+      # main.go embeds gui/dist, which is a build output (not committed). The Go
+      # job doesn't need the real frontend, so a placeholder satisfies the embed.
+      - name: Placeholder frontend bundle
+        run: mkdir -p gui/dist && echo '<!doctype html>' > gui/dist/index.html
+
+      - name: gofmt
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "Not gofmt-formatted:"; echo "$unformatted"; exit 1
+          fi
+
+      - name: go vet
+        run: go vet -tags webkit2_41 ./...
+
+      - name: go test
+        run: go test -tags webkit2_41 -count=1 ./...
+
+      - name: Build CLI
+        run: go build ./cmd/cycling-sim/
+
+      # End-to-end: seed a fresh database and run the validation report. The
+      # report's PASS/FAIL lines are informational (real-race cases are a
+      # realism gauge, not a gate); the step fails only if the commands error.
+      - name: Seed and validate
+        env:
+          CYCLING_SIM_DB: ${{ runner.temp }}/ci.db
+        run: |
+          ./cycling-sim seed
+          ./cycling-sim validate | tee validation.txt
+
+      - name: Upload validation report
+        uses: actions/upload-artifact@v4
+        with:
+          name: validation-report
+          path: validation.txt
+
+  frontend:
+    name: Frontend (typecheck, build)
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: gui
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: gui/package-lock.json
+
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - run: npm run build

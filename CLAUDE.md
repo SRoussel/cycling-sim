@@ -19,27 +19,31 @@ Requires Go 1.24+ and uses `modernc.org/sqlite` (pure Go, no CGO needed).
 - `internal/service/` — race loading, start-list selection, running and saving; shared by CLI and GUI (use it, don't duplicate)
 - `internal/seed/` — seed data (riders from `data/riders.csv`, courses, races, stage races)
 - `internal/selection/` — start-list selection per race profile
+- `internal/calibrate/` — `fit-ratings`: fits rider thresholds to real results by simulation
 - `internal/model/` — Domain structs (Rider, Course, Segment, Race, Result, GCStanding) with validation
 - `internal/simulation/` — Core simulation engine:
   - `physics.go` — Speed-from-power solver (bisection method), drag/gravity/rolling forces, drafting
   - `fatigue.go` — W' balance (within-stage) + cumulative multi-stage fatigue
-  - `peloton.go` — Group dynamics, climb splitting, descent speed caps
+  - `peloton_*.go` — groups (`peloton_follow.go`), effort/teams (`peloton_groups.go`), steps (`peloton_segment.go`)
+  - `wind.go`, `altitude.go` — wind/echelons, climb factor, altitude; `PrepareSegments` readies a course for a race
   - `tactics.go` — Breakaway logic, sprint finish resolution, daily form variance
   - `engine.go`, `runner.go` — Orchestrate road races, TTs, and stage races (runner adds progress callbacks)
-  - `validation.go` — synthetic-field validation; `validation_real.go` — 2024 real-race reference results
+  - `validation.go` — synthetic fields; `validation_real.go` — 2024 references + 2023 hold-out; `validation_speed.go` — winning speeds
 - `internal/database/` — SQLite schema, migrations, CRUD operations
 
 ## Key Design Decisions
 Guiding rule: express behaviour as physics or rider intent, never as hardcoded gradient/distance thresholds.
 
-- **Ability modifiers** (1-100 scale, 70 = WT average): `effectivePower = base * (1 + (ability-70)*0.002)`, giving ±4% range. W/kg (FTP/weight) is the main performance lever.
+- **Ability modifiers** (1-100 scale, 70 = WT average): `effectivePower = base * (1 + (ability-70)*0.002)`, giving ±4% range. W/kg (FTP/weight) is the main performance lever. Climbing ability blends in with the climb factor (full effect on real climbs, none on the flat). `EffectivePower` is the rider's threshold on that terrain *and* the W' threshold (`thresholdIntOn`) — keep them the same, or riding "at threshold" drains/refills W' and cancels abilities.
 - **Speed solver**: bisection on `0.5·ρ·CdA·(v+w)|v+w|·v + staticForce·v = P` (w = headwind; robust on descents).
 - **Steps**: segments are simulated in ≤2 km steps; tactical/incident probabilities are per 5 km (`ScaleToDistance`).
 - **Groups** (`peloton_follow.go`): one rule on all terrain. Pace comes from a rotating pace line of workers (riders chasing/attacking/driving; small groups share). Followers must hold it with positional draft + spendable W'; else they're dropped. Groups line out at ≥95% threshold (no deep bunch shelter). Cooperative chases of a break spend W' N/k faster (pool depth). Groups can't pass each other; riders in a group close up to its front.
 - **Contact**: riders within 10 s are one road group. Breakaway state is read from the road.
 - **Effort** (`riderEffort`): each mode draws on W' once over one horizon — attack: the step; committed chase / finale (last 20 km): to the line; team driving: rest of the climb. Domestiques pace at threshold until the 3 km lead-out.
 - **W'**: depletes above FTP; recovers with Skiba (2012) τ = 546·e^(−0.01·(CP−P)) + 316 s.
-- **Durability**: in-race threshold fades ~2.5%/1000 kJ (Endurance-scaled, cap 15%).
+- **Durability**: in-race threshold fades ~2.5%/1000 kJ (Endurance-scaled, cap 15%). Sprint power fades the same way and loses up to 10% with an emptied W' (`FatiguedSprintPower`), so lead-out riders finish behind.
+- **Altitude**: elevation integrated from gradients (course low point = 0 m); air density by standard atmosphere; aerobic power by Bassett et al. 1999 (acclimatised): ~92% at 2000 m.
+- **Drafting**: `DraftFactor` is a smooth curve: 0.65 on one wheel → 0.25 deep in a bunch.
 - **Stage fatigue**: `cumulativeFatigue += stress·(1 − recovery/150)`, FTP × (1 − 0.004·fatigue), floor 85% (~4% over a Grand Tour). Time cuts by climbing density (waived if >20% outside).
 - **Wind**: segments have headings (synthetic in seed data); headwind enters the solver; crosswind removes gutter shelter beyond a 10-rider echelon by yaw angle; roads meander ±60° per step.
 - **Terrain**: `ClimbFactor` (share of power lifting weight) classifies terrain for tactics.
@@ -56,7 +60,8 @@ SQLite with WAL mode, foreign keys enabled. Schema auto-migrates on open. Use `C
 ./cycling-sim races                   # list races
 ./cycling-sim run <race-id> [--incidents] [--seed N]   # simulate a race
 ./cycling-sim run-stage-race <sr-id> [--seed N]        # simulate stage race with GC
-./cycling-sim validate                # synthetic + real-race validation report
+./cycling-sim validate [-v]           # synthetic, 2024 real races, 2023 hold-out, race speeds (-v: per rider)
+./cycling-sim fit-ratings [--classics] [file]  # fit thresholds to 2024 refs by simulation
 ./cycling-sim import-results [dir]    # derive ratings from saved result pages
 ./cycling-sim results <race-id>       # view saved results
 ./cycling-sim gc <sr-id> <stage>      # view GC standings
@@ -70,4 +75,6 @@ SQLite with WAL mode, foreign keys enabled. Schema auto-migrates on open. Use `C
 - Course segments must sum to the stated distance (`fitToDistance` in seed, enforced by a test). Changing seed data requires `clear` + `seed`.
 - `data/riders.csv`: ~370 of 521 riders share templated ability profiles; ratings are the main realism bottleneck.
 - Rating layers at seed time: `riders.csv` → `rider_derived.csv` (from `cycling-sim import-results`, saved pages in `data/results/<profile>/`) → `rider_overrides.csv` (curated; GC tier calibrated to 2024 Tour gaps). Never scrape FirstCycling/PCS (robots.txt / bot protection).
-- `cycling-sim validate` scores synthetic fields, six 2024 classics and the 2024 Tour GC; real non-starters are excluded.
+- `cycling-sim validate` scores synthetic fields, six 2024 classics and the 2024 Tour GC (verified non-starters excluded via `DidNotStart`; reference riders always start), a 2023 hold-out (never fitted) and winners' average speeds.
+- `data/rider_fitted.csv` (optional, from `fit-ratings`) is a 4th layer of `FTP_scale` multipliers. None is committed: fitting the classics overfits (2023 hold-out gets worse), and the Tour fit pushes GC domestiques (Jorgenson, C. Rodríguez) above Pogačar's W/kg because the model lacks co-leader tactics. The fitter flags such implausible W/kg.
+- Known gaps: seeded classic courses have far too little climbing (Liège ~1,870 m of climbing vs ~4,000 m real), so hilly races run ~13% too fast; GC domestiques lose too much time in Grand Tours.

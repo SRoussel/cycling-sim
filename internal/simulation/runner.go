@@ -563,11 +563,13 @@ func SimulateStageRaceWithProgress(stageRace *model.StageRace, stages []StageCon
 		}
 		allResults = append(allResults, results)
 
-		activeByID := make(map[int64]model.Rider, len(adjustedRiders))
-		for _, r := range adjustedRiders {
+		// Carry the unadjusted riders forward: fatigue is applied afresh to
+		// the base FTP each stage (carrying adjustedRiders compounded it).
+		activeByID := make(map[int64]model.Rider, len(activeRiders))
+		for _, r := range activeRiders {
 			activeByID[r.ID] = r
 		}
-		remaining := make([]model.Rider, 0, len(adjustedRiders))
+		remaining := make([]model.Rider, 0, len(activeRiders))
 		for _, res := range results {
 			if res.Position == 0 {
 				delete(gcTimes, res.RiderID)

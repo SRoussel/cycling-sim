@@ -281,3 +281,25 @@ func TestSprintFinishOrdering(t *testing.T) {
 		t.Errorf("sprinter won %d/100 sprints, expected >80", sprinterWins)
 	}
 }
+
+// Stage fatigue is applied to the rider's base threshold each stage: over 21
+// identical time trials it costs a few percent, it doesn't compound (it once
+// did, taking ~40% off threshold by the last stage).
+func TestStageFatigueDoesNotCompound(t *testing.T) {
+	r := makeAllRounder("Rider")
+	r.ID = 1
+	r.Consistency = 100
+	var stages []StageConfig
+	for i := 1; i <= 21; i++ {
+		stages = append(stages, StageConfig{
+			Race:        &model.Race{ID: int64(i), Name: "TT", CourseID: 3, RaceType: model.RaceTypeTT},
+			Course:      ttCourse(),
+			StageNumber: i,
+		})
+	}
+	res, _ := SimulateStageRace(&model.StageRace{ID: 1, Name: "Test"}, stages, []model.Rider{r}, 7)
+	first, last := res[0][0].FinishTimeSeconds, res[20][0].FinishTimeSeconds
+	if ratio := last / first; ratio > 1.06 {
+		t.Errorf("last stage %.1f%% slower than the first; fatigue should cost a few percent", (ratio-1)*100)
+	}
+}

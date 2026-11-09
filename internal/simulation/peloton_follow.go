@@ -96,7 +96,7 @@ func isSheltered(rp riderPower) bool { return rp.sheltered }
 
 // shelteredFor decides who sits in: riders conserving, sprinters (saving it
 // for the sprint), and team leaders until the final phase, when they race, or
-// until they chase in a stage race.
+// until they chase in a stage race or have a rival up the road.
 func shelteredFor(rs *RiderState, action Action, state *RaceState) bool {
 	phase := phaseOf(state)
 	switch {
@@ -106,9 +106,10 @@ func shelteredFor(rs *RiderState, action Action, state *RaceState) bool {
 		return true
 	case rs.TeamRole == RoleLeader:
 		// In a stage race a chasing GC leader takes turns (time lost now is
-		// lost for good); in a one-day race they wait for the finale.
+		// lost for good); in a one-day race they wait for the finale unless a
+		// rival is up the road.
 		stageChase := state != nil && state.IsStageRace && action == ActionChase
-		return phase != PhaseFinal && !stageChase
+		return phase != PhaseFinal && !stageChase && !state.rivalAhead(rs)
 	}
 	return false
 }

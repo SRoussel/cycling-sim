@@ -315,9 +315,9 @@ func riderEffort(rs *RiderState, action Action, segment *model.Segment, remainin
 		return threshold * IntensityForPhase(phase)
 	}
 
-	// A GC rider with a rival up the road limits their losses: they chase to
+	// A leader with a rival up the road limits their losses: they chase to
 	// the line (and take turns, see shelteredFor).
-	if state.gcRivalAhead(rs) {
+	if state.rivalAhead(rs) {
 		return burstOver(remainingKm), ActionChase
 	}
 	if action == ActionConserve {

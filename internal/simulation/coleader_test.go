@@ -50,21 +50,34 @@ func TestGCRivalAhead(t *testing.T) {
 	s := &RaceState{IsStageRace: true, GCGaps: map[int64]float64{1: 60, 2: 300, 3: 0}}
 
 	s.Ahead = map[*RiderState]float64{rival: 120}
-	if s.gcRivalAhead(me) {
+	if s.rivalAhead(me) {
 		t.Error("a rival 4 min down on GC and 2 min up the road doesn't threaten my GC place")
 	}
 	s.Ahead = map[*RiderState]float64{rival: 400}
-	if !s.gcRivalAhead(me) {
+	if !s.rivalAhead(me) {
 		t.Error("a rival who would pass me on GC must be chased")
 	}
 	s.Ahead = map[*RiderState]float64{mate: 400}
-	if s.gcRivalAhead(me) {
+	if s.rivalAhead(me) {
 		t.Error("a teammate up the road is not a rival")
 	}
 	s.IsStageRace = false
-	s.Ahead = map[*RiderState]float64{rival: 400}
-	if s.gcRivalAhead(me) {
-		t.Error("one-day races have no GC to defend")
+	s.Ahead = map[*RiderState]float64{rival: 120}
+	s.Phase = PhaseEarly
+	if s.rivalAhead(me) {
+		t.Error("early in a one-day race nobody chases a rival yet")
+	}
+	s.Phase = PhaseMid
+	if !s.rivalAhead(me) {
+		t.Error("later in a one-day race, a rival leader up the road must be chased")
+	}
+	dom := stateFor(4, "A", 400, 62, RoleDomestique)
+	if !s.rivalAhead(dom) {
+		t.Error("a domestique whose leader isn't ahead races for placings")
+	}
+	s.Ahead = map[*RiderState]float64{rival: 120, mate: 60}
+	if s.rivalAhead(dom) {
+		t.Error("riders don't chase when their own leader is up the road")
 	}
 }
 

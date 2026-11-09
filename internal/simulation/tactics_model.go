@@ -546,18 +546,42 @@ func clamp(value float64, min float64, max float64) float64 {
 	return value
 }
 
-// gcRivalAhead reports whether a stage-race leader has a GC rival up the road:
-// a leader ahead who would finish the stage ahead of them on GC if the gap
-// held. Such a rider limits their losses instead of sitting in.
-func (s *RaceState) gcRivalAhead(rs *RiderState) bool {
-	if s == nil || !s.IsStageRace || rs.TeamRole != RoleLeader || len(s.Ahead) == 0 {
+// rivalAhead reports whether a rider has a rival up the road and so must
+// race instead of sitting in (they chase to the line and take turns):
+//   - stage race: a leader, with a leader ahead who would pass them on GC if
+//     the gap held;
+//   - one-day race, after the early phase: any rider (sprinters excepted)
+//     with another team's leader ahead and no leader of their own team up the
+//     road, since placings are decided now. Riders don't chase their own
+//     leader.
+func (s *RaceState) rivalAhead(rs *RiderState) bool {
+	if s == nil || len(s.Ahead) == 0 || rs.TeamRole == RoleSprinter {
 		return false
 	}
-	mine := s.GCGaps[rs.Rider.ID]
-	for other, lead := range s.Ahead {
-		if other.TeamRole == RoleLeader && other.Rider.Team != rs.Rider.Team && s.GCGaps[other.Rider.ID] < mine+lead {
-			return true
+	if s.IsStageRace {
+		if rs.TeamRole != RoleLeader {
+			return false
 		}
+		mine := s.GCGaps[rs.Rider.ID]
+		for other, lead := range s.Ahead {
+			if other.TeamRole == RoleLeader && other.Rider.Team != rs.Rider.Team && s.GCGaps[other.Rider.ID] < mine+lead {
+				return true
+			}
+		}
+		return false
 	}
-	return false
+	if s.Phase == PhaseEarly {
+		return false
+	}
+	rival := false
+	for other := range s.Ahead {
+		if other.TeamRole != RoleLeader {
+			continue
+		}
+		if other.Rider.Team == rs.Rider.Team {
+			return false // own leader up the road: don't chase them
+		}
+		rival = true
+	}
+	return rival
 }

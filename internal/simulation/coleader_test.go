@@ -1,6 +1,7 @@
 package simulation
 
 import (
+	"fmt"
 	"testing"
 
 	"cycling_sim/internal/model"
@@ -93,5 +94,21 @@ func TestLeaderTempoSpeed(t *testing.T) {
 	}
 	if solo := segmentSpeed(threshold, r.TotalMassKg(), r.CdA, climb, r.Handling); v <= solo {
 		t.Errorf("drafting should let the leader follow a pace above their solo threshold speed (%.2f vs %.2f)", v, solo)
+	}
+}
+
+// In a stage race the team's best climber leads, whoever the ability ratings
+// favoured; the old leader rides for them unless they qualify as co-leader.
+func TestStageRaceLeaderIsBestClimber(t *testing.T) {
+	var states []*RiderState
+	old := stateFor(1, "A", 380, 66, RoleLeader)         // 5.76 W/kg
+	climber := stateFor(2, "A", 400, 60, RoleDomestique) // 6.67 W/kg
+	states = append(states, old, climber)
+	for i := int64(10); i < 30; i++ { // twenty stronger riders elsewhere
+		states = append(states, stateFor(i, fmt.Sprint("T", i), 460, 62, RoleLeader))
+	}
+	AssignCoLeaders(states, nil, true)
+	if climber.TeamRole != RoleLeader || old.TeamRole != RoleDomestique {
+		t.Errorf("roles: climber %v, old leader %v; want leader, domestique", climber.TeamRole, old.TeamRole)
 	}
 }

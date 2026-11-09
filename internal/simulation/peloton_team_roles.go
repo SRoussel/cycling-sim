@@ -98,6 +98,26 @@ func AssignCoLeaders(states []*RiderState, gcGaps map[int64]float64, stageRace b
 	if !stageRace {
 		return
 	}
+	// A team's GC leader is its best climber: climbing W/kg decides a stage
+	// race, not the average of ability ratings AssignTeamRoles goes by (which
+	// made Bilbao Bahrain's leader over Buitrago at the 2024 Tour).
+	best := map[string]*RiderState{}
+	for _, rs := range states {
+		if rs.DNF || rs.TeamRole == RoleSprinter {
+			continue
+		}
+		if b := best[rs.Rider.Team]; b == nil || climbingWKg(rs.Rider) > climbingWKg(b.Rider) {
+			best[rs.Rider.Team] = rs
+		}
+	}
+	for _, rs := range states {
+		if b := best[rs.Rider.Team]; b != nil && rs.TeamRole == RoleLeader && rs != b {
+			rs.TeamRole = RoleDomestique // back as a co-leader below if they qualify
+		}
+	}
+	for _, b := range best {
+		b.TeamRole = RoleLeader
+	}
 	wkg := map[int64]float64{}
 	var ids []int64
 	for _, rs := range states {

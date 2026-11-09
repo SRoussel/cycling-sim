@@ -21,13 +21,21 @@ type WPrimeState struct {
 // recovery time constant scales with baseReconRate/ReconRate.
 const baseReconRate = 0.03
 
+// W' (anaerobic work capacity above threshold) is a physiological trait that
+// goes with peak power: riders with a big sprint or punch carry more of it,
+// pure climbers less, independent of endurance (which is durability, see
+// DurabilityFactor). wPrimeSeconds scales peak power to W': 14 s gives the
+// 15-28 kJ range reported for trained and pro cyclists (~21 kJ at a typical
+// 1550 W). It decides short climbs, where W' matters as much as threshold.
+const (
+	wPrimeSeconds = 14.0
+	defaultWPrime = 20000.0 // no peak power known
+)
+
 func NewWPrimeState(rider *model.Rider) *WPrimeState {
-	wMax := 20000.0 + float64(rider.Endurance-70)*200.0
-	if wMax < 15000 {
-		wMax = 15000
-	}
-	if wMax > 25000 {
-		wMax = 25000
+	wMax := defaultWPrime
+	if rider.MaxSprintWatts > 0 {
+		wMax = wPrimeSeconds * float64(rider.MaxSprintWatts)
 	}
 	// Recovery attribute determines reconstitution rate
 	// 70 → rate 0.03, higher = faster reconstitution

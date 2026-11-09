@@ -61,17 +61,20 @@ func TestWPrimeFloorAtZero(t *testing.T) {
 	}
 }
 
-func TestEnduranceAffectsWPrimeMax(t *testing.T) {
-	lowEndurance := testRider()
-	lowEndurance.Endurance = 50
-	highEndurance := testRider()
-	highEndurance.Endurance = 90
-
-	wLow := NewWPrimeState(lowEndurance)
-	wHigh := NewWPrimeState(highEndurance)
-
-	if wHigh.WPrimeMax <= wLow.WPrimeMax {
-		t.Errorf("high endurance should have more W': %.0f vs %.0f", wHigh.WPrimeMax, wLow.WPrimeMax)
+// W' goes with peak power (anaerobic capacity), not with endurance.
+func TestWPrimeFollowsPeakPower(t *testing.T) {
+	climber := testRider()
+	climber.MaxSprintWatts = 1200
+	puncheur := testRider()
+	puncheur.MaxSprintWatts = 1700
+	wc, wp := NewWPrimeState(climber).WPrimeMax, NewWPrimeState(puncheur).WPrimeMax
+	if wp <= wc || wc < 15000 || wp > 28000 {
+		t.Errorf("W' climber %.0f J, puncheur %.0f J; want puncheur > climber within 15-28 kJ", wc, wp)
+	}
+	enduring := *climber
+	enduring.Endurance = 95
+	if NewWPrimeState(&enduring).WPrimeMax != wc {
+		t.Error("endurance should not change W'")
 	}
 }
 

@@ -3,14 +3,13 @@
 # threshold from riders.csv / rider_derived.csv / rider_overrides.csv.
 # Regenerated on each fit; the 2023 hold-out in `cycling-sim validate` checks it.
 Name,FTP_scale,Source
-Adam Yates,1.0080,fitted: Tour de France 2024 (GC) +0.0%
-Carlos Rodríguez,0.9802,fitted: Tour de France 2024 (GC) +0.1%
-Enric Mas,0.9620,fitted: Tour de France 2024 (GC) intruder -0.3%
-Jai Hindley,0.9943,fitted: Tour de France 2024 (GC) intruder -0.3%
-Jonas Vingegaard,0.9972,fitted: Tour de France 2024 (GC) +0.1%
-João Almeida,1.0087,fitted: Tour de France 2024 (GC) +0.0%
-Matteo Jorgenson,0.9969,fitted: Tour de France 2024 (GC) -1.3%
-Mikel Landa,1.0183,fitted: Tour de France 2024 (GC) +0.1%
-Remco Evenepoel,0.9894,fitted: Tour de France 2024 (GC) +0.1%
-Richard Carapaz,0.9859,fitted: Tour de France 2024 (GC) intruder -0.2%
+Adam Yates,1.0115,fitted: Tour de France 2024 (GC) +0.1%
+Carlos Rodríguez,0.9770,fitted: Tour de France 2024 (GC) +0.2%
+Enric Mas,0.9613,fitted: Tour de France 2024 (GC) intruder -0.4%
+Jai Hindley,0.9962,fitted: Tour de France 2024 (GC) intruder -0.3%
+João Almeida,1.0090,fitted: Tour de France 2024 (GC) +0.0%
+Matteo Jorgenson,0.9848,fitted: Tour de France 2024 (GC) -0.7%
+Mikel Landa,1.0158,fitted: Tour de France 2024 (GC) +0.1%
+Remco Evenepoel,0.9870,fitted: Tour de France 2024 (GC) -0.1%
+Richard Carapaz,0.9841,fitted: Tour de France 2024 (GC) intruder -0.2%
 Santiago Buitrago,0.9786,fitted: Tour de France 2024 (GC) +1.5%

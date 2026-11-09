@@ -41,7 +41,7 @@ Guiding rule: express behaviour as physics or rider intent, never as hardcoded g
 - **Groups** (`peloton_follow.go`): one rule on all terrain. Pace comes from a rotating pace line of workers (riders chasing/attacking/driving; small groups share). A big group with nobody working holds a collective tempo set by its middle riders (`tempoRiders`), not its strongest, until the finale. Followers must hold it with positional draft + spendable W'; else they're dropped. Groups line out at ≥95% threshold (no deep bunch shelter). Cooperative chases of a break spend W' N/k faster (pool depth). Groups can't pass each other; riders in a group close up to its front.
 - **Contact**: riders within 10 s are one road group. Breakaway state is read from the road.
 - **Effort** (`riderEffort`): each mode draws on W' once over one horizon — attack: the step; committed chase / finale (last 20 km): to the line; team driving: rest of the climb. Domestiques pace at threshold until the 3 km lead-out.
-- **W'**: depletes above FTP; recovers with Skiba (2012) τ = 546·e^(−0.01·(CP−P)) + 316 s.
+- **W'**: anaerobic capacity from peak power (`wPrimeSeconds` 14 s × sprint watts, ~15–28 kJ): puncheurs and sprinters carry more than pure climbers, which decides short climbs. Depletes above FTP; recovers with Skiba (2012) τ = 546·e^(−0.01·(CP−P)) + 316 s.
 - **Durability**: in-race threshold fades ~2.5%/1000 kJ (Endurance-scaled, cap 15%). Sprint power fades the same way and loses up to 10% with an emptied W' (`FatiguedSprintPower`), so lead-out riders finish behind.
 - **Altitude**: elevation integrated from gradients (course low point = 0 m); air density by standard atmosphere; aerobic power by Bassett et al. 1999 (acclimatised): ~92% at 2000 m.
 - **Drafting**: `DraftFactor` is a smooth curve: 0.65 on one wheel → 0.25 deep in a bunch.
@@ -57,7 +57,6 @@ These break the guiding rule (gradient/distance/ability thresholds instead of ph
 - `breakawayProbability` (tactics.go): ~10 multipliers keyed to km windows (×1.5 at 30–60 km, ×0.05 beyond 80 km on the flat, ×0.35 below, ×0.3 inside 10 km, ×0.7 beyond 100 km), sprinter ×0.3 unless handling > 85 on cobbles, capped handling boost.
 - `BuildRivalAssessment`: "dangerous" = top 5 by an ability score that weights Handling 3× on cobbles (comment lists named riders' scores).
 - `PhaseFromKm`: phases at 60 km / 20 km drive holding intensity, driving, rivalAhead and the finale.
-- W′ comes from the Endurance rating (15–25 kJ), not physiology; puncheurs/rouleurs should have the larger anaerobic capacity.
 - Experiment branch `experiment/physics-attacks`: one-day attacks by physics (go when the rival can't hold the wheel here and the solo time to the line beats the chase pace line; front groups commit while they hold) replace the 8% roll. Mechanism works (Strade/Lombardia/Roubaix winners win more) but gap sum 2925 s vs 2706 s: classics riders lose minutes to climbers on short climbs. W′ = 14 s × peak sprint power helps there (MSR, Liège, Roubaix) but needs a Tour refit. Next step: W′ from physiology on main first (refit, judge), then rebase the attack rule onto it.
 
 ## Database

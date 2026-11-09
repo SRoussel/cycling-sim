@@ -52,6 +52,14 @@ func FormGroups(riders []*RiderState, segment *model.Segment, isTT bool, remaini
 			helpers[rs.Rider.Team]++
 		}
 	}
+	// A leader with a rival up the road is chased for by their domestiques in
+	// the group; the leader sits in while they have them (see shelteredFor).
+	teamChase := map[string]bool{}
+	for _, rs := range riders {
+		if rs.TeamRole == RoleLeader && state.rivalAhead(rs) {
+			teamChase[rs.Rider.Team] = true
+		}
+	}
 	rps := make([]riderPower, len(riders))
 	for i, rs := range riders {
 		var power float64
@@ -84,7 +92,7 @@ func FormGroups(riders []*RiderState, segment *model.Segment, isTT bool, remaini
 			}
 			state.LastActions[rs.Rider.ID] = action
 		}
-		power, action = riderEffort(rs, action, segment, remainingDistance, state, driving[rs.Rider.Team], leaderTeams[rs.Rider.Team], *params)
+		power, action = riderEffort(rs, action, segment, remainingDistance, state, driving[rs.Rider.Team], leaderTeams[rs.Rider.Team], teamChase[rs.Rider.Team], *params)
 		if state != nil && state.Overrides != nil {
 			if effortMultiplier, ok := state.Overrides.EffortMultiplier(rs.Rider.ID); ok {
 				power *= effortMultiplier
@@ -297,7 +305,7 @@ const leadOutKm = 3.0
 // riderEffort decides how hard a rider rides this step. Each mode draws on W'
 // once, over one horizon: a burst spends it over this step, racing to the
 // line spreads it over the time left, and steady riding doesn't touch it.
-func riderEffort(rs *RiderState, action Action, segment *model.Segment, remainingKm float64, state *RaceState, driveFor *RiderState, protectedTeammate bool, params TacticsParams) (float64, Action) {
+func riderEffort(rs *RiderState, action Action, segment *model.Segment, remainingKm float64, state *RaceState, driveFor *RiderState, protectedTeammate, teamChase bool, params TacticsParams) (float64, Action) {
 	r := rs.Rider
 	threshold := EffectivePower(r, rs.CurrentFTP(), segment, false)
 	burstOver := func(km float64) float64 {
@@ -315,9 +323,10 @@ func riderEffort(rs *RiderState, action Action, segment *model.Segment, remainin
 		return threshold * IntensityForPhase(phase)
 	}
 
-	// A leader with a rival up the road limits their losses: they chase to
-	// the line (and take turns, see shelteredFor).
-	if state.rivalAhead(rs) {
+	// A rival up the road is chased to the line: by the leader's domestiques
+	// when the team has them here (the leader sits in, see shelteredFor),
+	// otherwise by the rider themself.
+	if state.rivalAhead(rs) || (teamChase && rs.TeamRole == RoleDomestique) {
 		return burstOver(remainingKm), ActionChase
 	}
 	if action == ActionConserve {

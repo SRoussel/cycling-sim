@@ -2,6 +2,7 @@ package simulation
 
 import (
 	"fmt"
+	"math/rand"
 	"testing"
 
 	"cycling_sim/internal/model"
@@ -135,5 +136,54 @@ func TestFreedByPlanIsSmooth(t *testing.T) {
 	}
 	if share(5) < 0.9 || share(16) > 0.1 {
 		t.Errorf("freed: rank 5 %.2f, rank 16 %.2f", share(5), share(16))
+	}
+}
+
+// With a rival up the road, a leader's domestiques chase and the leader sits
+// in; a leader without teammates takes turns.
+func TestTeamChasesForLeader(t *testing.T) {
+	rival := stateFor(1, "R", 420, 62, RoleLeader)
+	rival.TotalTime = 0
+	leader := stateFor(2, "A", 420, 62, RoleLeader)
+	dom := stateFor(3, "A", 400, 68, RoleDomestique)
+	lone := stateFor(4, "B", 420, 62, RoleLeader)
+	state := &RaceState{Phase: PhaseMid, Ahead: map[*RiderState]float64{rival: 30}}
+	seg := &model.Segment{DistanceKm: 2, SurfaceType: model.SurfaceRoad}
+	groups := FormGroups([]*RiderState{leader, dom, lone}, seg, false, 50, rand.New(rand.NewSource(1)), state, nil)
+	if len(groups) == 0 {
+		t.Fatal("no groups")
+	}
+	g := groups[0]
+	if g.Workers[leader] {
+		t.Error("a leader with a domestique present should sit in during the chase")
+	}
+	if !g.Workers[dom] {
+		t.Error("the domestique should chase for the leader")
+	}
+	if !g.Workers[lone] {
+		t.Error("a leader without teammates should take turns")
+	}
+}
+
+// A one-day team rides for whoever is fastest over the course: the big
+// engine on the flat, the light climber uphill.
+func TestCourseLeaders(t *testing.T) {
+	flat := []model.Segment{{DistanceKm: 50, SurfaceType: model.SurfaceRoad}}
+	hill := []model.Segment{{DistanceKm: 10, GradientPct: 8, SurfaceType: model.SurfaceRoad}}
+	for _, c := range []struct {
+		name string
+		segs []model.Segment
+		want int64
+	}{{"flat", flat, 2}, {"climb", hill, 1}} {
+		climber := stateFor(1, "A", 380, 58, RoleLeader)    // 6.6 W/kg
+		engine := stateFor(2, "A", 470, 82, RoleDomestique) // 5.7 W/kg
+		AssignCourseLeaders([]*RiderState{climber, engine}, c.segs)
+		lead := climber
+		if engine.TeamRole == RoleLeader {
+			lead = engine
+		}
+		if lead.Rider.ID != c.want || climber.TeamRole == engine.TeamRole {
+			t.Errorf("%s: leader %d, want %d (roles %v/%v)", c.name, lead.Rider.ID, c.want, climber.TeamRole, engine.TeamRole)
+		}
 	}
 }

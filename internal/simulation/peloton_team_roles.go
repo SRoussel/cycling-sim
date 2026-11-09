@@ -166,3 +166,43 @@ func AssignCoLeaders(states []*RiderState, gcGaps map[int64]float64, plan map[in
 		}
 	}
 }
+
+// AssignCourseLeaders picks each team's leader for a one-day race: the
+// rider who would be fastest over this course riding at threshold (its real
+// profile, wind and surfaces), so climbers lead on hilly courses and big
+// engines on flatter ones. Sprinters keep their role; the previous leader
+// rides for the new one. (AssignTeamRoles goes by an average of ability
+// ratings, which made Kwiatkowski INEOS's Milan-San Remo leader over Ganna.)
+func AssignCourseLeaders(states []*RiderState, segments []model.Segment) {
+	best := map[string]*RiderState{}
+	bestTime := map[string]float64{}
+	for _, rs := range states {
+		if rs.DNF || rs.TeamRole == RoleSprinter {
+			continue
+		}
+		t := courseTime(rs, segments)
+		if b := best[rs.Rider.Team]; b == nil || t < bestTime[rs.Rider.Team] {
+			best[rs.Rider.Team], bestTime[rs.Rider.Team] = rs, t
+		}
+	}
+	for _, rs := range states {
+		if b := best[rs.Rider.Team]; b != nil && rs.TeamRole == RoleLeader && rs != b {
+			rs.TeamRole = RoleDomestique
+		}
+	}
+	for _, b := range best {
+		b.TeamRole = RoleLeader
+	}
+}
+
+// courseTime is a rider's time over the segments alone at threshold.
+func courseTime(rs *RiderState, segments []model.Segment) float64 {
+	r := rs.Rider
+	t := 0.0
+	for i := range segments {
+		seg := &segments[i]
+		v := segmentSpeed(EffectivePower(r, rs.CurrentFTP(), seg, false), r.TotalMassKg(), r.CdA, seg, r.Handling)
+		t += SegmentTime(v, seg.DistanceKm)
+	}
+	return t
+}

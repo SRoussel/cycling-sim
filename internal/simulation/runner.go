@@ -270,6 +270,9 @@ func SimulateRoadRaceWithProgress(config RaceConfig, onProgress func(ProgressSna
 		segStartDist := coveredDist
 		segStartTimes := segmentStartTimes(states)
 		startElapsed := leaderElapsed(states)
+		if raceState != nil {
+			raceState.Course, raceState.SegIndex = segments, i
+		}
 		SimulateSegment(states, seg, false, totalDist-coveredDist, rng, raceState, &tacticsParams, config.IncidentsEnabled)
 		coveredDist += seg.DistanceKm
 		endElapsed := leaderElapsed(states)

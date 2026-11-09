@@ -59,8 +59,18 @@ type RaceState struct {
 	SegmentKmLeft   float64        // distance to the end of the current course segment
 	// Ahead lists riders in road groups ahead of the group being decided, with
 	// their lead over it in seconds (set per road group each step).
-	Ahead                 map[*RiderState]float64
-	Climb                 float64 // ClimbFactor of the current step
+	Ahead map[*RiderState]float64
+	// Road is the road group being decided; Chasers the next road group
+	// behind it and ChaseGap its deficit in seconds (nil/0 for the last).
+	Road     []*RiderState
+	Chasers  []*RiderState
+	ChaseGap float64
+	// Course is the prepared course and SegIndex the current segment, so
+	// riders can look ahead to the line (see escape.go).
+	Course                []model.Segment
+	SegIndex              int
+	lineTime              map[lineKey]float64 // per-step cache of timeToLine
+	Climb                 float64             // ClimbFactor of the current step
 	BreakawayHasDangerous bool
 	SprintChaseActive     bool
 	BreakawayActive       bool
@@ -204,6 +214,10 @@ func DecideAction(rs *RiderState, state *RaceState, hasLeader bool, rng *rand.Ra
 	if wFrac < localParams.ConserveWPrimeThresh {
 		return ActionConserve
 	}
+	// One-day race leaders go when the race can be won from here (escape.go).
+	if state != nil && state.Segment != nil && state.attackPays(rs, state.Segment) {
+		return ActionAttack
+	}
 
 	// ------------------------------------------------------------------
 	// Stage-race GC leader on flat/rolling terrain: conserve energy.
@@ -338,16 +352,6 @@ func DecideAction(rs *RiderState, state *RaceState, hasLeader bool, rng *rand.Ra
 					return ActionAttack
 				}
 			}
-		}
-	}
-
-	// ------------------------------------------------------------------
-	// One-day race mountain attacks (simpler: no GC mindset needed).
-	// ------------------------------------------------------------------
-	if state != nil && state.Segment != nil &&
-		climbOf(state.Segment) > terrainClimb && rs.TeamRole == RoleLeader && !state.IsStageRace {
-		if rng.Float64() < perStep(0.08, state) && wFrac > 0.35 {
-			return ActionAttack
 		}
 	}
 

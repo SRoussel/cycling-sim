@@ -179,8 +179,16 @@ func simulateStep(riders []*RiderState, segment *model.Segment, isTT bool, dista
 	var groups []*Group
 	groupIDOffset := 0
 	var ahead []*RiderState
-	for _, cluster := range clusters {
+	if state != nil {
+		state.lineTime = nil // fatigue and position changed since the last step
+	}
+	for ci, cluster := range clusters {
 		if state != nil {
+			state.Road, state.Chasers, state.ChaseGap = cluster, nil, 0
+			if ci+1 < len(clusters) && len(cluster) > 0 && len(clusters[ci+1]) > 0 {
+				state.Chasers = clusters[ci+1]
+				state.ChaseGap = clusters[ci+1][0].TotalTime - cluster[0].TotalTime
+			}
 			state.Ahead = make(map[*RiderState]float64, len(ahead))
 			if len(cluster) > 0 {
 				for _, a := range ahead {

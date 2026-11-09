@@ -1,0 +1,167 @@
+package simulation
+
+import (
+	"sort"
+
+	"cycling_sim/internal/model"
+)
+
+// Escapes in one-day races. A team leader races to win, so after the early
+// phase they go when the race can be won from here, judged by physics on the
+// remaining course rather than by gradient or distance rules:
+//
+//   - attack (attackPays): from a group with rival leaders, when the
+//     strongest of them couldn't hold the wheel at the attacker's burst speed
+//     here (on flat roads the draft makes that impossible; on climbs and
+//     rough roads it isn't), and riding to the line alone at threshold would
+//     beat that group chasing in a rotating pace line;
+//   - commit (escapeHolds): in a road group with no rival leader ahead and a
+//     threatening one behind (at least as strong as the group's weakest
+//     leader), alone or as a front selection of rivals, ride to the line
+//     (threshold plus W') and take turns, while the group's projected time as
+//     a pace line still beats the chase behind plus the gap.
+//
+// The projection is what makes Milan-San Remo different from Strade Bianche:
+// a fast run-in favours the chasing pace line, long climbs and gravel favour
+// the rider ahead.
+
+// escapeEligible: the rules apply to one-day race leaders once the race is on.
+func (s *RaceState) escapeEligible(rs *RiderState) bool {
+	return s != nil && !s.IsStageRace && s.Phase != PhaseEarly && rs.TeamRole == RoleLeader &&
+		len(s.Course) > 0 && !rs.DNF
+}
+
+func rivalLeaderOf(rs, other *RiderState) bool {
+	return other != rs && !other.DNF && other.TeamRole == RoleLeader && other.Rider.Team != rs.Rider.Team
+}
+
+// chaseOf returns the riders who would chase rs from a group: other teams'
+// non-sprinters, strongest first, as many as share a pace line.
+func chaseOf(rs *RiderState, group []*RiderState) []*RiderState {
+	var out []*RiderState
+	for _, c := range group {
+		if c != rs && !c.DNF && c.Rider.Team != rs.Rider.Team && c.TeamRole != RoleSprinter {
+			out = append(out, c)
+		}
+	}
+	sort.SliceStable(out, func(i, j int) bool { return out[i].CurrentFTP() > out[j].CurrentFTP() })
+	if len(out) > maxRotation {
+		out = out[:maxRotation]
+	}
+	return out
+}
+
+// attackPays reports whether a leader should attack from their road group.
+func (s *RaceState) attackPays(rs *RiderState, seg *model.Segment) bool {
+	if !s.escapeEligible(rs) || s.rivalAhead(rs) {
+		return false
+	}
+	var rival *RiderState // the strongest rival leader who would try to follow
+	for _, o := range s.Road {
+		if rivalLeaderOf(rs, o) && (rival == nil || o.CurrentFTP()/o.Rider.TotalMassKg() > rival.CurrentFTP()/rival.Rider.TotalMassKg()) {
+			rival = o
+		}
+	}
+	if rival == nil {
+		return false
+	}
+	// Can the rival hold the wheel here?
+	r := rs.Rider
+	threshold := EffectivePower(r, rs.CurrentFTP(), seg, false)
+	v0 := segmentSpeed(threshold, r.TotalMassKg(), r.CdA, seg, r.Handling)
+	burst := threshold + rs.WPrime.AvailablePowerAboveFTP(SegmentTime(v0, seg.DistanceKm))
+	v := segmentSpeed(burst, r.TotalMassKg(), r.CdA, seg, r.Handling)
+	o := rival.Rider
+	need := segmentPower(v, o.TotalMassKg(), o.CdA*groupDraft(2, false, seg, v), seg, o.Handling)
+	avail := EffectivePower(o, rival.CurrentFTP(), seg, false) + rival.WPrime.AvailablePowerAboveFTP(SegmentTime(v, seg.DistanceKm))
+	if need <= avail {
+		return false
+	}
+	chase := chaseOf(rs, s.Road)
+	if len(chase) == 0 {
+		return false
+	}
+	return s.timeToLine([]*RiderState{rs}) < s.timeToLine(chase)
+}
+
+// escapeHolds reports whether a leader ahead of their rivals commits to the
+// line with their road group.
+func (s *RaceState) escapeHolds(rs *RiderState) bool {
+	if !s.escapeEligible(rs) || len(s.Chasers) == 0 {
+		return false
+	}
+	for other := range s.Ahead {
+		if rivalLeaderOf(rs, other) {
+			return false
+		}
+	}
+	// Only a threat is worth racing for: a rival leader behind who is at
+	// least as strong as the weakest leader in this group (a dropped weaker
+	// leader is no reason for a bunch to race flat out).
+	weakest := wkg(rs)
+	for _, o := range s.Road {
+		if o.TeamRole == RoleLeader && !o.DNF && wkg(o) < weakest {
+			weakest = wkg(o)
+		}
+	}
+	threat := false
+	for _, c := range s.Chasers {
+		threat = threat || (rivalLeaderOf(rs, c) && wkg(c) >= weakest)
+	}
+	if !threat {
+		return false
+	}
+	chase := chaseOf(rs, s.Chasers)
+	if len(chase) == 0 {
+		return false
+	}
+	// Ahead, rs shares the work with the rest of their road group.
+	own := []*RiderState{rs}
+	for _, o := range s.Road {
+		if o != rs && !o.DNF && len(own) < maxRotation {
+			own = append(own, o)
+		}
+	}
+	return s.timeToLine(own) < s.timeToLine(chase)+s.ChaseGap
+}
+
+type lineKey struct {
+	first *RiderState
+	k     int
+}
+
+// timeToLine is the time a pace line of riders needs from here to the finish
+// at threshold on each segment's terrain: their mean power, mass and CdA with
+// the rotation's shelter, as paceLineSpeed models a group's pace.
+func (s *RaceState) timeToLine(line []*RiderState) float64 {
+	key := lineKey{line[0], len(line)}
+	if t, ok := s.lineTime[key]; ok {
+		return t
+	}
+	n := float64(len(line))
+	t := 0.0
+	for i := s.SegIndex; i < len(s.Course); i++ {
+		seg := &s.Course[i]
+		km := seg.DistanceKm
+		if i == s.SegIndex && s.SegmentKmLeft > 0 && s.SegmentKmLeft < km {
+			km = s.SegmentKmLeft
+		}
+		var p, m, cda, handling float64
+		for _, rs := range line {
+			p += EffectivePower(rs.Rider, rs.CurrentFTP(), seg, false)
+			m += rs.Rider.TotalMassKg()
+			cda += rs.Rider.CdA
+			handling += float64(rs.Rider.Handling)
+		}
+		v := segmentSpeed(p/n, m/n, cda/n*rotationFactor(len(line), seg.SurfaceType), seg, int(handling/n))
+		t += SegmentTime(v, km)
+	}
+	if s.lineTime == nil {
+		s.lineTime = map[lineKey]float64{}
+	}
+	s.lineTime[key] = t
+	return t
+}
+
+// wkg is a rider's current threshold per kilogram.
+func wkg(rs *RiderState) float64 { return rs.CurrentFTP() / rs.Rider.TotalMassKg() }

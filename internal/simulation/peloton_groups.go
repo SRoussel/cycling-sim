@@ -329,6 +329,10 @@ func riderEffort(rs *RiderState, action Action, segment *model.Segment, remainin
 	if state.rivalAhead(rs) || (teamChase && rs.TeamRole == RoleDomestique) {
 		return burstOver(remainingKm), ActionChase
 	}
+	// A leader clear of their rivals who can hold it commits to the line.
+	if state.escapeHolds(rs) {
+		return burstOver(remainingKm), ActionChase
+	}
 	if action == ActionConserve {
 		return steady() * params.ConservePowerPenalty, action
 	}

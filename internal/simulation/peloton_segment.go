@@ -174,6 +174,9 @@ func simulateStep(riders []*RiderState, segment *model.Segment, isTT bool, dista
 	// Partition riders into road clusters: dropped riders can't teleport back.
 	clusters := partitionByTimeGap(activeRiders)
 	updateBreakawayState(state, clusters)
+	if state != nil {
+		state.Clusters = clusters
+	}
 
 	// Form groups within each cluster independently
 	var groups []*Group

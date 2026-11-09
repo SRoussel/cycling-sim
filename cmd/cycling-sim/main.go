@@ -458,6 +458,13 @@ func cmdValidateSets(db *database.DB, n int) {
 		fmt.Printf("  %-30s %5.0fs  (%4.0f-%4.0f)  winner %3.0f%%\n", r.Name, mean, lo, hi, r.RealWinnerPc)
 	}
 	fmt.Printf("  %-30s %5.0fs\n", "Sum of mean gap errors", total)
+	for set := 0; set < n; set++ {
+		simulation.ValidationSeedBase = int64(set) * 1000
+		for _, r := range simulation.RunShapeValidation(db) {
+			fmt.Printf("  set %d %-28s %s\n", set+1, r.Name, r.Summary())
+		}
+	}
+	simulation.ValidationSeedBase = 0
 }
 
 func cmdValidate(db *database.DB, verbose bool) {
@@ -512,6 +519,17 @@ func cmdValidate(db *database.DB, verbose bool) {
 	p2 := print("Real races (2024; fit-ratings fits to these)", real)
 	p3 := print("Hold-out (2023, never fitted)", holdout)
 	p4 := print("Race speeds", speeds)
+	fmt.Println("== Race shape (how stages were won) ==")
+	for _, r := range simulation.RunShapeValidation(db) {
+		fmt.Printf("%-34s %s\n", r.Name, r.Summary())
+		if verbose {
+			for i, per := range r.PerStage {
+				fmt.Printf("    stage %2d real %-9s sim sprint %3.0f%% break %3.0f%% selection %3.0f%% tt %3.0f%%\n", i+1, r.Stages[i],
+					per[simulation.OutcomeSprint]*100, per[simulation.OutcomeBreakaway]*100, per[simulation.OutcomeSelection]*100, per[simulation.OutcomeTT]*100)
+			}
+		}
+	}
+	fmt.Println()
 	fmt.Printf("Passed %d/%d synthetic, %d/%d real, %d/%d hold-out, %d/%d speeds\n",
 		p1, len(synth), p2, len(real), p3, len(holdout), p4, len(speeds))
 }

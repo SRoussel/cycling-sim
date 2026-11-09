@@ -82,6 +82,8 @@ type RaceState struct {
 	// GCGaps maps rider ID → cumulative GC deficit in seconds vs. leader (0 = race leader).
 	// Populated at the start of each stage race stage. Nil for one-day races.
 	GCGaps map[int64]float64
+	// Clusters are the road groups of the last step, front first.
+	Clusters [][]*RiderState
 	// Favourites are the riders the bunch marks (see markFavourites).
 	Favourites map[int64]bool
 }

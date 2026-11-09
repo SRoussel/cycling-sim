@@ -23,6 +23,8 @@ type RaceConfig struct {
 	// whether a team frees a strong domestique to ride for GC (see
 	// AssignCoLeaders). Nil: the hard top-10 rule.
 	TeamPlan map[int64]float64
+	// Shape, when set, records how the race unfolds (see RaceShape).
+	Shape *RaceShape
 }
 
 // SimulateRoadRace runs a complete road race simulation and returns results.
@@ -122,4 +124,6 @@ type StageConfig struct {
 	Course        *model.Course
 	StageNumber   int
 	RestDayBefore bool
+	// Shape, when set, records how the stage unfolds (see RaceShape).
+	Shape *RaceShape
 }

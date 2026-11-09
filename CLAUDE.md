@@ -51,6 +51,10 @@ Guiding rule: express behaviour as physics or rider intent, never as hardcoded g
 - **Team strategy**: a team drives when its leader's threshold pace would break the group's fastest finisher even in the draft; its domestiques then set the pace the leader can hold on the wheel at the phase intensity (`leaderTempoSpeed`: a tempo mid-race, threshold in the finale), not an all-out effort. Leaders race in the finale; until then they sit in, even during chases, while a teammate is in their group: a leader with a rival up the road is chased for by their domestiques and only takes turns alone.
 - **Stage races** (`AssignCoLeaders`, `gcRivalAhead`): each team's GC leader is its best climber by W/kg (not the ability-rating average `AssignTeamRoles` uses); domestiques who are among the 10 strongest climbers in the field, or in the GC top 10, become co-leaders. A GC leader with a rival up the road who would pass them on GC has their domestiques chase it to the line (alone, they chase themselves).
 
+## Race control (in progress, Nov 2026)
+Agreed plan with the user: replace the bunch's hand-written chase/conserve rules with a planned chase — teams with an interest (a break holds a rider who'd beat their leader/sprinter) ride the slowest pace that still catches the break with a margin before the finish or decisive climb, paid for by their domestiques (leaders sit in); a team out of helpers stops controlling; expose it in the GUI as a team order the player can override; start with Grand Tour flat stages. Then rivals (not the whole bunch) answer favourites' attacks; then phases.
+- Race shape (`race_shape.go`, `validation_shape.go`): stage outcome = tt; breakaway if the winner was ahead of the main group (race leader's group / most favourites, not the biggest) 30 km out; sprint if 15+ riders within 5 s at the line; else selection. 2023 Tour real: 6 sprints, 9 breakaways, 5 selections, 1 TT. Baseline: 45% of stage outcomes match; the sim produces 0.8 breakaway wins per Tour (the day's break is always caught) and 12 selections.
+
 ## Special cases still to replace (audit, Nov 2026)
 These break the guiding rule (gradient/distance/ability thresholds instead of physics or intent). Replace one at a time and judge with `validate --sets 3`:
 - `DecideAction` (tactics_model.go), kept after testing (Nov 2026):
@@ -74,6 +78,7 @@ SQLite with WAL mode, foreign keys enabled. Schema auto-migrates on open. Use `C
 ./cycling-sim run-stage-race <sr-id> [--seed N]        # simulate stage race with GC
 ./cycling-sim validate [-v]           # synthetic, 2024 real races, 2023 hold-out, race speeds (-v: per rider)
 ./cycling-sim validate --sets N       # reference races over N independent seed sets (judge model changes with this)
+                                      # both also report race shape: how each 2023 Tour stage was won (sprint / breakaway / selection / tt) vs reality
 ./cycling-sim fit-ratings [--classics] [file]  # fit thresholds to 2024 refs by simulation
 ./cycling-sim apply-ratings           # re-apply all rating layers to the DB in place (keeps results)
 ./cycling-sim import-stages <dir>     # real route profiles from local PCM stage files (keeps results)

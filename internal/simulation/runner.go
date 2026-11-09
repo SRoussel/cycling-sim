@@ -260,6 +260,7 @@ func SimulateRoadRaceWithProgress(config RaceConfig, onProgress func(ProgressSna
 		}
 		SimulateSegment(states, seg, false, totalDist-coveredDist, rng, raceState, &tacticsParams, config.IncidentsEnabled)
 		coveredDist += seg.DistanceKm
+		config.Shape.observe(raceState, totalDist-coveredDist)
 		endElapsed := leaderElapsed(states)
 		if onProgress != nil {
 			events := []string{}
@@ -471,6 +472,7 @@ func SimulateStageRaceWithProgress(stageRace *model.StageRace, stages []StageCon
 			ActionOverrides: overrides,
 			GCGaps:          gcGaps,
 			TeamPlan:        plan,
+			Shape:           stage.Shape,
 		}
 
 		var results []model.RaceResult

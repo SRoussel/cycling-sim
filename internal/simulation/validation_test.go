@@ -1062,3 +1062,28 @@ func TestValidation_MilanSanRemo(t *testing.T) {
 		t.Logf("%s (actual #%d): avg sim pos %.1f", f.name, f.actualPos, avgPos)
 	}
 }
+
+// A winner who was ahead of the main group at the check won from the break;
+// otherwise a big group at the line is a sprint, a small one a selection.
+func TestRaceShapeClassify(t *testing.T) {
+	res := func(gaps ...float64) []model.RaceResult {
+		var out []model.RaceResult
+		for i, g := range gaps {
+			out = append(out, model.RaceResult{RiderID: int64(i + 1), Position: i + 1, TimeGapSeconds: g})
+		}
+		return out
+	}
+	bunch := make([]float64, 20)
+	if got := (&RaceShape{}).Classify(res(bunch...), false); got != OutcomeSprint {
+		t.Errorf("bunch finish: %s", got)
+	}
+	if got := (&RaceShape{}).Classify(res(0, 30, 30), false); got != OutcomeSelection {
+		t.Errorf("solo from the field: %s", got)
+	}
+	if got := (&RaceShape{breakAt: map[int64]bool{1: true}}).Classify(res(0, 30), false); got != OutcomeBreakaway {
+		t.Errorf("winner from the break: %s", got)
+	}
+	if got := (&RaceShape{}).Classify(res(0), true); got != OutcomeTT {
+		t.Errorf("time trial: %s", got)
+	}
+}

@@ -16,9 +16,12 @@ type ValidationSummary struct {
 	Correlation          float64
 	Top10Accuracy        float64
 	MeanTimeGapErrorSecs float64 // MAE of time gaps for matched riders (0 if N/A)
-	MatchedRiders        int     // number of riders matched between reference and internal DB
-	IsRealRace           bool    // true when backed by real FirstCycling reference data
-	Details              string
+	// MedianGapErrorSecs (stage races): the MAE of each rider's median gap
+	// over the runs, which a few runs lost by minutes don't distort.
+	MedianGapErrorSecs float64
+	MatchedRiders      int  // number of riders matched between reference and internal DB
+	IsRealRace         bool // true when backed by real FirstCycling reference data
+	Details            string
 	// Riders compares each matched reference rider with the simulation, and
 	// Intruders lists riders who often finish top 10 in the simulation but
 	// were not in the real top 10 (real-race cases only).
@@ -46,6 +49,7 @@ var ValidationSeedBase int64
 type SeedSetResult struct {
 	Name         string
 	MAE          []float64 // gap error per seed set
+	MedianMAE    []float64 // median-gap error per seed set (stage races)
 	RealWinnerPc float64   // mean share of runs the real winner wins
 }
 
@@ -74,6 +78,7 @@ func RunSeedSets(db *database.DB, sets int) []SeedSetResult {
 				out = append(out, SeedSetResult{Name: r.Name})
 			}
 			out[i].MAE = append(out[i].MAE, r.MeanTimeGapErrorSecs)
+			out[i].MedianMAE = append(out[i].MedianMAE, r.MedianGapErrorSecs)
 			for _, c := range r.Riders {
 				if c.RealPos == 1 {
 					out[i].RealWinnerPc += c.WinPct / float64(sets)

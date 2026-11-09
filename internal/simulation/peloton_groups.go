@@ -60,10 +60,31 @@ func FormGroups(riders []*RiderState, segment *model.Segment, isTT bool, remaini
 			teamChase[rs.Rider.Team] = true
 		}
 	}
+	// Stage races: a team keeps its domestiques for today only if it needs
+	// them: a sprinter who can contest the finish, or a leader who is a
+	// favourite or GC contender. Other teams' riders are free to go in the
+	// break (sprint teams on a mountain stage, a team out of contention).
+	needsHelp := map[string]bool{}
+	if state != nil && state.IsStageRace {
+		for _, rs := range riders {
+			switch {
+			case rs.TeamRole == RoleSprinter && len(state.Course) > 0 && state.sprinterCanFollow(rs, riders):
+				needsHelp[rs.Rider.Team] = true
+			case rs.TeamRole == RoleLeader && (state.isDangerous(rs) || state.gcContender(rs)):
+				needsHelp[rs.Rider.Team] = true
+			}
+		}
+	}
+	// Stage races: interested teams' domestiques chase the groups ahead to a
+	// plan (chase.go) instead of everyone chasing by rule.
+	plan := state.planChase(riders)
 	rps := make([]riderPower, len(riders))
 	for i, rs := range riders {
 		var power float64
 		hasLeader := leaderTeams[rs.Rider.Team]
+		if state != nil && state.IsStageRace {
+			hasLeader = needsHelp[rs.Rider.Team]
+		}
 		action := ActionHold
 		if state != nil && state.Overrides != nil {
 			if a, ok := state.Overrides.ConsumeOneShot(rs.Rider.ID); ok {
@@ -82,6 +103,10 @@ func FormGroups(riders []*RiderState, segment *model.Segment, isTT bool, remaini
 		if action == ActionHold {
 			action = DecideAction(rs, state, hasLeader, rng, *params)
 		}
+		chaseAt := 0.0
+		if plan.chasing(rs, helpers) && action != ActionAttack {
+			action, chaseAt = ActionChase, plan.intensity
+		}
 		if state != nil {
 			if state.LastActions == nil {
 				state.LastActions = make(map[int64]Action)
@@ -92,7 +117,7 @@ func FormGroups(riders []*RiderState, segment *model.Segment, isTT bool, remaini
 			}
 			state.LastActions[rs.Rider.ID] = action
 		}
-		power, action = riderEffort(rs, action, segment, remainingDistance, state, driving[rs.Rider.Team], leaderTeams[rs.Rider.Team], teamChase[rs.Rider.Team], *params)
+		power, action = riderEffort(rs, action, segment, remainingDistance, state, driving[rs.Rider.Team], leaderTeams[rs.Rider.Team], teamChase[rs.Rider.Team], chaseAt, *params)
 		if state != nil && state.Overrides != nil {
 			if effortMultiplier, ok := state.Overrides.EffortMultiplier(rs.Rider.ID); ok {
 				power *= effortMultiplier
@@ -142,7 +167,7 @@ func FormGroups(riders []*RiderState, segment *model.Segment, isTT bool, remaini
 	// can hold the wheel stays with it (followSplit decides physically).
 	finale := state != nil && state.Phase == PhaseFinal
 	threatening := func(rp riderPower) bool {
-		return finale || state.isDangerous(rp.state)
+		return finale || state.isDangerous(rp.state) || state.gcContender(rp.state)
 	}
 	var attackers, others []riderPower
 	for _, rp := range rps {
@@ -305,7 +330,7 @@ const leadOutKm = 3.0
 // riderEffort decides how hard a rider rides this step. Each mode draws on W'
 // once, over one horizon: a burst spends it over this step, racing to the
 // line spreads it over the time left, and steady riding doesn't touch it.
-func riderEffort(rs *RiderState, action Action, segment *model.Segment, remainingKm float64, state *RaceState, driveFor *RiderState, protectedTeammate, teamChase bool, params TacticsParams) (float64, Action) {
+func riderEffort(rs *RiderState, action Action, segment *model.Segment, remainingKm float64, state *RaceState, driveFor *RiderState, protectedTeammate, teamChase bool, chaseAt float64, params TacticsParams) (float64, Action) {
 	r := rs.Rider
 	threshold := EffectivePower(r, rs.CurrentFTP(), segment, false)
 	burstOver := func(km float64) float64 {
@@ -320,6 +345,11 @@ func riderEffort(rs *RiderState, action Action, segment *model.Segment, remainin
 		if phase == PhaseFinal {
 			return threshold
 		}
+		// Stage races: with a break up the road and nobody chasing it to a
+		// plan, the bunch rides easy (chasers return earlier, see chaseAt).
+		if state != nil && state.IsStageRace && state.HasBreakaway && !state.BreakawayRiders[r.ID] {
+			return threshold * easyIntensity
+		}
 		return threshold * IntensityForPhase(phase)
 	}
 
@@ -332,6 +362,20 @@ func riderEffort(rs *RiderState, action Action, segment *model.Segment, remainin
 	// A leader clear of their rivals who can hold it commits to the line.
 	if state.escapeHolds(rs) {
 		return burstOver(remainingKm), ActionChase
+	}
+	// A planned chase rides at the plan's intensity (all in: to the line).
+	if chaseAt > 0 {
+		if chaseAt > chaseAllIn {
+			return burstOver(remainingKm), ActionChase
+		}
+		return math.Min(threshold*chaseAt, burstOver(remainingKm)), ActionChase
+	}
+	// Stage races: a break with a group behind rides together to stay away,
+	// at the pace its riders can sustain to the finish.
+	if state != nil && state.IsStageRace && state.BreakawayRiders[r.ID] && len(state.Chasers) > 0 &&
+		action != ActionAttack && len(state.Road) > 0 && len(state.Course) > 0 {
+		hours := state.timeToLine(topLine(state.Road)) / 3600
+		return threshold * sustainableFraction(hours), ActionChase
 	}
 	if action == ActionConserve {
 		return steady() * params.ConservePowerPenalty, action

@@ -69,8 +69,10 @@ type RaceState struct {
 	// riders can look ahead to the line (see escape.go).
 	Course                []model.Segment
 	SegIndex              int
-	lineTime              map[lineKey]float64 // per-step cache of timeToLine
-	Climb                 float64             // ClimbFactor of the current step
+	lineTime              map[lineKey]float64  // per-step cache of timeToLine
+	reach                 float64              // per-step cache of breakReach
+	canFollow             map[*RiderState]bool // per-step cache of sprinterCanFollow
+	Climb                 float64              // ClimbFactor of the current step
 	BreakawayHasDangerous bool
 	SprintChaseActive     bool
 	BreakawayActive       bool
@@ -231,7 +233,8 @@ func DecideAction(rs *RiderState, state *RaceState, hasLeader bool, rng *rand.Ra
 		// and leaders on flat/rolling terrain (mountain leaders already evaluated above).
 		isLeaderOnMountain := rs.TeamRole == RoleLeader && state.Segment != nil && climbOf(state.Segment) > terrainClimb
 		inBreak := state.BreakawayRiders[rs.Rider.ID]
-		if !isLeaderOnMountain && !inBreak {
+		// Stage races chase to a plan instead (chase.go, applied in FormGroups).
+		if !isLeaderOnMountain && !inBreak && !state.IsStageRace {
 			// One-day classics on flat/rolling non-cobble terrain: the peloton
 			// always controls the pace when a breakaway forms (sprint teams drive
 			// the chase). This prevents unrealistic solo gaps on opening flats
@@ -262,14 +265,14 @@ func DecideAction(rs *RiderState, state *RaceState, hasLeader bool, rng *rand.Ra
 		// objective: a team with a sprinter drives the final for the sprint;
 		// a leader saves themselves on flat and rolling roads until the final
 		// and has a dangerous or sizeable break chased.
-		if ctx := state.TeamContexts[rs.Rider.Team]; ctx != nil && ctx.SprinterID != 0 && state.Phase == PhaseFinal {
+		if ctx := state.TeamContexts[rs.Rider.Team]; ctx != nil && ctx.SprinterID != 0 && state.Phase == PhaseFinal && !state.IsStageRace {
 			return ActionChase
 		}
 		if rs.TeamRole == RoleLeader {
 			if state.Segment != nil && state.Segment.SurfaceType != model.SurfaceCobbles && climbOf(state.Segment) < terrainRolling && state.Phase != PhaseFinal {
 				return ActionConserve
 			}
-			if state.HasBreakaway && (state.BreakawayGap > 25 || state.BreakawayHasDangerous) && state.Phase != PhaseEarly {
+			if !state.IsStageRace && state.HasBreakaway && (state.BreakawayGap > 25 || state.BreakawayHasDangerous) && state.Phase != PhaseEarly {
 				return ActionChase
 			}
 		}
@@ -278,7 +281,10 @@ func DecideAction(rs *RiderState, state *RaceState, hasLeader bool, rng *rand.Ra
 	// ------------------------------------------------------------------
 	// Generic breakaway attempt (all riders, via tactical awareness roll).
 	// ------------------------------------------------------------------
-	if state != nil && state.Segment != nil {
+	// Favourites and GC contenders don't take the opportunistic roll: their
+	// attacks are deliberate (attackPays above), and a marked rider's move
+	// makes the whole bunch respond.
+	if state != nil && state.Segment != nil && !state.isDangerous(rs) && !state.gcContender(rs) {
 		if BreakawayAttemptWithParams(rs, state.Segment, state.KmRemaining, rng, hasLeader, localParams) {
 			return ActionAttack
 		}

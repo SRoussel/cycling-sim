@@ -511,6 +511,7 @@ func RunRealStageRaceValidationFor(db *database.DB, allRiders []model.Rider, ent
 		top10 := map[int64]int{}
 		gapSum := map[int64]float64{}
 		gapN := map[int64]int{}
+		gapAll := map[int64][]float64{} // every run's gap, for medians
 		posSum := map[int64]float64{}
 		allRuns := parallelRuns(runs, func(run int) [][]model.GCStanding {
 			_, standings := SimulateStageRace(sr, stages, riders, ValidationSeedBase+int64(run+1))
@@ -530,6 +531,7 @@ func RunRealStageRaceValidationFor(db *database.DB, allRiders []model.Rider, ent
 					top10[g.RiderID]++
 				}
 				gapSum[g.RiderID] += g.TotalTimeSeconds - lead
+				gapAll[g.RiderID] = append(gapAll[g.RiderID], g.TotalTimeSeconds-lead)
 				gapN[g.RiderID]++
 				posSum[g.RiderID] += float64(g.GCPosition)
 			}
@@ -542,7 +544,7 @@ func RunRealStageRaceValidationFor(db *database.DB, allRiders []model.Rider, ent
 				refPos = append(refPos, i+1)
 			}
 		}
-		overlap, mae, n := 0.0, 0.0, 0
+		overlap, mae, medMAE, n := 0.0, 0.0, 0.0, 0
 		avgPos := map[int64]float64{}
 		for i, id := range matched {
 			overlap += float64(top10[id])
@@ -557,12 +559,20 @@ func RunRealStageRaceValidationFor(db *database.DB, allRiders []model.Rider, ent
 					avg = gapSum[id] / float64(gapN[id])
 				}
 				mae += math.Abs(avg - ref)
+				med := avg
+				if g := gapAll[id]; len(g) > 0 {
+					sorted := append([]float64(nil), g...)
+					sort.Float64s(sorted)
+					med = sorted[len(sorted)/2]
+				}
+				medMAE += math.Abs(med - ref)
 				n++
 			}
 		}
 		overlap = overlap / float64(len(matched)*runs) * 100
 		if n > 0 {
 			mae /= float64(n)
+			medMAE /= float64(n)
 		}
 		corr := validationSpearman(matched, avgPos)
 		winPct := float64(wins[entry.Top10RiderIDs[0]]) / float64(runs) * 100
@@ -591,9 +601,9 @@ func RunRealStageRaceValidationFor(db *database.DB, allRiders []model.Rider, ent
 		passed := overlap >= realPassTop10Target && mae <= realStageRaceGapMAE
 		out = append(out, ValidationSummary{
 			Name: entry.DisplayName, IsRealRace: true, Passed: passed,
-			Correlation: corr, Top10Accuracy: overlap, MeanTimeGapErrorSecs: mae, MatchedRiders: len(matched),
-			Details: fmt.Sprintf("Matched %d | Corr %.2f | GC top-10 overlap %.0f%% (≥%.0f%%) | GC gap MAE %.0fs over %d (≤%.0fs) | Real winner wins %.0f%%",
-				len(matched), corr, overlap, realPassTop10Target, mae, n, realStageRaceGapMAE, winPct),
+			Correlation: corr, Top10Accuracy: overlap, MeanTimeGapErrorSecs: mae, MedianGapErrorSecs: medMAE, MatchedRiders: len(matched),
+			Details: fmt.Sprintf("Matched %d | Corr %.2f | GC top-10 overlap %.0f%% (≥%.0f%%) | GC gap MAE %.0fs over %d (≤%.0fs), median-gap MAE %.0fs | Real winner wins %.0f%%",
+				len(matched), corr, overlap, realPassTop10Target, mae, n, realStageRaceGapMAE, medMAE, winPct),
 			Riders: checks, Intruders: intruders,
 		})
 	}

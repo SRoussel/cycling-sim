@@ -455,7 +455,15 @@ func cmdValidateSets(db *database.DB, n int) {
 			lo, hi = math.Min(lo, v), math.Max(hi, v)
 		}
 		total += mean
-		fmt.Printf("  %-30s %5.0fs  (%4.0f-%4.0f)  winner %3.0f%%\n", r.Name, mean, lo, hi, r.RealWinnerPc)
+		med := ""
+		if len(r.MedianMAE) > 0 && r.MedianMAE[0] > 0 {
+			m := 0.0
+			for _, v := range r.MedianMAE {
+				m += v / float64(len(r.MedianMAE))
+			}
+			med = fmt.Sprintf("  median-gap %4.0fs", m)
+		}
+		fmt.Printf("  %-30s %5.0fs  (%4.0f-%4.0f)  winner %3.0f%%%s\n", r.Name, mean, lo, hi, r.RealWinnerPc, med)
 	}
 	fmt.Printf("  %-30s %5.0fs\n", "Sum of mean gap errors", total)
 	for set := 0; set < n; set++ {

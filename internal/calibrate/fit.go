@@ -189,19 +189,6 @@ func applyScales(base []model.Rider, scale map[int64]float64) []model.Rider {
 	return out
 }
 
-// Unfit removes previously applied fitted scales (name → scale) from riders,
-// so a new fit starts from the curated/derived ratings, not compounding.
-func Unfit(riders []model.Rider, previous map[string]float64) []model.Rider {
-	out := make([]model.Rider, len(riders))
-	copy(out, riders)
-	for i := range out {
-		if s, ok := previous[strings.ToLower(strings.Join(strings.Fields(out[i].Name), " "))]; ok && s > 0 {
-			out[i].FTPWatts = int(math.Round(float64(out[i].FTPWatts) / s))
-		}
-	}
-	return out
-}
-
 // Write saves adjustments in the rider-overrides format (FTP_scale column).
 func Write(path string, adj []Adjustment) error {
 	f, err := os.Create(path)

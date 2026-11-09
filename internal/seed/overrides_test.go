@@ -123,3 +123,25 @@ func TestApplyRatingsKeepsResults(t *testing.T) {
 		t.Errorf("apply changed the rider count: %d → %d", len(riders), len(after))
 	}
 }
+
+// A fit starts from every layer but the fitted one, so fits never compound.
+func TestUnfittedFTPsIgnoreFittedLayer(t *testing.T) {
+	unfitted, err := UnfittedFTPs()
+	if err != nil {
+		t.Fatal(err)
+	}
+	built, err := BuildRiders()
+	if err != nil {
+		t.Fatal(err)
+	}
+	fitted, err := LoadOverrides(findDataFile(FittedFile))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, r := range built {
+		key := NormalizeName(r.Name)
+		if _, ok := fitted[key]; !ok && unfitted[key] != r.FTPWatts {
+			t.Errorf("%s: unfitted %d differs from built %d without a fitted scale", r.Name, unfitted[key], r.FTPWatts)
+		}
+	}
+}

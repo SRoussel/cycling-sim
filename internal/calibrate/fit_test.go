@@ -52,9 +52,4 @@ func TestUnfitAndWriteRoundTrip(t *testing.T) {
 	if r.FTPWatts != 420 {
 		t.Fatalf("fitted FTP %d, want 420", r.FTPWatts)
 	}
-	// Unfit recovers the unfitted threshold for the next fit.
-	base := Unfit([]model.Rider{r}, map[string]float64{"tadej pogačar": 1.05})
-	if base[0].FTPWatts != 400 {
-		t.Errorf("unfitted FTP %d, want 400", base[0].FTPWatts)
-	}
 }

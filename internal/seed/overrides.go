@@ -143,3 +143,6 @@ func (o RiderOverride) Apply(r *model.Rider) error {
 func normalizeName(s string) string {
 	return strings.ToLower(strings.Join(strings.Fields(s), " "))
 }
+
+// NormalizeName is the key rating layers match riders by.
+func NormalizeName(s string) string { return normalizeName(s) }

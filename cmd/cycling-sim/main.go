@@ -539,17 +539,19 @@ func cmdFitRatings(db *database.DB, path string, classics bool) {
 	if err != nil || len(riders) == 0 {
 		fatalf("No riders in the database: run 'cycling-sim seed' first.\n")
 	}
-	prev, err := seed.LoadOverrides(path)
+	// Start from the ratings without any fitted correction (never from the
+	// database, which already carries the last fit, so fits don't compound).
+	unfitted, err := seed.UnfittedFTPs()
 	if err != nil {
-		fatalf("Error reading %s: %v\n", path, err)
+		fatalf("Error building base ratings: %v\n", err)
 	}
-	prevScale := map[string]float64{}
-	for key, o := range prev {
-		if v, err := strconv.ParseFloat(o.Fields["FTP_scale"], 64); err == nil {
-			prevScale[key] = v
+	base := make([]model.Rider, len(riders))
+	copy(base, riders)
+	for i := range base {
+		if ftp, ok := unfitted[seed.NormalizeName(base[i].Name)]; ok {
+			base[i].FTPWatts = ftp
 		}
 	}
-	base := calibrate.Unfit(riders, prevScale)
 	opt := calibrate.DefaultOptions()
 	opt.Classics = classics
 	opt.Log = func(format string, args ...any) { fmt.Printf(format, args...) }

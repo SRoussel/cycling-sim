@@ -125,6 +125,32 @@ func BuildRiders() ([]model.Rider, error) {
 	return readRidersCSV(findDataFile("riders.csv"), layers...)
 }
 
+// UnfittedFTPs returns each rider's threshold from every rating layer except
+// the fitted one (keyed by normalised name): the base a new fit starts from,
+// whatever the database or an earlier fit holds.
+func UnfittedFTPs() (map[string]int, error) {
+	var layers []map[string]RiderOverride
+	for _, name := range RatingLayers {
+		if name == FittedFile {
+			continue
+		}
+		l, err := LoadOverrides(findDataFile(name))
+		if err != nil {
+			return nil, err
+		}
+		layers = append(layers, l)
+	}
+	riders, err := readRidersCSV(findDataFile("riders.csv"), layers...)
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[string]int, len(riders))
+	for _, r := range riders {
+		out[normalizeName(r.Name)] = r.FTPWatts
+	}
+	return out, nil
+}
+
 // readRidersCSV reads riders from a CSV file and applies rating layers.
 func readRidersCSV(path string, layers ...map[string]RiderOverride) ([]model.Rider, error) {
 	f, err := os.Open(path)

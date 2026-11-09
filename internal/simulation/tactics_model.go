@@ -102,20 +102,10 @@ func DefaultTacticsParams() TacticsParams {
 	}
 }
 
-type TeamObjective int
-
-const (
-	ObjectiveStageWin TeamObjective = iota
-	ObjectiveGCProtection
-	ObjectiveBreakawayHunt
-	ObjectiveSprintWin
-)
-
 type TeamStrategy struct {
-	PrimaryObjective TeamObjective
-	AggressionBias   float64
-	RiskTolerance    float64
-	EnergyBudget     float64
+	AggressionBias float64
+	RiskTolerance  float64
+	EnergyBudget   float64
 }
 
 type TeamContext struct {
@@ -137,7 +127,7 @@ type TacticsEvent struct {
 }
 
 func NewRaceState(states []*RiderState, rng *rand.Rand, isStageRace bool) *RaceState {
-	contexts, rival := BuildTeamContexts(states, rng, isStageRace)
+	contexts, rival := BuildTeamContexts(states)
 	return &RaceState{
 		TeamContexts: contexts,
 		Rival:        rival,
@@ -198,10 +188,8 @@ func DecideAction(rs *RiderState, state *RaceState, hasLeader bool, rng *rand.Ra
 		return ActionConserve
 	}
 	localParams := params
-	var strategy *TeamStrategy
 	if state != nil && state.TeamContexts != nil {
 		if ctx, ok := state.TeamContexts[rs.Rider.Team]; ok {
-			strategy = &ctx.Strategy
 			localParams.AttackAggression *= ctx.Strategy.AggressionBias
 			localParams.ConserveWPrimeThresh *= 1.0 + (1.0-ctx.Strategy.EnergyBudget)*0.25
 		}
@@ -268,25 +256,19 @@ func DecideAction(rs *RiderState, state *RaceState, hasLeader bool, rng *rand.Ra
 				return ActionChase
 			}
 		}
-		if strategy != nil {
-			switch strategy.PrimaryObjective {
-			case ObjectiveSprintWin:
-				if state.Phase == PhaseFinal {
-					return ActionChase
-				}
-			case ObjectiveGCProtection:
-				if rs.TeamRole == RoleLeader {
-					if state.Segment != nil && state.Segment.SurfaceType != model.SurfaceCobbles && climbOf(state.Segment) < terrainRolling && state.Phase != PhaseFinal {
-						return ActionConserve
-					}
-					if state.HasBreakaway && (state.BreakawayGap > 25 || state.BreakawayHasDangerous) && state.Phase != PhaseEarly {
-						return ActionChase
-					}
-				}
-			case ObjectiveBreakawayHunt:
-				if state.Phase == PhaseEarly && rng.Float64() < perStep(0.05, state) {
-					return ActionAttack
-				}
+		// What a team rides for follows from its roster, not a random
+		// objective: a team with a sprinter drives the final for the sprint;
+		// a leader saves themselves on flat and rolling roads until the final
+		// and has a dangerous or sizeable break chased.
+		if ctx := state.TeamContexts[rs.Rider.Team]; ctx != nil && ctx.SprinterID != 0 && state.Phase == PhaseFinal {
+			return ActionChase
+		}
+		if rs.TeamRole == RoleLeader {
+			if state.Segment != nil && state.Segment.SurfaceType != model.SurfaceCobbles && climbOf(state.Segment) < terrainRolling && state.Phase != PhaseFinal {
+				return ActionConserve
+			}
+			if state.HasBreakaway && (state.BreakawayGap > 25 || state.BreakawayHasDangerous) && state.Phase != PhaseEarly {
+				return ActionChase
 			}
 		}
 	}
@@ -335,14 +317,14 @@ func ApplyEventModifiers(params TacticsParams, state *RaceState) TacticsParams {
 	return params
 }
 
-func BuildTeamContexts(states []*RiderState, rng *rand.Rand, isStageRace bool) (map[string]*TeamContext, RivalAssessment) {
+func BuildTeamContexts(states []*RiderState) (map[string]*TeamContext, RivalAssessment) {
 	contexts := make(map[string]*TeamContext)
 	teams := make(map[string][]*RiderState)
 	for _, rs := range states {
 		teams[rs.Rider.Team] = append(teams[rs.Rider.Team], rs)
 	}
 
-	// Sort team names for deterministic RNG consumption (Go maps iterate in random order).
+	// Sorted for a deterministic order (Go maps iterate in random order).
 	teamNames := make([]string, 0, len(teams))
 	for team := range teams {
 		teamNames = append(teamNames, team)
@@ -364,10 +346,9 @@ func BuildTeamContexts(states []*RiderState, rng *rand.Rand, isStageRace bool) (
 		}
 
 		ctx.Strategy = TeamStrategy{
-			PrimaryObjective: pickObjective(ctx, members, rng, isStageRace),
-			AggressionBias:   clamp(0.85+avgAbility(members, func(r *RiderState) int { return r.Rider.TacticalAwareness })*0.003, 0.75, 1.25),
-			RiskTolerance:    clamp(0.8+avgAbility(members, func(r *RiderState) int { return r.Rider.Handling })*0.002, 0.7, 1.2),
-			EnergyBudget:     clamp(0.7+avgAbility(members, func(r *RiderState) int { return r.Rider.Endurance })*0.003, 0.6, 1.1),
+			AggressionBias: clamp(0.85+avgAbility(members, func(r *RiderState) int { return r.Rider.TacticalAwareness })*0.003, 0.75, 1.25),
+			RiskTolerance:  clamp(0.8+avgAbility(members, func(r *RiderState) int { return r.Rider.Handling })*0.002, 0.7, 1.2),
+			EnergyBudget:   clamp(0.7+avgAbility(members, func(r *RiderState) int { return r.Rider.Endurance })*0.003, 0.6, 1.1),
 		}
 		contexts[team] = ctx
 	}
@@ -388,50 +369,6 @@ func BuildRivalAssessment(states []*RiderState) RivalAssessment {
 	}
 
 	return RivalAssessment{SprintTeamsChasing: sprintTeams}
-}
-
-func pickObjective(ctx *TeamContext, members []*RiderState, rng *rand.Rand, isStageRace bool) TeamObjective {
-	if !isStageRace {
-		if ctx.SprinterID != 0 {
-			if rng.Float64() < 0.7 {
-				return ObjectiveSprintWin
-			}
-		}
-		if ctx.LeaderID != 0 {
-			if rng.Float64() < 0.6 {
-				return ObjectiveGCProtection
-			}
-		}
-		if rng.Float64() < 0.5 {
-			return ObjectiveBreakawayHunt
-		}
-		return ObjectiveStageWin
-	}
-
-	// Stage races: bias toward sustainable objectives.
-	if ctx.SprinterID != 0 && ctx.LeaderID != 0 {
-		// Teams with both leaders often protect GC but still target sprints.
-		if rng.Float64() < 0.55 {
-			return ObjectiveSprintWin
-		}
-		return ObjectiveGCProtection
-	}
-	if ctx.SprinterID != 0 {
-		if rng.Float64() < 0.8 {
-			return ObjectiveSprintWin
-		}
-		return ObjectiveStageWin
-	}
-	if ctx.LeaderID != 0 {
-		if rng.Float64() < 0.85 {
-			return ObjectiveGCProtection
-		}
-		return ObjectiveStageWin
-	}
-	if rng.Float64() < 0.65 {
-		return ObjectiveBreakawayHunt
-	}
-	return ObjectiveStageWin
 }
 
 func avgAbility(members []*RiderState, getter func(*RiderState) int) float64 {

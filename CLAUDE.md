@@ -53,7 +53,7 @@ Guiding rule: express behaviour as physics or rider intent, never as hardcoded g
 
 ## Special cases still to replace (audit, Nov 2026)
 These break the guiding rule (gradient/distance/ability thresholds instead of physics or intent). Replace one at a time and judge with `validate --sets 3`:
-- `DecideAction` (tactics_model.go): GC leaders conserve on flat terrain (85% in the final); "one-day flat/rolling: always chase" (comment cites the Poggio); "cobbles: dangerous riders always chase" (cites Roubaix); random team objectives with their own rules.
+- `DecideAction` (tactics_model.go): GC leaders conserve on flat terrain (85% in the final); "one-day flat/rolling: always chase" (comment cites the Poggio); "cobbles: dangerous riders always chase" (cites Roubaix); (done Nov 2026: random team objectives replaced by roster intent — a team with a sprinter drives the final, a leader saves themselves on flat/rolling roads until the final and has a dangerous or sizeable break chased; gap sum 2468 → 2292 s).
 - Done (Nov 2026): `breakawayProbability` is intent only (aggression × W′ left; domestiques working for a leader in the group rarely go; a team's sprinter waits for the sprint) — its ~10 km-window/terrain multipliers are gone, where a move sticks is physics. Gap sum 2739 → 2413 s; Milan-San Remo got worse (107 → 144, 65 → 122 s).
 - Done (Nov 2026): favourites (`RaceState.Favourites`, the riders the bunch marks) are the `favouriteCount` = 5 fastest over the course at threshold (`markFavourites`), not an ability formula with Handling ×3 on cobbles. Marking every team leader instead was tested and rejected (3849 s: the bunch rides every attack).
 - `PhaseFromKm`: phases at 60 km / 20 km drive holding intensity, driving, rivalAhead and the finale.

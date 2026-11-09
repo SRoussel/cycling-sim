@@ -51,6 +51,15 @@ Guiding rule: express behaviour as physics or rider intent, never as hardcoded g
 - **Team strategy**: a team drives when its leader's threshold pace would break the group's fastest finisher even in the draft; its domestiques then set the pace the leader can hold on the wheel at the phase intensity (`leaderTempoSpeed`: a tempo mid-race, threshold in the finale), not an all-out effort. Leaders race in the finale; shelter needs a teammate.
 - **Stage races** (`AssignCoLeaders`, `gcRivalAhead`): each team's GC leader is its best climber by W/kg (not the ability-rating average `AssignTeamRoles` uses); domestiques who are among the 10 strongest climbers in the field, or in the GC top 10, become co-leaders. A GC leader with a rival up the road who would pass them on GC limits losses (chases to the line); chasing GC leaders take turns instead of sitting in.
 
+## Special cases still to replace (audit, Nov 2026)
+These break the guiding rule (gradient/distance/ability thresholds instead of physics or intent). Replace one at a time and judge with `validate --sets 3`:
+- `DecideAction` (tactics_model.go): stage-race mountain attacks from a probability table (km < 15/8/25/12, 0.08–0.22, ×0.7 jersey, ×(1+deficit/1800)); GC leaders conserve on flat terrain (85% in the final); "one-day flat/rolling: always chase" (comment cites the Poggio); "cobbles: dangerous riders always chase" (cites Roubaix); one-day mountain attacks at 8%/5 km; random team objectives with their own rules.
+- `breakawayProbability` (tactics.go): ~10 multipliers keyed to km windows (×1.5 at 30–60 km, ×0.05 beyond 80 km on the flat, ×0.35 below, ×0.3 inside 10 km, ×0.7 beyond 100 km), sprinter ×0.3 unless handling > 85 on cobbles, capped handling boost.
+- `BuildRivalAssessment`: "dangerous" = top 5 by an ability score that weights Handling 3× on cobbles (comment lists named riders' scores).
+- `PhaseFromKm`: phases at 60 km / 20 km drive holding intensity, driving, rivalAhead and the finale.
+- W′ comes from the Endurance rating (15–25 kJ), not physiology; puncheurs/rouleurs should have the larger anaerobic capacity.
+- Experiment branch `experiment/physics-attacks`: one-day attacks by physics (go when the rival can't hold the wheel here and the solo time to the line beats the chase pace line; front groups commit while they hold) replace the 8% roll. Mechanism works (Strade/Lombardia/Roubaix winners win more) but gap sum 2925 s vs 2706 s: classics riders lose minutes to climbers on short climbs. W′ = 14 s × peak sprint power helps there (MSR, Liège, Roubaix) but needs a Tour refit. Next step: W′ from physiology on main first (refit, judge), then rebase the attack rule onto it.
+
 ## Database
 SQLite with WAL mode, foreign keys enabled. Schema auto-migrates on open. Use `CYCLING_SIM_DB` env var to set path (default: `cycling_sim.db`).
 

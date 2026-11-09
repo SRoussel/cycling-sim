@@ -63,6 +63,7 @@ SQLite with WAL mode, foreign keys enabled. Schema auto-migrates on open. Use `C
 ./cycling-sim run-stage-race <sr-id> [--seed N]        # simulate stage race with GC
 ./cycling-sim validate [-v]           # synthetic, 2024 real races, 2023 hold-out, race speeds (-v: per rider)
 ./cycling-sim fit-ratings [--classics] [file]  # fit thresholds to 2024 refs by simulation
+./cycling-sim apply-ratings           # re-apply all rating layers to the DB in place (keeps results)
 ./cycling-sim import-results [dir]    # derive ratings from saved result pages
 ./cycling-sim results <race-id>       # view saved results
 ./cycling-sim gc <sr-id> <stage>      # view GC standings
@@ -74,8 +75,8 @@ SQLite with WAL mode, foreign keys enabled. Schema auto-migrates on open. Use `C
 
 ## Data notes
 - Course segments must sum to the stated distance (`fitToDistance` in seed, enforced by a test). Changing seed data requires `clear` + `seed`.
-- `data/riders.csv`: ~370 of 521 riders share templated ability profiles; ratings are the main realism bottleneck.
-- Rating layers at seed time: `riders.csv` → `rider_derived.csv` (from `cycling-sim import-results`, saved pages in `data/results/<profile>/`) → `rider_overrides.csv` (curated; GC tier calibrated to 2024 Tour gaps). Never scrape FirstCycling/PCS (robots.txt / bot protection).
+- `data/riders.csv`: ~370 of 521 riders share templated profiles. `data/rider_llm.csv` replaces 338 of them with LLM-drafted physical profiles (specialty, weight, W/kg; confidence high/medium/low), written offline from `data/llm/draft_spec.txt` by `python3 data/llm/expand.py [--review]`. Never call an LLM inside the race loop (speed, reproducibility). Leakage caveat: an LLM's sense of a specialty is shaped by results it has seen, so the 2023 hold-out isn't fully independent of it.
+- Rating layers at seed time (`seed.RatingLayers`): `riders.csv` → `rider_llm.csv` → `rider_derived.csv` (from `cycling-sim import-results`, saved pages in `data/results/<profile>/`) → `rider_overrides.csv` (curated; GC tier calibrated to 2024 Tour gaps). Never scrape FirstCycling/PCS (robots.txt / bot protection).
 - `cycling-sim validate` scores synthetic fields, six 2024 classics and the 2024 Tour GC (verified non-starters excluded via `DidNotStart`; reference riders always start), a 2023 hold-out (never fitted) and winners' average speeds.
 - `data/rider_fitted.csv` (from `fit-ratings`, Tour GC only) is a 4th layer of `FTP_scale` multipliers (≤ ±4%). Don't fit the classics: with 1-2 results per rider it overfits (the 2023 hold-out gets worse). The fitter flags riders pushed above the strongest rider's climbing W/kg — that means it is compensating for a model gap (as it did before co-leader tactics), so fix the model instead.
-- Known gaps: seeded classic courses have far too little climbing (Liège ~1,870 m of climbing vs ~4,000 m real), so hilly races run ~13% too fast and flat ones ~11% too slow.
+- Known gaps: the Flanders course rewards climbing W/kg more than the real race (climbers crowd the finish now that the field has realistic climbers); seeded classic courses have far too little climbing (Liège ~1,870 m of climbing vs ~4,000 m real), so hilly races run ~13% too fast and flat ones ~11% too slow.

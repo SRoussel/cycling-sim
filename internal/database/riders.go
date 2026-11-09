@@ -105,3 +105,30 @@ func (db *DB) SetRiderFTPs(ftp map[int64]int) error {
 	}
 	return tx.Commit()
 }
+
+// UpdateRiderRatings updates riders' physical attributes and ratings (not
+// name, team or nationality) by ID, in one transaction.
+func (db *DB) UpdateRiderRatings(riders []model.Rider) error {
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	for _, r := range riders {
+		if err := r.Validate(); err != nil {
+			tx.Rollback()
+			return fmt.Errorf("invalid rider %s: %w", r.Name, err)
+		}
+		_, err := tx.Exec(`UPDATE riders SET weight_kg = ?, height_cm = ?, ftp_watts = ?,
+			max_sprint_watts = ?, vo2max_watts = ?, cda = ?, climbing_ability = ?, sprint_ability = ?,
+			tt_ability = ?, descending_ability = ?, handling = ?, endurance = ?, recovery = ?,
+			consistency = ?, tactical_awareness = ? WHERE id = ?`,
+			r.WeightKg, r.HeightCm, r.FTPWatts, r.MaxSprintWatts, r.VO2MaxWatts, r.CdA,
+			r.ClimbingAbility, r.SprintAbility, r.TTAbility, r.DescendingAbility, r.Handling,
+			r.Endurance, r.Recovery, r.Consistency, r.TacticalAwareness, r.ID)
+		if err != nil {
+			tx.Rollback()
+			return fmt.Errorf("updating rider %d: %w", r.ID, err)
+		}
+	}
+	return tx.Commit()
+}

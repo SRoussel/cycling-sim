@@ -61,6 +61,12 @@ func main() {
 		cmdRunStageRace(db, srID, seedVal)
 	case "validate":
 		cmdValidate(db, len(args) > 0 && (args[0] == "-v" || args[0] == "--verbose"))
+	case "apply-ratings":
+		n, err := seed.ApplyRatings(db)
+		if err != nil {
+			fatalf("Error applying ratings: %v\n", err)
+		}
+		fmt.Printf("Updated %d riders from riders.csv + %s (saved results kept).\n", n, strings.Join(seed.RatingLayers, " + "))
 	case "fit-ratings":
 		out := seed.DataPath(seed.FittedFile)
 		classics := false
@@ -155,6 +161,8 @@ Commands:
                                  dir/<sprint|hilly|mountain|cobbles|tt>/
                                  (default data/results); writes
                                  data/rider_derived.csv. Re-seed to apply.
+  apply-ratings                  Re-apply riders.csv + rating layers to the
+                                 riders in the DB, keeping saved results
   fit-ratings [--classics] [file] Fit rider thresholds to the 2024 Tour GC
                                  (--classics: also the one-day races) by
                                  simulation; writes file (default
@@ -518,7 +526,7 @@ func cmdFitRatings(db *database.DB, path string, classics bool) {
 		ftp[a.RiderID] = int(math.Round(float64(baseFTP[a.RiderID]) * a.Scale)) // ...apply new ones
 		flag := ""
 		if a.Implausible {
-			flag = "  ← climbs faster than the strongest rider: likely compensating for tactics"
+			flag = "  ← clearly out-climbs the strongest rider: likely compensating for a model gap"
 			implausible++
 		}
 		fmt.Printf("  %-28s %+5.1f%%  (%d W, %.2f W/kg, %.2f on climbs)%s\n", a.Name, (a.Scale-1)*100, ftp[a.RiderID], a.WKg, a.ClimbWKg, flag)

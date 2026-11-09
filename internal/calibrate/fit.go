@@ -49,6 +49,7 @@ const (
 	settledPct         = 0.1   // stop when the mean step falls below this
 	damping            = 0.7   // fraction of the requested step taken (damps run-to-run noise)
 	missingSimPos      = 500.0 // simulated position beyond this: rider never finished
+	plausibleMarginPct = 2.0   // tolerance above the strongest rider (fit noise)
 )
 
 // Adjustment is a fitted threshold correction for one rider.
@@ -59,9 +60,10 @@ type Adjustment struct {
 	WKg      float64 // fitted threshold W/kg
 	ClimbWKg float64 // fitted W/kg on a climb (climbing ability applied)
 	Evidence []string
-	// Implausible is set when the fit pushes a rider above the strongest
-	// unfitted rider's climbing W/kg: the fit is then compensating for
-	// something the model gets wrong (tactics, role), not measuring the rider.
+	// Implausible is set when the fit pushes a rider more than
+	// plausibleMarginPct above the strongest unfitted rider's climbing W/kg:
+	// the fit is then compensating for something the model gets wrong
+	// (tactics, role), not measuring the rider.
 	Implausible bool
 }
 
@@ -147,7 +149,7 @@ func Fit(db *database.DB, base []model.Rider, opt Options) ([]Adjustment, error)
 		if r.WeightKg > 0 {
 			a.WKg = float64(r.FTPWatts) * s / r.WeightKg
 			a.ClimbWKg = climb(r, float64(r.FTPWatts)*s)
-			a.Implausible = a.ClimbWKg > maxClimb && s > 1
+			a.Implausible = a.ClimbWKg > maxClimb*(1+plausibleMarginPct/100) && s > 1
 		}
 		out = append(out, a)
 	}

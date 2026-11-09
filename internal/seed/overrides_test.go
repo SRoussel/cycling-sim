@@ -64,3 +64,62 @@ func TestShippedOverridesMatchRiders(t *testing.T) {
 		}
 	}
 }
+
+// Every shipped rating layer must load, name only real riders, and leave
+// valid riders; LLM-drafted rows must carry a confidence level.
+func TestShippedRatingLayers(t *testing.T) {
+	riders, err := BuildRiders()
+	if err != nil {
+		t.Fatal(err)
+	}
+	names := map[string]bool{}
+	for _, r := range riders {
+		names[normalizeName(r.Name)] = true
+		if err := r.Validate(); err != nil {
+			t.Errorf("%s invalid after rating layers: %v", r.Name, err)
+		}
+	}
+	for _, layer := range RatingLayers {
+		m, err := LoadOverrides(findDataFile(layer))
+		if err != nil {
+			t.Fatalf("%s: %v", layer, err)
+		}
+		for key, o := range m {
+			if !names[key] {
+				t.Errorf("%s: %q matches no rider", layer, o.Name)
+			}
+			if layer == "rider_llm.csv" && o.Confidence != "high" && o.Confidence != "medium" && o.Confidence != "low" {
+				t.Errorf("%s: %q has confidence %q", layer, o.Name, o.Confidence)
+			}
+		}
+	}
+}
+
+func TestApplyRatingsKeepsResults(t *testing.T) {
+	db, _ := database.OpenMemory()
+	defer db.Close()
+	if _, err := Seed(db); err != nil {
+		t.Fatal(err)
+	}
+	riders, _ := db.ListRiders()
+	// Simulate a stale database: one rider's ratings drift.
+	stale := riders[0]
+	stale.FTPWatts += 50
+	if err := db.UpdateRiderRatings([]model.Rider{stale}); err != nil {
+		t.Fatal(err)
+	}
+	n, err := ApplyRatings(db)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n != len(riders) {
+		t.Errorf("updated %d riders, want %d", n, len(riders))
+	}
+	got, _ := db.GetRider(stale.ID)
+	if got.FTPWatts != riders[0].FTPWatts {
+		t.Errorf("FTP %d after apply, want %d", got.FTPWatts, riders[0].FTPWatts)
+	}
+	if after, _ := db.ListRiders(); len(after) != len(riders) {
+		t.Errorf("apply changed the rider count: %d → %d", len(riders), len(after))
+	}
+}

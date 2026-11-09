@@ -35,26 +35,16 @@ func Seed(db *database.DB) (Result, error) {
 		return res, nil
 	}
 
-	csvPath := findDataFile("riders.csv")
-	// Derived ratings (from imported results) first, then curated overrides.
-	derived, err := LoadOverrides(findDataFile("rider_derived.csv"))
+	riders, err := BuildRiders()
 	if err != nil {
 		return res, err
 	}
-	curated, err := LoadOverrides(findDataFile("rider_overrides.csv"))
-	if err != nil {
-		return res, err
+	for i := range riders {
+		if err := db.CreateRider(&riders[i]); err != nil {
+			continue
+		}
+		res.Riders++
 	}
-	// Fitted corrections (cycling-sim fit-ratings) scale the result last.
-	fitted, err := LoadOverrides(findDataFile(FittedFile))
-	if err != nil {
-		return res, err
-	}
-	riderCount, err := loadRidersFromCSV(db, csvPath, derived, curated, fitted)
-	if err != nil {
-		return res, err
-	}
-	res.Riders = riderCount
 
 	courseIDs, warnings := seedCourses(db)
 	res.Courses = len(courseIDs)
@@ -113,24 +103,42 @@ func findDataFile(name string) string {
 	return filepath.Join("data", name)
 }
 
-// loadRidersFromCSV reads riders from a CSV file and inserts them into the database.
-func loadRidersFromCSV(db *database.DB, path string, layers ...map[string]RiderOverride) (int, error) {
+// RatingLayers are the rider-rating files applied on top of riders.csv, in
+// order (later layers win): LLM-drafted profiles, ratings derived from
+// imported results, curated overrides, and fitted threshold corrections.
+var RatingLayers = []string{"rider_llm.csv", "rider_derived.csv", "rider_overrides.csv", FittedFile}
+
+// BuildRiders reads riders.csv and applies every rating layer.
+func BuildRiders() ([]model.Rider, error) {
+	var layers []map[string]RiderOverride
+	for _, name := range RatingLayers {
+		l, err := LoadOverrides(findDataFile(name))
+		if err != nil {
+			return nil, err
+		}
+		layers = append(layers, l)
+	}
+	return readRidersCSV(findDataFile("riders.csv"), layers...)
+}
+
+// readRidersCSV reads riders from a CSV file and applies rating layers.
+func readRidersCSV(path string, layers ...map[string]RiderOverride) ([]model.Rider, error) {
 	f, err := os.Open(path)
 	if err != nil {
-		return 0, fmt.Errorf("opening %s: %w", path, err)
+		return nil, fmt.Errorf("opening %s: %w", path, err)
 	}
 	defer f.Close()
 
 	reader := csv.NewReader(f)
 	records, err := reader.ReadAll()
 	if err != nil {
-		return 0, fmt.Errorf("reading CSV: %w", err)
+		return nil, fmt.Errorf("reading CSV: %w", err)
 	}
 	if len(records) < 2 {
-		return 0, fmt.Errorf("CSV has no data rows")
+		return nil, fmt.Errorf("CSV has no data rows")
 	}
 
-	count := 0
+	var out []model.Rider
 	for _, row := range records[1:] {
 		if len(row) < 19 {
 			continue
@@ -175,16 +183,39 @@ func loadRidersFromCSV(db *database.DB, path string, layers ...map[string]RiderO
 		for _, overrides := range layers {
 			if o, ok := overrides[normalizeName(rider.Name)]; ok {
 				if err := o.Apply(&rider); err != nil {
-					return count, err
+					return nil, err
 				}
 			}
 		}
-		if err := db.CreateRider(&rider); err != nil {
-			continue
-		}
-		count++
+		out = append(out, rider)
 	}
-	return count, nil
+	return out, nil
+}
+
+// ApplyRatings recomputes every rider from riders.csv and the rating layers
+// and updates the riders already in the database (matched by name) in place,
+// so saved results survive. It returns how many riders were updated.
+func ApplyRatings(db *database.DB) (int, error) {
+	built, err := BuildRiders()
+	if err != nil {
+		return 0, err
+	}
+	existing, err := db.ListRiders()
+	if err != nil {
+		return 0, err
+	}
+	ids := map[string]int64{}
+	for _, r := range existing {
+		ids[normalizeName(r.Name)] = r.ID
+	}
+	var updates []model.Rider
+	for _, r := range built {
+		if id, ok := ids[normalizeName(r.Name)]; ok {
+			r.ID = id
+			updates = append(updates, r)
+		}
+	}
+	return len(updates), db.UpdateRiderRatings(updates)
 }
 
 // ---- Seed courses/races/stage races (copied from CLI seed logic, kept deterministic) ----

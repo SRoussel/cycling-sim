@@ -14,9 +14,10 @@ import (
 // RiderOverride holds optional replacements for a rider's attributes.
 // A nil field means "keep the base value from riders.csv".
 type RiderOverride struct {
-	Name   string
-	Fields map[string]string
-	Source string
+	Name       string
+	Fields     map[string]string
+	Source     string
+	Confidence string // high/medium/low (LLM-drafted layer)
 }
 
 // overrideColumns maps CSV header names to setters on model.Rider.
@@ -96,7 +97,7 @@ func LoadOverrides(path string) (map[string]RiderOverride, error) {
 		header[i] = strings.TrimSpace(h)
 		if header[i] == "Name" {
 			nameCol = i
-		} else if header[i] != "Source" && overrideColumns[header[i]] == nil {
+		} else if header[i] != "Source" && header[i] != "Confidence" && overrideColumns[header[i]] == nil {
 			return nil, fmt.Errorf("%s: unknown column %q", path, header[i])
 		}
 	}
@@ -116,6 +117,10 @@ func LoadOverrides(path string) (map[string]RiderOverride, error) {
 			}
 			if header[i] == "Source" {
 				o.Source = v
+				continue
+			}
+			if header[i] == "Confidence" {
+				o.Confidence = v
 				continue
 			}
 			o.Fields[header[i]] = v

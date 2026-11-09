@@ -214,7 +214,7 @@ func DecideAction(rs *RiderState, state *RaceState, hasLeader bool, rng *rand.Ra
 	if wFrac < localParams.ConserveWPrimeThresh {
 		return ActionConserve
 	}
-	// One-day race leaders go when the race can be won from here (escape.go).
+	// Leaders go when the race (or time on GC) can be won from here (escape.go).
 	if state != nil && state.Segment != nil && state.attackPays(rs, state.Segment) {
 		return ActionAttack
 	}
@@ -230,67 +230,6 @@ func DecideAction(rs *RiderState, state *RaceState, hasLeader bool, rng *rand.Ra
 					return ActionConserve
 				}
 			}
-		}
-	}
-
-	// ------------------------------------------------------------------
-	// Stage-race mountain attack evaluation for team leaders.
-	// Placed BEFORE the generic "breakaway → Chase" block so that a GC
-	// leader can launch a counter-attack even when a breakaway is active.
-	// ------------------------------------------------------------------
-	if state != nil && state.Segment != nil &&
-		climbOf(state.Segment) > terrainHill && rs.TeamRole == RoleLeader && state.IsStageRace {
-
-		isFavorite := state.Rival.DangerousRiders[rs.Rider.ID]
-
-		// GC gap: 0 = race leader, positive = seconds behind leader.
-		gcDeficit := 0.0
-		if state.GCGaps != nil {
-			gcDeficit = state.GCGaps[rs.Rider.ID]
-		}
-
-		var attackProb float64
-		if isFavorite {
-			// Top GC contenders: measured attacks in the final climbing km.
-			// km<15 on a real climb (>5%) is the realistic attack window.
-			if state.KmRemaining < 15 && climbOf(state.Segment) > terrainClimb && wFrac > 0.40 {
-				attackProb = 0.08
-				if state.KmRemaining < 8 {
-					attackProb = 0.12
-				}
-			}
-			// A rival is up the road — this is urgent, respond harder.
-			if state.BreakawayHasDangerous && state.Phase == PhaseFinal {
-				if attackProb < 0.20 {
-					attackProb = 0.20
-				}
-			}
-			// GC leader (deficit ≈ 0) is slightly less aggressive — protecting the jersey.
-			if gcDeficit < 30 {
-				attackProb *= 0.70
-			}
-		} else {
-			// Non-favorite leaders hunt for stage wins more freely.
-			if state.KmRemaining < 25 && wFrac > 0.35 {
-				attackProb = 0.15
-				if state.KmRemaining < 12 {
-					attackProb = 0.22
-				}
-			}
-		}
-
-		// GC deficit boosts aggression: riders further down need to gamble.
-		// 5 min down (300s) → ×1.17, 30 min down (1800s) → ×2.0, capped at ×2.5.
-		if gcDeficit > 30 {
-			multiplier := math.Min(1.0+gcDeficit/1800.0, 2.5)
-			attackProb *= multiplier
-		}
-		if attackProb > 0.90 {
-			attackProb = 0.90
-		}
-
-		if attackProb > 0 && rng.Float64() < perStep(attackProb, state) {
-			return ActionAttack
 		}
 	}
 

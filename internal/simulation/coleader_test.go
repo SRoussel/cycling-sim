@@ -194,13 +194,14 @@ func TestAttackPaysOnClimbsNotFlat(t *testing.T) {
 	for _, c := range []struct {
 		name  string
 		grade float64
+		stage bool
 		want  bool
-	}{{"climb", 8, true}, {"flat", 0, false}} {
+	}{{"climb", 8, false, true}, {"flat", 0, false, false}, {"stage-race climb", 8, true, true}, {"stage-race flat", 0, true, false}} {
 		strong := stateFor(1, "A", 460, 62, RoleLeader) // 7.4 W/kg
 		rival := stateFor(2, "B", 380, 66, RoleLeader)  // 5.8 W/kg
 		dom := stateFor(3, "B", 380, 70, RoleDomestique)
 		course := []model.Segment{{DistanceKm: 12, GradientPct: c.grade, SurfaceType: model.SurfaceRoad}}
-		s := &RaceState{Phase: PhaseFinal, Road: []*RiderState{strong, rival, dom}, Course: course, SegIndex: 0, SegmentKmLeft: 12}
+		s := &RaceState{Phase: PhaseFinal, IsStageRace: c.stage, Road: []*RiderState{strong, rival, dom}, Course: course, SegIndex: 0, SegmentKmLeft: 12}
 		if got := s.attackPays(strong, &course[0]); got != c.want {
 			t.Errorf("%s: attackPays = %v, want %v", c.name, got, c.want)
 		}

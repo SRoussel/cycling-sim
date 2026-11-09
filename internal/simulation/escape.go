@@ -6,8 +6,8 @@ import (
 	"cycling_sim/internal/model"
 )
 
-// Escapes in one-day races. A team leader races to win, so after the early
-// phase they go when the race can be won from here, judged by physics on the
+// Escapes. A team leader races to win (or, in a stage race, to gain time on
+// GC rivals), so after the early phase they go when that pays from here, judged by physics on the
 // remaining course rather than by gradient or distance rules:
 //
 //   - attack (attackPays): from a group with rival leaders, when the
@@ -25,9 +25,9 @@ import (
 // a fast run-in favours the chasing pace line, long climbs and gravel favour
 // the rider ahead.
 
-// escapeEligible: the rules apply to one-day race leaders once the race is on.
+// escapeEligible: the rules apply to team leaders once the race is on.
 func (s *RaceState) escapeEligible(rs *RiderState) bool {
-	return s != nil && !s.IsStageRace && s.Phase != PhaseEarly && rs.TeamRole == RoleLeader &&
+	return s != nil && s.Phase != PhaseEarly && rs.TeamRole == RoleLeader &&
 		len(s.Course) > 0 && !rs.DNF
 }
 

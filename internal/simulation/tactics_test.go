@@ -35,75 +35,31 @@ func TestBreakawayAttemptLowWPrime(t *testing.T) {
 	}
 }
 
-func TestBreakawayAttemptSteepSegment(t *testing.T) {
-	rider := testRider()
-	rider.TacticalAwareness = 70
-	rider.ClimbingAbility = 85
-	rs := &RiderState{
-		Rider:        rider,
-		WPrime:       NewWPrimeState(rider),
-		FormFactor:   1.0,
-		EffectiveFTP: rider.FTPWatts,
-	}
-
-	flatSeg := &model.Segment{GradientPct: 1.0, DistanceKm: 10, SurfaceType: model.SurfaceRoad}
-	steepSeg := &model.Segment{GradientPct: 7.0, DistanceKm: 10, SurfaceType: model.SurfaceRoad}
-
-	rng1 := rand.New(rand.NewSource(99))
-	rng2 := rand.New(rand.NewSource(99))
-
-	flatAttacks := 0
-	steepAttacks := 0
-	n := 5000
-	for i := 0; i < n; i++ {
-		if BreakawayAttempt(rs, flatSeg, 50, rng1) {
-			flatAttacks++
+// Breakaway attempts are intent: a team's sprinter waits for the sprint, a
+// domestique riding for a leader in the group rarely goes. Where a move sticks
+// is physics (see TestSimulateSegmentBreakawayGap).
+func TestBreakawayAttemptRoles(t *testing.T) {
+	seg := &model.Segment{GradientPct: 0, DistanceKm: 10, SurfaceType: model.SurfaceRoad}
+	count := func(role TeamRole, leaderHere bool) int {
+		rider := testRider()
+		rider.TacticalAwareness = 90
+		rs := &RiderState{Rider: rider, WPrime: NewWPrimeState(rider), FormFactor: 1, EffectiveFTP: rider.FTPWatts, TeamRole: role}
+		rng := rand.New(rand.NewSource(7))
+		n := 0
+		for i := 0; i < 5000; i++ {
+			if BreakawayAttempt(rs, seg, 100, rng, leaderHere) {
+				n++
+			}
 		}
-		if BreakawayAttempt(rs, steepSeg, 50, rng2) {
-			steepAttacks++
-		}
+		return n
 	}
-	if steepAttacks <= flatAttacks {
-		t.Errorf("steep segment attacks (%d) should exceed flat attacks (%d)", steepAttacks, flatAttacks)
+	if n := count(RoleSprinter, false); n != 0 {
+		t.Errorf("a team's sprinter tried %d breakaways; they wait for the sprint", n)
 	}
-	t.Logf("flat attacks: %d/%d, steep attacks: %d/%d", flatAttacks, n, steepAttacks, n)
-}
-
-func TestBreakawayAttemptOptimalDistance(t *testing.T) {
-	rider := testRider()
-	rider.TacticalAwareness = 80
-	rs := &RiderState{
-		Rider:        rider,
-		WPrime:       NewWPrimeState(rider),
-		FormFactor:   1.0,
-		EffectiveFTP: rider.FTPWatts,
+	free, working := count(RoleDomestique, false), count(RoleDomestique, true)
+	if free == 0 || working*4 > free {
+		t.Errorf("domestique attempts: free %d, with leader present %d; want far fewer when working", free, working)
 	}
-	seg := &model.Segment{GradientPct: 1.0, DistanceKm: 10, SurfaceType: model.SurfaceRoad}
-
-	n := 10000
-	// 30-60km zone (optimal)
-	rng1 := rand.New(rand.NewSource(123))
-	optimalAttacks := 0
-	for i := 0; i < n; i++ {
-		if BreakawayAttempt(rs, seg, 45, rng1) {
-			optimalAttacks++
-		}
-	}
-
-	// <10km zone (peloton will chase)
-	rng2 := rand.New(rand.NewSource(123))
-	closeAttacks := 0
-	for i := 0; i < n; i++ {
-		if BreakawayAttempt(rs, seg, 5, rng2) {
-			closeAttacks++
-		}
-	}
-
-	if closeAttacks >= optimalAttacks {
-		t.Errorf("close-to-finish attacks (%d) should be less than optimal zone attacks (%d)",
-			closeAttacks, optimalAttacks)
-	}
-	t.Logf("optimal zone: %d/%d, close to finish: %d/%d", optimalAttacks, n, closeAttacks, n)
 }
 
 func TestBreakawayAttemptTacticalAwareness(t *testing.T) {
@@ -311,60 +267,6 @@ func TestSimulateSegmentBreakawayGap(t *testing.T) {
 		}
 	}
 	t.Log("no breakaway occurred across 500 seeds — probabilistically possible but unlikely with high tactical awareness")
-}
-
-func TestSimulateSegmentBreakawayNearFinishFewerEvents(t *testing.T) {
-	// Near the finish, BreakawayAttempt probability is lower (0.3x multiplier),
-	// so fewer breakaway events should occur compared to far from finish.
-	attacker := makeRider("Attacker", 420, 68, 80, 50, 70, 70, 80, 70, 70, 95)
-	attacker.ID = 1
-	pelotonRider := makeRider("Peloton", 360, 75, 60, 80, 60, 70, 70, 70, 70, 30)
-	pelotonRider.ID = 2
-
-	allRiders := []model.Rider{attacker, pelotonRider}
-	seg := &model.Segment{GradientPct: 0, DistanceKm: 20, SurfaceType: model.SurfaceRoad}
-
-	farBreakawayCount := 0
-	nearBreakawayCount := 0
-	n := 500
-
-	for seed := int64(0); seed < int64(n); seed++ {
-		rngFar := rand.New(rand.NewSource(seed))
-		statesFar := make([]*RiderState, len(allRiders))
-		for i := range allRiders {
-			r := &allRiders[i]
-			statesFar[i] = &RiderState{
-				Rider: r, WPrime: NewWPrimeState(r),
-				FormFactor: 1.0, EffectiveFTP: r.FTPWatts,
-			}
-		}
-		SimulateSegment(statesFar, seg, false, 45.0, rngFar, nil, nil) // optimal zone
-		if statesFar[0].TotalTime != statesFar[1].TotalTime {
-			farBreakawayCount++
-		}
-
-		rngNear := rand.New(rand.NewSource(seed))
-		statesNear := make([]*RiderState, len(allRiders))
-		for i := range allRiders {
-			r := &allRiders[i]
-			statesNear[i] = &RiderState{
-				Rider: r, WPrime: NewWPrimeState(r),
-				FormFactor: 1.0, EffectiveFTP: r.FTPWatts,
-			}
-		}
-		SimulateSegment(statesNear, seg, false, 5.0, rngNear, nil, nil) // very close to finish
-		if statesNear[0].TotalTime != statesNear[1].TotalTime {
-			nearBreakawayCount++
-		}
-	}
-
-	t.Logf("breakaway events: far (45km)=%d/%d, near (5km)=%d/%d",
-		farBreakawayCount, n, nearBreakawayCount, n)
-
-	if nearBreakawayCount >= farBreakawayCount {
-		t.Errorf("near-finish breakaway count (%d) should be less than far count (%d)",
-			nearBreakawayCount, farBreakawayCount)
-	}
 }
 
 func avgFloat64(vals []float64) float64 {

@@ -182,7 +182,7 @@ func paceLineSpeed(rps []riderPower, segment *model.Segment, cooperative bool) (
 // and form the next group from those remaining. Drafting only reduces aero
 // drag, so its benefit fades naturally as speed drops on climbs; descending
 // skill caps speed on the way down. One rule for every gradient.
-func followSplit(rps []riderPower, segment *model.Segment, firstID int, cooperative bool) []*Group {
+func followSplit(rps []riderPower, segment *model.Segment, firstID int, cooperative, racing bool) []*Group {
 	if len(rps) == 0 {
 		return nil
 	}
@@ -200,9 +200,18 @@ func followSplit(rps []riderPower, segment *model.Segment, firstID int, cooperat
 		// The pace comes from the riders doing the work: their rotation, and
 		// never slower than the strongest worker would ride on the front alone.
 		// Sheltered leaders follow; they don't set the tempo.
-		speed, intensity, workerSet, k := paceLineSpeed(remaining, segment, cooperative)
+		// A big group in which nobody is working (no chase, attack or team
+		// drive) holds a collective tempo: riders on the front ride at a pace
+		// the bulk of the bunch can follow, so it is set by the middle of the
+		// group, not its strongest rider. In the finale everyone races.
+		holding := !racing && len(remaining) > maxRotation && !anyWorking(remaining)
+		pacers := remaining
+		if holding {
+			pacers = tempoRiders(remaining)
+		}
+		speed, intensity, workerSet, k := paceLineSpeed(pacers, segment, cooperative)
 		linedOut := intensity >= linedOutIntensity
-		if s := strongestWorkerSpeed(remaining, solo); speed < s {
+		if s := strongestWorkerSpeed(remaining, solo); !holding && speed < s {
 			speed = s
 		}
 		// An attacker in the group drives the pace at their own burst speed.
@@ -252,6 +261,34 @@ func followSplit(rps []riderPower, segment *model.Segment, firstID int, cooperat
 		remaining = rest
 	}
 	return groups
+}
+
+// anyWorking reports whether a rider in the group is chasing or attacking
+// (team drives count as chasing).
+func anyWorking(rps []riderPower) bool {
+	for _, rp := range rps {
+		if rp.action == ActionChase || rp.action == ActionAttack {
+			return true
+		}
+	}
+	return false
+}
+
+// tempoRiders returns the riders who set a holding group's tempo: a
+// rotation's worth of non-sheltered riders around the group's median power.
+func tempoRiders(rps []riderPower) []riderPower {
+	var pool []riderPower
+	for _, rp := range rps {
+		if !isSheltered(rp) {
+			pool = append(pool, rp)
+		}
+	}
+	if len(pool) <= maxRotation {
+		return rps
+	}
+	sort.SliceStable(pool, func(i, j int) bool { return pool[i].power > pool[j].power })
+	lo := len(pool)/2 - maxRotation/2
+	return pool[lo : lo+maxRotation]
 }
 
 // strongestWorkerSpeed is the solo speed of the fastest non-sheltered rider

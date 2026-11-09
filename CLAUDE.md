@@ -20,6 +20,7 @@ Requires Go 1.24+ and uses `modernc.org/sqlite` (pure Go, no CGO needed).
 - `internal/seed/` — seed data (riders from `data/riders.csv`, courses, races, stage races)
 - `internal/selection/` — start-list selection per race profile
 - `internal/calibrate/` — `fit-ratings`: fits rider thresholds to real results by simulation
+- `internal/stagefile/` — reads Pro Cycling Manager stage files (`.cds`) installed locally, converts route profile + cobbled/gravel sectors into segments
 - `internal/model/` — Domain structs (Rider, Course, Segment, Race, Result, GCStanding) with validation
 - `internal/simulation/` — Core simulation engine:
   - `physics.go` — Speed-from-power solver (bisection method), drag/gravity/rolling forces, drafting
@@ -37,7 +38,7 @@ Guiding rule: express behaviour as physics or rider intent, never as hardcoded g
 - **Ability modifiers** (1-100 scale, 70 = WT average): `effectivePower = base * (1 + (ability-70)*0.002)`, giving ±4% range. W/kg (FTP/weight) is the main performance lever. Climbing ability blends in with the climb factor (full effect on real climbs, none on the flat). `EffectivePower` is the rider's threshold on that terrain *and* the W' threshold (`thresholdIntOn`) — keep them the same, or riding "at threshold" drains/refills W' and cancels abilities.
 - **Speed solver**: bisection on `0.5·ρ·CdA·(v+w)|v+w|·v + staticForce·v = P` (w = headwind; robust on descents).
 - **Steps**: segments are simulated in ≤2 km steps; tactical/incident probabilities are per 5 km (`ScaleToDistance`).
-- **Groups** (`peloton_follow.go`): one rule on all terrain. Pace comes from a rotating pace line of workers (riders chasing/attacking/driving; small groups share). Followers must hold it with positional draft + spendable W'; else they're dropped. Groups line out at ≥95% threshold (no deep bunch shelter). Cooperative chases of a break spend W' N/k faster (pool depth). Groups can't pass each other; riders in a group close up to its front.
+- **Groups** (`peloton_follow.go`): one rule on all terrain. Pace comes from a rotating pace line of workers (riders chasing/attacking/driving; small groups share). A big group with nobody working holds a collective tempo set by its middle riders (`tempoRiders`), not its strongest, until the finale. Followers must hold it with positional draft + spendable W'; else they're dropped. Groups line out at ≥95% threshold (no deep bunch shelter). Cooperative chases of a break spend W' N/k faster (pool depth). Groups can't pass each other; riders in a group close up to its front.
 - **Contact**: riders within 10 s are one road group. Breakaway state is read from the road.
 - **Effort** (`riderEffort`): each mode draws on W' once over one horizon — attack: the step; committed chase / finale (last 20 km): to the line; team driving: rest of the climb. Domestiques pace at threshold until the 3 km lead-out.
 - **W'**: depletes above FTP; recovers with Skiba (2012) τ = 546·e^(−0.01·(CP−P)) + 316 s.
@@ -47,7 +48,7 @@ Guiding rule: express behaviour as physics or rider intent, never as hardcoded g
 - **Stage fatigue**: `cumulativeFatigue += stress·(1 − recovery/150)`, FTP × (1 − 0.004·fatigue), floor 85% (~4% over a Grand Tour). Time cuts by climbing density (waived if >20% outside).
 - **Wind**: segments have headings (synthetic in seed data); headwind enters the solver; crosswind removes gutter shelter beyond a 10-rider echelon by yaw angle; roads meander ±60° per step.
 - **Terrain**: `ClimbFactor` (share of power lifting weight) classifies terrain for tactics.
-- **Team strategy**: a team drives when its leader's threshold pace would break the group's fastest finisher even in the draft; its domestiques then set the pace the leader can hold on the wheel at threshold (`leaderTempoSpeed`), not an all-out effort. Leaders race in the finale; shelter needs a teammate.
+- **Team strategy**: a team drives when its leader's threshold pace would break the group's fastest finisher even in the draft; its domestiques then set the pace the leader can hold on the wheel at the phase intensity (`leaderTempoSpeed`: a tempo mid-race, threshold in the finale), not an all-out effort. Leaders race in the finale; shelter needs a teammate.
 - **Stage races** (`AssignCoLeaders`, `gcRivalAhead`): domestiques who are among the 10 strongest climbers in the field, or in the GC top 10, become co-leaders. A GC leader with a rival up the road who would pass them on GC limits losses (chases to the line); chasing GC leaders take turns instead of sitting in.
 
 ## Database
@@ -64,6 +65,7 @@ SQLite with WAL mode, foreign keys enabled. Schema auto-migrates on open. Use `C
 ./cycling-sim validate [-v]           # synthetic, 2024 real races, 2023 hold-out, race speeds (-v: per rider)
 ./cycling-sim fit-ratings [--classics] [file]  # fit thresholds to 2024 refs by simulation
 ./cycling-sim apply-ratings           # re-apply all rating layers to the DB in place (keeps results)
+./cycling-sim import-stages <dir>     # real route profiles from local PCM stage files (keeps results)
 ./cycling-sim import-results [dir]    # derive ratings from saved result pages
 ./cycling-sim results <race-id>       # view saved results
 ./cycling-sim gc <sr-id> <stage>      # view GC standings
@@ -79,4 +81,5 @@ SQLite with WAL mode, foreign keys enabled. Schema auto-migrates on open. Use `C
 - Rating layers at seed time (`seed.RatingLayers`): `riders.csv` → `rider_llm.csv` → `rider_derived.csv` (from `cycling-sim import-results`, saved pages in `data/results/<profile>/`) → `rider_overrides.csv` (curated; GC tier calibrated to 2024 Tour gaps). Never scrape FirstCycling/PCS (robots.txt / bot protection).
 - `cycling-sim validate` scores synthetic fields, six 2024 classics and the 2024 Tour GC (verified non-starters excluded via `DidNotStart`; reference riders always start), a 2023 hold-out (never fitted) and winners' average speeds.
 - `data/rider_fitted.csv` (from `fit-ratings`, Tour GC only) is a 4th layer of `FTP_scale` multipliers (≤ ±4%). Don't fit the classics: with 1-2 results per rider it overfits (the 2023 hold-out gets worse). The fitter flags riders pushed above the strongest rider's climbing W/kg — that means it is compensating for a model gap (as it did before co-leader tactics), so fix the model instead.
-- Known gaps: the Flanders course rewards climbing W/kg more than the real race (climbers crowd the finish now that the field has realistic climbers); seeded classic courses have far too little climbing (Liège ~1,870 m of climbing vs ~4,000 m real), so hilly races run ~13% too fast and flat ones ~11% too slow.
+- Route profiles: `data/stage_sources.csv` maps the 11 seeded classics to stage files of the locally installed "WorldDB" PCM mod (Steam Workshop). `import-stages` writes derived segments to `data/local/course_profiles.json` (gitignored: the source files are the mod author's; never commit them or bulk-derived data) and seeding uses it when present. Format notes are in `internal/stagefile/stagefile.go`; distance and altitude share a unit (gradients checked against Liège's Redoute/Roche-aux-Faucons, Flanders' Paterberg/Koppenberg). Profiles are smoothed over 600 m (sectors use the raw profile); total climbing still reads ~10–20% above published figures. Grand Tour stages are still the generic seeded ones (the mod has no 2024 Tour).
+- Known gaps: on real routes, top-10 gaps in hilly classics are still too large (classics riders' W/kg ratings look low, e.g. Benoot 5.6); Paris-Roubaix runs ~9% slow (cobble resistance); the Poggio is steeper in the source file than in reality.

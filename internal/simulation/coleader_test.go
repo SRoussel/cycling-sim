@@ -71,7 +71,7 @@ func TestGCRivalAhead(t *testing.T) {
 func TestLeaderTempoSpeed(t *testing.T) {
 	leader := stateFor(1, "A", 420, 62, RoleLeader)
 	climb := &model.Segment{GradientPct: 7, DistanceKm: 2, SurfaceType: model.SurfaceRoad}
-	v := leaderTempoSpeed(leader, climb)
+	v := leaderTempoSpeed(leader, climb, 1)
 	r := leader.Rider
 	threshold := EffectivePower(r, leader.CurrentFTP(), climb, false)
 	need := segmentPower(v, r.TotalMassKg(), r.CdA*draftFor(2, climb.SurfaceType), climb, r.Handling)

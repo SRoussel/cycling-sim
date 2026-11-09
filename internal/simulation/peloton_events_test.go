@@ -33,7 +33,7 @@ func TestAttackEventOnlyOnTransition(t *testing.T) {
 	states := []*RiderState{rs}
 
 	rng := rand.New(rand.NewSource(1))
-	state := NewRaceState(states, rng, false, false)
+	state := NewRaceState(states, rng, false)
 	overrides := &staticActionOverride{riderID: r.ID, action: ActionAttack}
 	state.Overrides = overrides
 

@@ -82,9 +82,8 @@ type RaceState struct {
 	// GCGaps maps rider ID → cumulative GC deficit in seconds vs. leader (0 = race leader).
 	// Populated at the start of each stage race stage. Nil for one-day races.
 	GCGaps map[int64]float64
-	// HasCobbles is true when the course contains significant cobbled sectors.
-	// Used to weight Handling in rival assessment (Paris-Roubaix style races).
-	HasCobbles bool
+	// Favourites are the riders the bunch marks (see markFavourites).
+	Favourites map[int64]bool
 }
 
 type TacticsParams struct {
@@ -128,7 +127,6 @@ type TeamContext struct {
 }
 
 type RivalAssessment struct {
-	DangerousRiders    map[int64]bool
 	SprintTeamsChasing bool
 }
 
@@ -138,13 +136,12 @@ type TacticsEvent struct {
 	Reason string
 }
 
-func NewRaceState(states []*RiderState, rng *rand.Rand, isStageRace bool, hasCobbles bool) *RaceState {
-	contexts, rival := BuildTeamContexts(states, rng, isStageRace, hasCobbles)
+func NewRaceState(states []*RiderState, rng *rand.Rand, isStageRace bool) *RaceState {
+	contexts, rival := BuildTeamContexts(states, rng, isStageRace)
 	return &RaceState{
 		TeamContexts: contexts,
 		Rival:        rival,
 		IsStageRace:  isStageRace,
-		HasCobbles:   hasCobbles,
 		LastActions:  make(map[int64]Action),
 	}
 }
@@ -259,7 +256,7 @@ func DecideAction(rs *RiderState, state *RaceState, hasLeader bool, rng *rand.Ra
 			// always chase when a non-dangerous breakaway escapes. This ensures vdP,
 			// van Aert, Pedersen etc. control the race on the pavé sectors.
 			onCobbles := state.Segment != nil && state.Segment.SurfaceType == model.SurfaceCobbles
-			isDangerous := state.Rival.DangerousRiders[rs.Rider.ID]
+			isDangerous := state.isDangerous(rs)
 			if state.HasBreakaway && onCobbles && !state.IsStageRace {
 				if isDangerous || state.BreakawayHasDangerous || state.BreakawayGap > 30 {
 					return ActionChase
@@ -338,7 +335,7 @@ func ApplyEventModifiers(params TacticsParams, state *RaceState) TacticsParams {
 	return params
 }
 
-func BuildTeamContexts(states []*RiderState, rng *rand.Rand, isStageRace bool, hasCobbles bool) (map[string]*TeamContext, RivalAssessment) {
+func BuildTeamContexts(states []*RiderState, rng *rand.Rand, isStageRace bool) (map[string]*TeamContext, RivalAssessment) {
 	contexts := make(map[string]*TeamContext)
 	teams := make(map[string][]*RiderState)
 	for _, rs := range states {
@@ -375,30 +372,13 @@ func BuildTeamContexts(states []*RiderState, rng *rand.Rand, isStageRace bool, h
 		contexts[team] = ctx
 	}
 
-	rival := BuildRivalAssessment(states, hasCobbles)
+	rival := BuildRivalAssessment(states)
 	return contexts, rival
 }
 
-func BuildRivalAssessment(states []*RiderState, hasCobbles bool) RivalAssessment {
-	gcCandidates := make([]*RiderState, 0, len(states))
-	for _, rs := range states {
-		gcCandidates = append(gcCandidates, rs)
-	}
-	sort.Slice(gcCandidates, func(i, j int) bool {
-		gi := gcScore(gcCandidates[i].Rider, hasCobbles)
-		gj := gcScore(gcCandidates[j].Rider, hasCobbles)
-		return gi > gj
-	})
-
-	dangerous := make(map[int64]bool)
-	limit := 5
-	if len(gcCandidates) < limit {
-		limit = len(gcCandidates)
-	}
-	for i := 0; i < limit; i++ {
-		dangerous[gcCandidates[i].Rider.ID] = true
-	}
-
+// BuildRivalAssessment notes whether sprint teams are present to chase. Who
+// is dangerous is a role, not a ranking: team leaders (see isDangerous).
+func BuildRivalAssessment(states []*RiderState) RivalAssessment {
 	sprintTeams := false
 	for _, rs := range states {
 		if rs.TeamRole == RoleSprinter || rs.Rider.SprintAbility >= 88 {
@@ -407,10 +387,7 @@ func BuildRivalAssessment(states []*RiderState, hasCobbles bool) RivalAssessment
 		}
 	}
 
-	return RivalAssessment{
-		DangerousRiders:    dangerous,
-		SprintTeamsChasing: sprintTeams,
-	}
+	return RivalAssessment{SprintTeamsChasing: sprintTeams}
 }
 
 func pickObjective(ctx *TeamContext, members []*RiderState, rng *rand.Rand, isStageRace bool) TeamObjective {
@@ -455,17 +432,6 @@ func pickObjective(ctx *TeamContext, members []*RiderState, rng *rand.Rand, isSt
 		return ObjectiveBreakawayHunt
 	}
 	return ObjectiveStageWin
-}
-
-func gcScore(r *model.Rider, hasCobbles bool) float64 {
-	if hasCobbles {
-		// On cobbles races (Paris-Roubaix style), Handling dominates.
-		// Weight Handling 3x vs Endurance to give correct hierarchy:
-		//   vdP (H=99): 96.25  van Aert (H=96): 94.5  Pogacar (H=90): 90.75
-		return float64(r.Handling*3+r.Endurance) / 4.0
-	}
-	// Standard: climbing, TT, endurance weighted equally.
-	return float64(r.ClimbingAbility+r.TTAbility+r.Endurance) / 3.0
 }
 
 func avgAbility(members []*RiderState, getter func(*RiderState) int) float64 {
@@ -527,4 +493,35 @@ func (s *RaceState) rivalAhead(rs *RiderState) bool {
 		rival = true
 	}
 	return rival
+}
+
+// favouriteCount: how many riders the bunch marks as favourites. A move or
+// break containing one is followed or chased at once; others are let go.
+// (Marking every team leader instead made the bunch ride every attack and
+// shattered races: gap sum 3849 s vs 2413 s.)
+const favouriteCount = 5
+
+// markFavourites ranks the riders by time over this course at threshold (the
+// physics behind AssignCourseLeaders) and marks the fastest as favourites.
+func (s *RaceState) markFavourites(states []*RiderState, segments []model.Segment) {
+	type ranked struct {
+		id int64
+		t  float64
+	}
+	var all []ranked
+	for _, rs := range states {
+		if !rs.DNF {
+			all = append(all, ranked{rs.Rider.ID, courseTime(rs, segments)})
+		}
+	}
+	sort.Slice(all, func(i, j int) bool { return all[i].t < all[j].t })
+	s.Favourites = map[int64]bool{}
+	for i := 0; i < len(all) && i < favouriteCount; i++ {
+		s.Favourites[all[i].id] = true
+	}
+}
+
+// isDangerous reports whether a rider is one of the race favourites.
+func (s *RaceState) isDangerous(rs *RiderState) bool {
+	return s != nil && s.Favourites[rs.Rider.ID]
 }

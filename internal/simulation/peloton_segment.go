@@ -69,7 +69,7 @@ func updateBreakawayState(state *RaceState, clusters [][]*RiderState) {
 	state.BreakawayGap = clusters[main][0].TotalTime - clusters[0][0].TotalTime
 	for _, c := range clusters[:main] {
 		for _, rs := range c {
-			if state.Rival.DangerousRiders[rs.Rider.ID] {
+			if state.isDangerous(rs) {
 				state.BreakawayHasDangerous = true
 			}
 		}

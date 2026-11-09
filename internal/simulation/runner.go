@@ -91,21 +91,6 @@ func buildRouteProfile(course *model.Course) *RouteProfile {
 	return &RouteProfile{TotalKm: course.TotalDistanceKm, Points: points}
 }
 
-// courseHasCobbles returns true when the course has at least 15km of cobbled sectors
-// (Paris-Roubaix style, not just rough bergs as in Tour of Flanders).
-func courseHasCobbles(course *model.Course) bool {
-	if course == nil {
-		return false
-	}
-	cobbleKm := 0.0
-	for _, seg := range course.Segments {
-		if seg.SurfaceType == model.SurfaceCobbles {
-			cobbleKm += seg.DistanceKm
-		}
-	}
-	return cobbleKm >= 15.0
-}
-
 func segmentStartTimes(states []*RiderState) map[int64]float64 {
 	out := make(map[int64]float64, len(states))
 	for _, rs := range states {
@@ -232,12 +217,12 @@ func SimulateRoadRaceWithProgress(config RaceConfig, onProgress func(ProgressSna
 	}
 
 	tacticsParams := DefaultTacticsParams()
-	hasCobbles := courseHasCobbles(config.Course)
 	stageRace := config.Race != nil && model.IsStageRaceStageName(config.Race.Name)
 	if !stageRace {
 		AssignCourseLeaders(states, segments)
 	}
-	raceState := NewRaceState(states, rng, stageRace, hasCobbles)
+	raceState := NewRaceState(states, rng, stageRace)
+	raceState.markFavourites(states, segments)
 	raceState.Overrides = config.ActionOverrides
 	raceState.GCGaps = config.GCGaps
 	AssignCoLeaders(states, config.GCGaps, config.TeamPlan, raceState.IsStageRace)

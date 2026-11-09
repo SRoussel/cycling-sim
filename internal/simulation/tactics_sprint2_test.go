@@ -52,7 +52,7 @@ func domestiqueAction(dom, leader *model.Rider, seg *model.Segment, remaining fl
 	leaderRS := &RiderState{Rider: leader, WPrime: NewWPrimeState(leader), FormFactor: 1.0, EffectiveFTP: leader.FTPWatts, TeamRole: RoleLeader}
 	sprRS := &RiderState{Rider: &sprinter, WPrime: NewWPrimeState(&sprinter), FormFactor: 1.0, EffectiveFTP: sprinter.FTPWatts, TeamRole: RoleSprinter}
 	riders := []*RiderState{domRS, leaderRS, sprRS}
-	state := NewRaceState(riders, rng, false, false)
+	state := NewRaceState(riders, rng, false)
 	state.Segment = seg
 	state.KmRemaining = remaining
 	state.Phase = PhaseFromKm(remaining)
@@ -69,7 +69,7 @@ func measureDomestiquePowers(dom *model.Rider, leader *model.Rider, seg *model.S
 		domRS := &RiderState{Rider: dom, WPrime: NewWPrimeState(dom), FormFactor: 1.0, EffectiveFTP: dom.FTPWatts, TeamRole: RoleDomestique}
 		leaderRS := &RiderState{Rider: leader, WPrime: NewWPrimeState(leader), FormFactor: 1.0, EffectiveFTP: leader.FTPWatts, TeamRole: RoleLeader}
 		riders := []*RiderState{domRS, leaderRS}
-		state := NewRaceState(riders, rng, true, false)
+		state := NewRaceState(riders, rng, true)
 		state.Segment = seg
 		state.KmRemaining = baseRemaining
 		state.Phase = PhaseFromKm(baseRemaining)

@@ -142,7 +142,7 @@ func FormGroups(riders []*RiderState, segment *model.Segment, isTT bool, remaini
 	// can hold the wheel stays with it (followSplit decides physically).
 	finale := state != nil && state.Phase == PhaseFinal
 	threatening := func(rp riderPower) bool {
-		return finale || (state != nil && state.Rival.DangerousRiders[rp.state.Rider.ID])
+		return finale || state.isDangerous(rp.state)
 	}
 	var attackers, others []riderPower
 	for _, rp := range rps {

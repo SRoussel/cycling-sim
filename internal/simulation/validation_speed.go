@@ -97,7 +97,7 @@ func oneDayWinnerSpeed(db *database.DB, riders []model.Rider, races []model.Race
 	var sum float64
 	for _, res := range parallelRuns(speedRuns, func(run int) []model.RaceResult {
 		start := selection.SelectStartList(riders, course, race, selection.DefaultConfig(race.RaceType, false, 0))
-		return SimulateRoadRace(RaceConfig{Race: race, Course: course, Riders: start, Seed: int64(run + 1)})
+		return SimulateRoadRace(RaceConfig{Race: race, Course: course, Riders: start, Seed: ValidationSeedBase + int64(run+1)})
 	}) {
 		if len(res) == 0 || res[0].FinishTimeSeconds <= 0 {
 			return 0, fmt.Errorf("no finishers")

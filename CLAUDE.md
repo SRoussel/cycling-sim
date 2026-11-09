@@ -63,6 +63,7 @@ SQLite with WAL mode, foreign keys enabled. Schema auto-migrates on open. Use `C
 ./cycling-sim run <race-id> [--incidents] [--seed N]   # simulate a race
 ./cycling-sim run-stage-race <sr-id> [--seed N]        # simulate stage race with GC
 ./cycling-sim validate [-v]           # synthetic, 2024 real races, 2023 hold-out, race speeds (-v: per rider)
+./cycling-sim validate --sets N       # reference races over N independent seed sets (judge model changes with this)
 ./cycling-sim fit-ratings [--classics] [file]  # fit thresholds to 2024 refs by simulation
 ./cycling-sim apply-ratings           # re-apply all rating layers to the DB in place (keeps results)
 ./cycling-sim import-stages <dir>     # real route profiles from local PCM stage files (keeps results)

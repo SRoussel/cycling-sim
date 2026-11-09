@@ -300,7 +300,7 @@ func RunRealRaceValidationFor(db *database.DB, allRiders []model.Rider, entries 
 				Race:   race,
 				Course: course,
 				Riders: riders,
-				Seed:   int64(run + 1),
+				Seed:   ValidationSeedBase + int64(run+1),
 			}
 			if race.RaceType == model.RaceTypeTT {
 				return SimulateTT(cfg)
@@ -513,7 +513,7 @@ func RunRealStageRaceValidationFor(db *database.DB, allRiders []model.Rider, ent
 		gapN := map[int64]int{}
 		posSum := map[int64]float64{}
 		allRuns := parallelRuns(runs, func(run int) [][]model.GCStanding {
-			_, standings := SimulateStageRace(sr, stages, riders, int64(run+1))
+			_, standings := SimulateStageRace(sr, stages, riders, ValidationSeedBase+int64(run+1))
 			return standings
 		})
 		for _, standings := range allRuns {

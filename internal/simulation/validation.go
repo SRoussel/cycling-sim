@@ -5,6 +5,7 @@ import (
 	"math"
 	"sort"
 
+	"cycling_sim/internal/database"
 	"cycling_sim/internal/model"
 )
 
@@ -34,6 +35,53 @@ type RiderCheck struct {
 	SimGap   float64 // average simulated gap (s)
 	Top10Pct float64 // share of runs finishing top 10
 	WinPct   float64
+}
+
+// ValidationSeedBase offsets every validation seed (run i uses base+i+1).
+// Different bases give independent seed sets, to tell a real change from
+// noise (see RunSeedSets).
+var ValidationSeedBase int64
+
+// SeedSetResult is one reference race scored over several seed sets.
+type SeedSetResult struct {
+	Name         string
+	MAE          []float64 // gap error per seed set
+	RealWinnerPc float64   // mean share of runs the real winner wins
+}
+
+// RunSeedSets scores every reference race (2024 and the 2023 hold-out) over
+// sets independent seed sets of the usual run counts.
+func RunSeedSets(db *database.DB, sets int) []SeedSetResult {
+	riders, err := db.ListRiders()
+	if err != nil || len(riders) == 0 {
+		return nil
+	}
+	defer func(b int64) { ValidationSeedBase = b }(ValidationSeedBase)
+	var out []SeedSetResult
+	index := map[string]int{}
+	for set := 0; set < sets; set++ {
+		ValidationSeedBase = int64(set) * 1000
+		var rows []ValidationSummary
+		rows = append(rows, RunRealRaceValidationFor(db, riders, KnownRealRaces(), realValidationRuns)...)
+		rows = append(rows, RunRealStageRaceValidationFor(db, riders, KnownRealStageRaces(), realStageRaceRuns)...)
+		rows = append(rows, RunRealRaceValidationFor(db, riders, KnownRealRaces2023(), realValidationRuns)...)
+		rows = append(rows, RunRealStageRaceValidationFor(db, riders, KnownRealStageRaces2023(), realStageRaceRuns)...)
+		for _, r := range rows {
+			i, ok := index[r.Name]
+			if !ok {
+				i = len(out)
+				index[r.Name] = i
+				out = append(out, SeedSetResult{Name: r.Name})
+			}
+			out[i].MAE = append(out[i].MAE, r.MeanTimeGapErrorSecs)
+			for _, c := range r.Riders {
+				if c.RealPos == 1 {
+					out[i].RealWinnerPc += c.WinPct / float64(sets)
+				}
+			}
+		}
+	}
+	return out
 }
 
 // RunValidationSuite runs lightweight validation checks for the UI.
@@ -135,7 +183,7 @@ func simulateAveragePositions(race *model.Race, course *model.Course, riders []m
 			Race:   race,
 			Course: course,
 			Riders: riders,
-			Seed:   int64(run + 1),
+			Seed:   ValidationSeedBase + int64(run+1),
 		}
 		var results []model.RaceResult
 		if race.RaceType == model.RaceTypeTT {

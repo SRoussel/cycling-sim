@@ -61,6 +61,14 @@ func main() {
 		srID := idArg(args, 0, "Usage: cycling-sim run-stage-race <stage-race-id> [--seed N]")
 		cmdRunStageRace(db, srID, seedVal)
 	case "validate":
+		if len(args) > 1 && args[0] == "--sets" {
+			n, err := strconv.Atoi(args[1])
+			if err != nil || n < 1 {
+				fatalf("Usage: cycling-sim validate --sets N\n")
+			}
+			cmdValidateSets(db, n)
+			break
+		}
 		cmdValidate(db, len(args) > 0 && (args[0] == "-v" || args[0] == "--verbose"))
 	case "import-stages":
 		if len(args) == 0 {
@@ -433,6 +441,23 @@ func formatDuration(seconds float64) string {
 		return fmt.Sprintf("%d'%02d\"", m, s)
 	}
 	return fmt.Sprintf("%d\"", s)
+}
+
+// cmdValidateSets scores the reference races over n independent seed sets:
+// a change is real when it moves the mean by more than the spread.
+func cmdValidateSets(db *database.DB, n int) {
+	fmt.Printf("Reference races over %d seed sets (gap error: mean, min-max; real winner's win rate)\n", n)
+	var total float64
+	for _, r := range simulation.RunSeedSets(db, n) {
+		mean, lo, hi := 0.0, math.Inf(1), math.Inf(-1)
+		for _, v := range r.MAE {
+			mean += v / float64(len(r.MAE))
+			lo, hi = math.Min(lo, v), math.Max(hi, v)
+		}
+		total += mean
+		fmt.Printf("  %-30s %5.0fs  (%4.0f-%4.0f)  winner %3.0f%%\n", r.Name, mean, lo, hi, r.RealWinnerPc)
+	}
+	fmt.Printf("  %-30s %5.0fs\n", "Sum of mean gap errors", total)
 }
 
 func cmdValidate(db *database.DB, verbose bool) {

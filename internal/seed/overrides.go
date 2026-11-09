@@ -3,6 +3,7 @@ package seed
 import (
 	"encoding/csv"
 	"fmt"
+	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -34,6 +35,9 @@ var overrideColumns = map[string]func(r *model.Rider, v string) error{
 	"Consistency":  intSetter(func(r *model.Rider, i int) { r.Consistency = i }),
 	"Tactical":     intSetter(func(r *model.Rider, i int) { r.TacticalAwareness = i }),
 	"Handling":     intSetter(func(r *model.Rider, i int) { r.Handling = i }),
+	// FTP_scale multiplies the threshold set by earlier layers (used by the
+	// fitted layer, which stores corrections rather than absolute values).
+	"FTP_scale": floatSetter(func(r *model.Rider, f float64) { r.FTPWatts = int(math.Round(float64(r.FTPWatts) * f)) }),
 }
 
 // OverrideColumns returns the supported override column names in a stable order.

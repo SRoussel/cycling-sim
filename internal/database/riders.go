@@ -90,3 +90,18 @@ func (db *DB) DeleteRider(id int64) error {
 	}
 	return nil
 }
+
+// SetRiderFTPs updates riders' threshold power in one transaction.
+func (db *DB) SetRiderFTPs(ftp map[int64]int) error {
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	for id, w := range ftp {
+		if _, err := tx.Exec("UPDATE riders SET ftp_watts = ? WHERE id = ?", w, id); err != nil {
+			tx.Rollback()
+			return fmt.Errorf("updating rider %d: %w", id, err)
+		}
+	}
+	return tx.Commit()
+}

@@ -45,7 +45,12 @@ func Seed(db *database.DB) (Result, error) {
 	if err != nil {
 		return res, err
 	}
-	riderCount, err := loadRidersFromCSV(db, csvPath, derived, curated)
+	// Fitted corrections (cycling-sim fit-ratings) scale the result last.
+	fitted, err := LoadOverrides(findDataFile(FittedFile))
+	if err != nil {
+		return res, err
+	}
+	riderCount, err := loadRidersFromCSV(db, csvPath, derived, curated, fitted)
 	if err != nil {
 		return res, err
 	}
@@ -85,6 +90,9 @@ func ClearDBFile(dbPath string) error {
 func DataPath(name string) string {
 	return filepath.Join(filepath.Dir(findDataFile("riders.csv")), name)
 }
+
+// FittedFile holds threshold corrections fitted to real results.
+const FittedFile = "rider_fitted.csv"
 
 // findDataFile locates a data file relative to the binary or source directory.
 func findDataFile(name string) string {

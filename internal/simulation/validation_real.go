@@ -75,6 +75,9 @@ func KnownRealRaces() []RealRaceEntry {
 			// 1 Pogačar  2 Skujiņš +2:44  3 Van Gils +2:47  4 Pidcock*  8 L.Martinez  9 Zana  10 Laporte
 			Top10RiderIDs: []int64{452, 193, 312, 0, 0, 0, 0, 44, 347, 421},
 			Top10GapSecs:  []float64{0, 164, 167, u, u, u, u, 288, 289, 317},
+			// Not on the start list (CyclingStage rider list; Cycling Weekly for
+			// van der Poel and van Aert).
+			DidNotStart: []int64{28, 429, 416, 190, 274, 239},
 		},
 		{
 			DisplayName:  "Milan-San Remo 2024",
@@ -82,6 +85,7 @@ func KnownRealRaces() []RealRaceEntry {
 			// Bunch sprint: 1 Philipsen  2 Matthews  3 Pogačar  4 Pedersen  7 Van Gils  8 Stuyven  10 van der Poel
 			Top10RiderIDs: []int64{17, 366, 452, 190, 0, 0, 312, 336, 0, 28},
 			Top10GapSecs:  []float64{0, 0, 0, 0, u, u, 0, 0, u, 0},
+			DidNotStart:   []int64{429}, // van Aert not on the start list
 		},
 		{
 			DisplayName:  "Tour of Flanders 2024",
@@ -89,8 +93,9 @@ func KnownRealRaces() []RealRaceEntry {
 			// 1 van der Poel solo; group at +1:02: 2 Mozzato*  3 Politt  4 Bjerg  5 Morgado  6 Sheffield  7 Naesen  9 Bettiol
 			Top10RiderIDs: []int64{28, 0, 453, 436, 446, 163, 78, 0, 493, 0},
 			Top10GapSecs:  []float64{0, 62, 62, 62, 62, 62, 62, 62, 62, 62},
-			// Pogačar didn't ride; van Aert crashed out at Dwars door Vlaanderen.
-			DidNotStart: []int64{452, 429},
+			// Pogačar didn't ride; van Aert crashed out at Dwars door Vlaanderen;
+			// the GC riders below weren't on the start list (CyclingStage).
+			DidNotStart: []int64{452, 429, 294, 431, 103, 36, 93, 67, 251},
 		},
 		{
 			DisplayName:  "Paris-Roubaix 2024",
@@ -98,7 +103,9 @@ func KnownRealRaces() []RealRaceEntry {
 			// 1 van der Poel solo  2 Philipsen +3:00  3 Pedersen  4 Politt  6 G.Vermeersch +3:47  9 Wærenskjold  10 Mihkels
 			Top10RiderIDs: []int64{28, 17, 190, 453, 0, 314, 0, 0, 491, 101},
 			Top10GapSecs:  []float64{0, 180, 180, 180, u, 227, u, u, u, u},
-			DidNotStart:   []int64{452, 429}, // Pogačar didn't ride; van Aert injured
+			// Pogačar didn't ride; van Aert injured; the rest weren't on the
+			// Cyclingnews start list.
+			DidNotStart: []int64{452, 429, 67, 416, 458, 82},
 		},
 		{
 			DisplayName:  "Liege-Bastogne-Liege 2024",
@@ -106,8 +113,9 @@ func KnownRealRaces() []RealRaceEntry {
 			// 1 Pogačar  2 Bardet* +1:39  3 van der Poel +2:02  4 Van Gils  5 A.Paret-Peintre  6 Vansevenant  8 Lutsenko  9 Bilbao
 			Top10RiderIDs: []int64{452, 0, 28, 312, 79, 344, 0, 274, 33, 0},
 			Top10GapSecs:  []float64{0, 99, 122, 122, 122, 122, 122, 122, 122, 122},
-			// Vingegaard, Evenepoel and Roglič were injured at Itzulia (4 April).
-			DidNotStart: []int64{431, 294, 306},
+			// Vingegaard, Evenepoel and Roglič were injured at Itzulia (4 April);
+			// the rest weren't on the start list (CyclingStage).
+			DidNotStart: []int64{431, 294, 306, 370, 245, 251, 416, 161, 259},
 		},
 		{
 			DisplayName:  "Il Lombardia 2024",
@@ -115,6 +123,68 @@ func KnownRealRaces() []RealRaceEntry {
 			// 1 Pogačar  2 Evenepoel +3:16  3 Ciccone +4:31  8 Powless +4:58  9 Gaudu +4:58
 			Top10RiderIDs: []int64{452, 294, 177, 0, 0, 0, 0, 103, 125, 0},
 			Top10GapSecs:  []float64{0, 196, 271, u, u, u, u, 298, 298, 298},
+			DidNotStart:   []int64{500, 370, 433, 429}, // not on the Cyclingnews start list
+		},
+	}
+}
+
+// KnownRealRaces2023 are hold-out references: the same classics in 2023,
+// never used for fitting ratings, so they show whether fitted ratings
+// generalise. Read from the English Wikipedia result tables (Nov 2026).
+// Riders not in data/riders.csv are 0 (Pidcock, Rui Costa, Turgis, Küng,
+// F. Wright, Trentin, Hirschi, S. Yates). Start lists aren't curated, so
+// only matched-rider metrics are meaningful.
+func KnownRealRaces2023() []RealRaceEntry {
+	return []RealRaceEntry{
+		{
+			DisplayName: "Strade Bianche 2023", InternalName: "Strade Bianche",
+			// 1 Pidcock* 2 Madouas 3 Benoot 4 Costa* 5 Valter 6 Mohorič 7 Bilbao 8 Grégoire 9 Formolo 10 Kron
+			Top10RiderIDs: []int64{0, 134, 60, 0, 55, 47, 33, 128, 240, 479},
+			Top10GapSecs:  []float64{0, 20, 22, 23, 23, 34, 64, 78, 83, 95},
+		},
+		{
+			DisplayName: "Milan-San Remo 2023", InternalName: "Milan-San Remo",
+			// 1 van der Poel 2 Ganna 3 van Aert 4 Pogačar 5 Kragh Andersen 6 Pedersen 7 Powless 8 Mohorič 9 Turgis* 10 Stuyven
+			Top10RiderIDs: []int64{28, 150, 429, 452, 183, 190, 103, 47, 0, 336},
+			Top10GapSecs:  []float64{0, 15, 15, 15, 26, 26, 26, 26, 26, 26},
+		},
+		{
+			DisplayName: "Tour of Flanders 2023", InternalName: "Tour of Flanders",
+			// 1 Pogačar 2 van der Poel 3 Pedersen 4 van Aert 5 Powless 6 Küng* 7 Asgreen 8 Wright* 9 Jorgenson 10 Trentin*
+			Top10RiderIDs: []int64{452, 28, 190, 429, 103, 0, 89, 0, 416, 0},
+			Top10GapSecs:  []float64{0, 16, 72, 72, 72, 72, 72, 72, 79, 169},
+		},
+		{
+			DisplayName: "Paris-Roubaix 2023", InternalName: "Paris-Roubaix",
+			// 1 van der Poel 2 Philipsen 3 van Aert 4 Pedersen 5 Küng* 6 Ganna 7 Degenkolb 8 Walscheid 9 Rex 10 Laporte
+			Top10RiderIDs: []int64{28, 17, 429, 190, 0, 150, 382, 201, 334, 421},
+			Top10GapSecs:  []float64{0, 46, 46, 50, 50, 50, 155, 211, 215, 251},
+		},
+		{
+			DisplayName: "Liege-Bastogne-Liege 2023", InternalName: "Liege-Bastogne-Liege",
+			// 1 Evenepoel 2 Pidcock* 3 Buitrago 4 Healy 5 Madouas 6 G.Martin 7 Benoot 8 Konrad 9 Skjelmose 10 Hirschi*
+			Top10RiderIDs: []int64{294, 0, 36, 95, 134, 135, 60, 182, 192, 0},
+			Top10GapSecs:  []float64{0, 66, 66, 68, 84, 85, 97, 108, 108, 108},
+		},
+		{
+			DisplayName: "Il Lombardia 2023", InternalName: "Il Lombardia",
+			// 1 Pogačar 2 Bagioli 3 Roglič 4 Vlasov 5 S.Yates* 6 A.Yates 7 C.Rodríguez 8 Carapaz 9 Evenepoel 10 Kron
+			Top10RiderIDs: []int64{452, 175, 306, 315, 0, 461, 161, 93, 294, 479},
+			Top10GapSecs:  []float64{0, 52, 52, 52, 52, 52, 52, 66, 86, 86},
+		},
+	}
+}
+
+// KnownRealStageRaces2023 is the stage-race hold-out (only the verified top 3).
+func KnownRealStageRaces2023() []RealRaceEntry {
+	const u = gapUnknown
+	return []RealRaceEntry{
+		{
+			DisplayName:  "Tour de France 2023 (GC)",
+			InternalName: "Tour de France",
+			// 1 Vingegaard 2 Pogačar +7:29 3 A.Yates
+			Top10RiderIDs: []int64{431, 452, 461, 0, 0, 0, 0, 0, 0, 0},
+			Top10GapSecs:  []float64{0, 449, u, u, u, u, u, u, u, u},
 		},
 	}
 }
@@ -126,9 +196,17 @@ func RunRealRaceValidation(db *database.DB) []ValidationSummary {
 	if db == nil {
 		return nil
 	}
-
 	allRiders, err := db.ListRiders()
 	if err != nil || len(allRiders) == 0 {
+		return nil
+	}
+	return RunRealRaceValidationFor(db, allRiders, KnownRealRaces(), realValidationRuns)
+}
+
+// RunRealRaceValidationFor validates one-day reference races with a given
+// rider set (e.g. candidate ratings) and number of runs per race.
+func RunRealRaceValidationFor(db *database.DB, allRiders []model.Rider, entries []RealRaceEntry, runs int) []ValidationSummary {
+	if db == nil || len(allRiders) == 0 || runs <= 0 {
 		return nil
 	}
 
@@ -144,7 +222,7 @@ func RunRealRaceValidation(db *database.DB) []ValidationSummary {
 	}
 
 	var results []ValidationSummary
-	for _, entry := range KnownRealRaces() {
+	for _, entry := range entries {
 		race := findRaceByName(internalRaces, entry.InternalName)
 		if race == nil {
 			results = append(results, ValidationSummary{
@@ -212,8 +290,12 @@ func RunRealRaceValidation(db *database.DB) []ValidationSummary {
 				pool = append(pool, r)
 			}
 		}
-		for run := 0; run < realValidationRuns; run++ {
-			riders := selection.SelectStartList(pool, course, race, selCfg)
+		var refIDs []int64
+		for _, m := range matched {
+			refIDs = append(refIDs, m.riderID)
+		}
+		for run := 0; run < runs; run++ {
+			riders := withStarters(selection.SelectStartList(pool, course, race, selCfg), pool, refIDs)
 			cfg := RaceConfig{
 				Race:   race,
 				Course: course,
@@ -271,7 +353,7 @@ func RunRealRaceValidation(db *database.DB) []ValidationSummary {
 		for _, m := range matched {
 			top10Pct += float64(top10Hits[m.riderID])
 		}
-		top10Pct = top10Pct / float64(len(matched)*realValidationRuns) * 100
+		top10Pct = top10Pct / float64(len(matched)*runs) * 100
 
 		// ── Metric 3: Time-gap MAE vs real gaps ──────────────────────────────
 		var gapMAESum float64
@@ -291,8 +373,8 @@ func RunRealRaceValidation(db *database.DB) []ValidationSummary {
 
 		// ── Metric 4: Winner match rate ──────────────────────────────────────
 		winnerPct := 0.0
-		if w := entry.Top10RiderIDs[0]; w > 0 && realValidationRuns > 0 {
-			winnerPct = float64(wins[w]) / float64(realValidationRuns) * 100
+		if w := entry.Top10RiderIDs[0]; w > 0 && runs > 0 {
+			winnerPct = float64(wins[w]) / float64(runs) * 100
 		}
 
 		passed := top10Pct >= realPassTop10Target && (gapN == 0 || gapMAE <= realPassGapMAE)
@@ -301,6 +383,17 @@ func RunRealRaceValidation(db *database.DB) []ValidationSummary {
 			"Matched %d | Corr %.2f | Top-10 overlap %.0f%% (≥%.0f%%) | Gap MAE %.0fs over %d (≤%.0fs) | Real winner wins %.0f%%",
 			len(matched), corr, top10Pct, realPassTop10Target, gapMAE, gapN, realPassGapMAE, winnerPct,
 		)
+
+		var checks []RiderCheck
+		for _, m := range matched {
+			checks = append(checks, RiderCheck{
+				RiderID: m.riderID, RealPos: m.refPos, RealGap: entry.Top10GapSecs[m.refPos-1],
+				SimPos: avgPos(m.riderID), SimGap: avgGap(m.riderID),
+				Top10Pct: float64(top10Hits[m.riderID]) / float64(runs) * 100,
+				WinPct:   float64(wins[m.riderID]) / float64(runs) * 100,
+			})
+		}
+		intruders := findIntruders(entry, top10Hits, wins, runs, avgPos, avgGap)
 
 		results = append(results, ValidationSummary{
 			Name:                 entry.DisplayName,
@@ -311,6 +404,8 @@ func RunRealRaceValidation(db *database.DB) []ValidationSummary {
 			MatchedRiders:        len(matched),
 			IsRealRace:           true,
 			Details:              details,
+			Riders:               checks,
+			Intruders:            intruders,
 		})
 	}
 	return results
@@ -331,10 +426,14 @@ func KnownRealStageRaces() []RealRaceEntry {
 		{
 			DisplayName:  "Tour de France 2024 (GC)",
 			InternalName: "Tour de France",
-			// 1 Pogačar  2 Vingegaard +6:17  3 Evenepoel +9:18  7 C.Rodríguez
-			// 8 Jorgenson  9 Gee* +27:21  10 Buitrago +29:03 (4-6 not verified)
-			Top10RiderIDs: []int64{452, 431, 294, 0, 0, 0, 161, 416, 0, 36},
-			Top10GapSecs:  []float64{0, 377, 558, u, u, u, u, u, 1641, 1743},
+			// 1 Pogačar  2 Vingegaard +6:17  3 Evenepoel +9:18  4 Almeida
+			// 5 Landa  6 A.Yates  7 C.Rodríguez +25:04  8 Jorgenson +26:34
+			// 9 Gee* +27:21  10 Buitrago +29:03 (7, 8 and 10 cross-checked
+			// against the young rider classification; gaps for 4-6 unverified).
+			Top10RiderIDs: []int64{452, 431, 294, 433, 326, 461, 161, 416, 0, 36},
+			Top10GapSecs:  []float64{0, 377, 558, u, u, u, 1504, 1594, 1641, 1743},
+			// Roglič and Ayuso abandoned on stage 13, so they have no final GC.
+			DidNotStart: []int64{306, 174},
 		},
 	}
 }
@@ -349,12 +448,21 @@ func RunRealStageRaceValidation(db *database.DB) []ValidationSummary {
 	if err != nil || len(allRiders) == 0 {
 		return nil
 	}
+	return RunRealStageRaceValidationFor(db, allRiders, KnownRealStageRaces(), realStageRaceRuns)
+}
+
+// RunRealStageRaceValidationFor validates stage-race references with a given
+// rider set and number of runs.
+func RunRealStageRaceValidationFor(db *database.DB, allRiders []model.Rider, entries []RealRaceEntry, runs int) []ValidationSummary {
+	if db == nil || len(allRiders) == 0 || runs <= 0 {
+		return nil
+	}
 	srs, err := db.ListStageRaces()
 	if err != nil {
 		return nil
 	}
 	var out []ValidationSummary
-	for _, entry := range KnownRealStageRaces() {
+	for _, entry := range entries {
 		var sr *model.StageRace
 		for i := range srs {
 			if srs[i].Name == entry.InternalName {
@@ -381,14 +489,30 @@ func RunRealStageRaceValidation(db *database.DB) []ValidationSummary {
 			stages = append(stages, StageConfig{Race: race, Course: course, StageNumber: st.StageNumber, RestDayBefore: st.RestDayBefore})
 			infos = append(infos, selection.StageInfo{Course: course, RaceType: race.RaceType})
 		}
-		riders := selection.SelectStageRaceStartList(allRiders, infos, selection.DefaultConfig(model.RaceTypeRoad, true, len(stages)))
+		dns := make(map[int64]bool, len(entry.DidNotStart))
+		for _, id := range entry.DidNotStart {
+			dns[id] = true
+		}
+		pool := make([]model.Rider, 0, len(allRiders))
+		for _, r := range allRiders {
+			if !dns[r.ID] {
+				pool = append(pool, r)
+			}
+		}
+		var refIDs []int64
+		for _, id := range entry.Top10RiderIDs {
+			if id > 0 {
+				refIDs = append(refIDs, id)
+			}
+		}
+		riders := withStarters(selection.SelectStageRaceStartList(pool, infos, selection.DefaultConfig(model.RaceTypeRoad, true, len(stages))), pool, refIDs)
 
 		wins := map[int64]int{}
 		top10 := map[int64]int{}
 		gapSum := map[int64]float64{}
 		gapN := map[int64]int{}
 		posSum := map[int64]float64{}
-		for run := 0; run < realStageRaceRuns; run++ {
+		for run := 0; run < runs; run++ {
 			_, standings := SimulateStageRace(sr, stages, riders, int64(run+1))
 			if len(standings) == 0 || len(standings[len(standings)-1]) == 0 {
 				continue
@@ -433,21 +557,103 @@ func RunRealStageRaceValidation(db *database.DB) []ValidationSummary {
 				n++
 			}
 		}
-		overlap = overlap / float64(len(matched)*realStageRaceRuns) * 100
+		overlap = overlap / float64(len(matched)*runs) * 100
 		if n > 0 {
 			mae /= float64(n)
 		}
 		corr := validationSpearman(matched, avgPos)
-		winPct := float64(wins[entry.Top10RiderIDs[0]]) / realStageRaceRuns * 100
+		winPct := float64(wins[entry.Top10RiderIDs[0]]) / float64(runs) * 100
+		simPos := func(id int64) float64 {
+			if gapN[id] == 0 {
+				return float64(len(riders) + 1)
+			}
+			return posSum[id] / float64(gapN[id])
+		}
+		simGap := func(id int64) float64 {
+			if gapN[id] == 0 {
+				return 4 * 3600
+			}
+			return gapSum[id] / float64(gapN[id])
+		}
+		var checks []RiderCheck
+		for i, id := range matched {
+			checks = append(checks, RiderCheck{
+				RiderID: id, RealPos: refPos[i], RealGap: entry.Top10GapSecs[refPos[i]-1],
+				SimPos: simPos(id), SimGap: simGap(id),
+				Top10Pct: float64(top10[id]) / float64(runs) * 100,
+				WinPct:   float64(wins[id]) / float64(runs) * 100,
+			})
+		}
+		intruders := findIntruders(entry, top10, wins, runs, simPos, simGap)
 		passed := overlap >= realPassTop10Target && mae <= realStageRaceGapMAE
 		out = append(out, ValidationSummary{
 			Name: entry.DisplayName, IsRealRace: true, Passed: passed,
 			Correlation: corr, Top10Accuracy: overlap, MeanTimeGapErrorSecs: mae, MatchedRiders: len(matched),
 			Details: fmt.Sprintf("Matched %d | Corr %.2f | GC top-10 overlap %.0f%% (≥%.0f%%) | GC gap MAE %.0fs over %d (≤%.0fs) | Real winner wins %.0f%%",
 				len(matched), corr, overlap, realPassTop10Target, mae, n, realStageRaceGapMAE, winPct),
+			Riders: checks, Intruders: intruders,
 		})
 	}
 	return out
+}
+
+// withStarters adds riders who really started (the reference top 10) to a
+// selected start list when selection left them out.
+func withStarters(list, pool []model.Rider, ids []int64) []model.Rider {
+	in := make(map[int64]bool, len(list))
+	for _, r := range list {
+		in[r.ID] = true
+	}
+	for _, id := range ids {
+		if in[id] {
+			continue
+		}
+		for _, r := range pool {
+			if r.ID == id {
+				list = append(list, r)
+				in[id] = true
+				break
+			}
+		}
+	}
+	return list
+}
+
+// intruderTop10Share: a rider not in the real top 10 who finishes top 10 in
+// at least this share of runs is reported as an intruder.
+const intruderTop10Share = 0.5
+
+// findIntruders lists riders who often make the simulated top 10 but were not
+// in the real top 10 (riders the reference doesn't name can't be judged:
+// unknown slots may be theirs).
+func findIntruders(entry RealRaceEntry, top10 map[int64]int, wins map[int64]int, runs int,
+	pos func(int64) float64, gap func(int64) float64) []RiderCheck {
+	known := map[int64]bool{}
+	unknownSlots := 0
+	for _, id := range entry.Top10RiderIDs {
+		if id > 0 {
+			known[id] = true
+		} else {
+			unknownSlots++
+		}
+	}
+	var out []RiderCheck
+	for id, n := range top10 {
+		if known[id] || float64(n) < intruderTop10Share*float64(runs) {
+			continue
+		}
+		out = append(out, RiderCheck{
+			RiderID: id, RealGap: gapUnknown, SimPos: pos(id), SimGap: gap(id),
+			Top10Pct: float64(n) / float64(runs) * 100, WinPct: float64(wins[id]) / float64(runs) * 100,
+		})
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].SimPos < out[j].SimPos })
+	// Unnamed reference places (riders not in the DB, or not verified) could
+	// belong to the most frequent intruders, so they aren't judged.
+	if unknownSlots >= len(out) {
+		return nil
+	}
+	return out[unknownSlots:]
 }
 
 // findRaceByName finds an internal race by exact name, then falls back to
@@ -465,4 +671,17 @@ func findRaceByName(races []model.Race, name string) *model.Race {
 		}
 	}
 	return nil
+}
+
+// RunHoldoutValidation validates the 2023 hold-out references.
+func RunHoldoutValidation(db *database.DB) []ValidationSummary {
+	if db == nil {
+		return nil
+	}
+	allRiders, err := db.ListRiders()
+	if err != nil || len(allRiders) == 0 {
+		return nil
+	}
+	return append(RunRealRaceValidationFor(db, allRiders, KnownRealRaces2023(), realValidationRuns),
+		RunRealStageRaceValidationFor(db, allRiders, KnownRealStageRaces2023(), realStageRaceRuns)...)
 }

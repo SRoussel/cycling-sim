@@ -621,6 +621,8 @@ func (a *App) IsDatabaseSeeded() bool {
 func (a *App) RunValidation() []ValidationResult {
 	synthetic := simulation.RunValidationSuite()
 	realCases := append(simulation.RunRealRaceValidation(a.db), simulation.RunRealStageRaceValidation(a.db)...)
+	realCases = append(realCases, simulation.RunHoldoutValidation(a.db)...)
+	realCases = append(realCases, simulation.RunSpeedValidation(a.db)...)
 
 	all := append(synthetic, realCases...)
 	output := make([]ValidationResult, len(all))

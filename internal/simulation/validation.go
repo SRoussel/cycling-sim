@@ -18,6 +18,22 @@ type ValidationSummary struct {
 	MatchedRiders        int     // number of riders matched between reference and internal DB
 	IsRealRace           bool    // true when backed by real FirstCycling reference data
 	Details              string
+	// Riders compares each matched reference rider with the simulation, and
+	// Intruders lists riders who often finish top 10 in the simulation but
+	// were not in the real top 10 (real-race cases only).
+	Riders    []RiderCheck `json:",omitempty"`
+	Intruders []RiderCheck `json:",omitempty"`
+}
+
+// RiderCheck is one rider's real result next to their simulated average.
+type RiderCheck struct {
+	RiderID  int64
+	RealPos  int     // 0 when not in the real top 10
+	RealGap  float64 // gapUnknown when unknown
+	SimPos   float64 // average simulated position
+	SimGap   float64 // average simulated gap (s)
+	Top10Pct float64 // share of runs finishing top 10
+	WinPct   float64
 }
 
 // RunValidationSuite runs lightweight validation checks for the UI.
@@ -32,12 +48,14 @@ func RunValidationSuite() []ValidationSummary {
 
 func runFlatSprintValidation() ValidationSummary {
 	return runCategoryValidation(validationCaseConfig{
-		Name:              "Flat sprint dominance",
-		RaceType:          model.RaceTypeRoad,
-		Course:            validationFlatCourse(),
-		NumRuns:           20,
-		ExpectedTopIDs:    buildGroupIDs(1, 10),
-		ExpectedOrderIDs:  append(buildGroupIDs(1, 10), append(buildGroupIDs(11, 10), buildGroupIDs(21, 10)...)...),
+		Name:           "Flat sprint dominance",
+		RaceType:       model.RaceTypeRoad,
+		Course:         validationFlatCourse(),
+		NumRuns:        20,
+		ExpectedTopIDs: buildGroupIDs(1, 10),
+		// Sprinters first; behind them all-rounders and climbers share the same
+		// sprint power, so their order depends on who did the team's work.
+		ExpectedTiers:     [][]int64{buildGroupIDs(1, 10), append(buildGroupIDs(11, 10), buildGroupIDs(21, 10)...)},
 		CorrelationTarget: 0.65,
 		Top10Target:       60,
 		Riders:            buildFlatField(),
@@ -79,6 +97,7 @@ type validationCaseConfig struct {
 	NumRuns           int
 	ExpectedTopIDs    []int64
 	ExpectedOrderIDs  []int64
+	ExpectedTiers     [][]int64 // alternative to ExpectedOrderIDs: ties within a tier
 	CorrelationTarget float64
 	Top10Target       float64
 	Riders            []model.Rider
@@ -91,6 +110,9 @@ func runCategoryValidation(cfg validationCaseConfig) ValidationSummary {
 	simOrder := rankByAveragePosition(avgPositions)
 	top10 := topNAccuracy(cfg.ExpectedTopIDs, simOrder, 10)
 	corr := validationSpearman(cfg.ExpectedOrderIDs, avgPositions)
+	if cfg.ExpectedTiers != nil {
+		corr = validationTierCorrelation(cfg.ExpectedTiers, avgPositions)
+	}
 
 	passed := corr >= cfg.CorrelationTarget && top10 >= cfg.Top10Target
 	details := fmt.Sprintf("Corr %.2f (>=%.2f), Top-10 %.0f%% (>=%.0f%%)", corr, cfg.CorrelationTarget, top10, cfg.Top10Target)
@@ -177,40 +199,69 @@ func topNAccuracy(expected []int64, simOrder []int64, n int) float64 {
 	return float64(count) / float64(len(expected)) * 100
 }
 
+// validationSpearman is the rank correlation between an expected order and
+// simulated average positions.
 func validationSpearman(expectedOrder []int64, avgPositions map[int64]float64) float64 {
-	n := len(expectedOrder)
-	if n < 2 {
-		return 0
-	}
-	values := make([]float64, n)
+	tiers := make([][]int64, len(expectedOrder))
 	for i, id := range expectedOrder {
-		values[i] = avgPositions[id]
+		tiers[i] = []int64{id}
 	}
-
-	rankX := validationRanks(sequenceFloats(n))
-	rankY := validationRanks(values)
-
-	var sumD2 float64
-	for i := 0; i < n; i++ {
-		d := rankX[i] - rankY[i]
-		sumD2 += d * d
-	}
-	return 1 - 6*sumD2/(float64(n)*(float64(n)*float64(n)-1))
+	return validationTierCorrelation(tiers, avgPositions)
 }
 
+// validationTierCorrelation is Spearman's correlation (Pearson on tie-averaged
+// ranks) between expected tiers — riders in a tier are expected to finish in
+// any order among themselves — and simulated average positions.
+func validationTierCorrelation(tiers [][]int64, avgPositions map[int64]float64) float64 {
+	var expected, values []float64
+	for t, tier := range tiers {
+		for _, id := range tier {
+			expected = append(expected, float64(t))
+			values = append(values, avgPositions[id])
+		}
+	}
+	if len(values) < 2 {
+		return 0
+	}
+	return pearson(validationRanks(expected), validationRanks(values))
+}
+
+func pearson(x, y []float64) float64 {
+	n := float64(len(x))
+	var mx, my float64
+	for i := range x {
+		mx += x[i] / n
+		my += y[i] / n
+	}
+	var sxy, sxx, syy float64
+	for i := range x {
+		sxy += (x[i] - mx) * (y[i] - my)
+		sxx += (x[i] - mx) * (x[i] - mx)
+		syy += (y[i] - my) * (y[i] - my)
+	}
+	if sxx == 0 || syy == 0 {
+		return 0
+	}
+	return sxy / math.Sqrt(sxx*syy)
+}
+
+// validationRanks returns 1-based ranks, ties sharing their average rank.
 func validationRanks(vals []float64) []float64 {
-	type indexed struct {
-		val float64
-		idx int
+	idx := make([]int, len(vals))
+	for i := range idx {
+		idx[i] = i
 	}
-	items := make([]indexed, len(vals))
-	for i, v := range vals {
-		items[i] = indexed{val: v, idx: i}
-	}
-	sort.Slice(items, func(i, j int) bool { return items[i].val < items[j].val })
+	sort.SliceStable(idx, func(a, b int) bool { return vals[idx[a]] < vals[idx[b]] })
 	ranks := make([]float64, len(vals))
-	for rank, item := range items {
-		ranks[item.idx] = float64(rank + 1)
+	for a := 0; a < len(idx); {
+		b := a
+		for b+1 < len(idx) && vals[idx[b+1]] == vals[idx[a]] {
+			b++
+		}
+		for k := a; k <= b; k++ {
+			ranks[idx[k]] = float64(a+b)/2 + 1
+		}
+		a = b + 1
 	}
 	return ranks
 }

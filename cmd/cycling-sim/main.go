@@ -2,12 +2,14 @@ package main
 
 import (
 	"fmt"
+	"math"
 	"os"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
 
+	"cycling_sim/internal/calibrate"
 	"cycling_sim/internal/database"
 	"cycling_sim/internal/importer"
 	"cycling_sim/internal/model"
@@ -58,7 +60,18 @@ func main() {
 		srID := idArg(args, 0, "Usage: cycling-sim run-stage-race <stage-race-id> [--seed N]")
 		cmdRunStageRace(db, srID, seedVal)
 	case "validate":
-		cmdValidate(db)
+		cmdValidate(db, len(args) > 0 && (args[0] == "-v" || args[0] == "--verbose"))
+	case "fit-ratings":
+		out := seed.DataPath(seed.FittedFile)
+		classics := false
+		for _, a := range args {
+			if a == "--classics" {
+				classics = true
+			} else {
+				out = a
+			}
+		}
+		cmdFitRatings(db, out, classics)
 	case "import-results":
 		dir := "data/results"
 		if len(args) > 0 {
@@ -137,11 +150,15 @@ Commands:
   run <race-id> [--incidents]    Simulate a race
   run-stage-race <stage-race-id> Simulate a stage race
                                  (both accept --seed N for reproducible runs)
-  validate                       Run synthetic + real-race (2024) validation
+  validate [-v]                  Run synthetic + real-race validation (-v: per rider)
   import-results [dir]           Derive ratings from saved result pages in
                                  dir/<sprint|hilly|mountain|cobbles|tt>/
                                  (default data/results); writes
                                  data/rider_derived.csv. Re-seed to apply.
+  fit-ratings [--classics] [file] Fit rider thresholds to the 2024 Tour GC
+                                 (--classics: also the one-day races) by
+                                 simulation; writes file (default
+                                 data/rider_fitted.csv) and updates the DB
   results <race-id>              Show race results
   gc <stage-race-id> <stage>     Show GC standings after a stage
 
@@ -401,7 +418,25 @@ func formatDuration(seconds float64) string {
 	return fmt.Sprintf("%d\"", s)
 }
 
-func cmdValidate(db *database.DB) {
+func cmdValidate(db *database.DB, verbose bool) {
+	names := map[int64]string{}
+	if verbose {
+		if all, err := db.ListRiders(); err == nil {
+			names = service.RiderNames(all)
+		}
+	}
+	detail := func(label string, c simulation.RiderCheck) {
+		real := "  -"
+		if c.RealPos > 0 {
+			real = fmt.Sprintf("%3d", c.RealPos)
+		}
+		realGap := "     ?"
+		if c.RealGap >= 0 {
+			realGap = fmt.Sprintf("%6.0f", c.RealGap)
+		}
+		fmt.Printf("    %-9s %-26s real %s %ss | sim %5.1f %6.0fs | top10 %3.0f%% win %3.0f%%\n",
+			label, names[c.RiderID], real, realGap, c.SimPos, c.SimGap, c.Top10Pct, c.WinPct)
+	}
 	print := func(title string, rows []simulation.ValidationSummary) int {
 		fmt.Printf("== %s ==\n", title)
 		passed := 0
@@ -412,6 +447,14 @@ func cmdValidate(db *database.DB) {
 				passed++
 			}
 			fmt.Printf("[%s] %-28s %s\n", mark, r.Name, r.Details)
+			if verbose {
+				for _, c := range r.Riders {
+					detail("", c)
+				}
+				for _, c := range r.Intruders {
+					detail("intruder", c)
+				}
+			}
 		}
 		fmt.Println()
 		return passed
@@ -421,9 +464,73 @@ func cmdValidate(db *database.DB) {
 	if real == nil {
 		fmt.Println("(no riders in DB: run 'cycling-sim seed' for real-race validation)")
 	}
+	holdout := simulation.RunHoldoutValidation(db)
+	speeds := simulation.RunSpeedValidation(db)
 	p1 := print("Synthetic fields", synth)
-	p2 := print("Real races (2024)", real)
-	fmt.Printf("Passed %d/%d synthetic, %d/%d real\n", p1, len(synth), p2, len(real))
+	p2 := print("Real races (2024; fit-ratings fits to these)", real)
+	p3 := print("Hold-out (2023, never fitted)", holdout)
+	p4 := print("Race speeds", speeds)
+	fmt.Printf("Passed %d/%d synthetic, %d/%d real, %d/%d hold-out, %d/%d speeds\n",
+		p1, len(synth), p2, len(real), p3, len(holdout), p4, len(speeds))
+}
+
+func cmdFitRatings(db *database.DB, path string, classics bool) {
+	riders, err := db.ListRiders()
+	if err != nil || len(riders) == 0 {
+		fatalf("No riders in the database: run 'cycling-sim seed' first.\n")
+	}
+	prev, err := seed.LoadOverrides(path)
+	if err != nil {
+		fatalf("Error reading %s: %v\n", path, err)
+	}
+	prevScale := map[string]float64{}
+	for key, o := range prev {
+		if v, err := strconv.ParseFloat(o.Fields["FTP_scale"], 64); err == nil {
+			prevScale[key] = v
+		}
+	}
+	base := calibrate.Unfit(riders, prevScale)
+	opt := calibrate.DefaultOptions()
+	opt.Classics = classics
+	opt.Log = func(format string, args ...any) { fmt.Printf(format, args...) }
+	what := "the 2024 Tour GC"
+	if classics {
+		what += " and 2024 classics"
+	}
+	fmt.Printf("Fitting thresholds to %s (this takes a minute or two)...\n", what)
+	adj, err := calibrate.Fit(db, base, opt)
+	if err != nil {
+		fatalf("Fit failed: %v\n", err)
+	}
+	if err := calibrate.Write(path, adj); err != nil {
+		fatalf("Error writing %s: %v\n", path, err)
+	}
+	baseFTP := map[int64]int{}
+	for _, r := range base {
+		baseFTP[r.ID] = r.FTPWatts
+	}
+	ftp := map[int64]int{}
+	for _, r := range riders {
+		ftp[r.ID] = baseFTP[r.ID] // undo old corrections...
+	}
+	implausible := 0
+	for _, a := range adj {
+		ftp[a.RiderID] = int(math.Round(float64(baseFTP[a.RiderID]) * a.Scale)) // ...apply new ones
+		flag := ""
+		if a.Implausible {
+			flag = "  ← above the strongest rider's W/kg: likely compensating for tactics"
+			implausible++
+		}
+		fmt.Printf("  %-28s %+5.1f%%  (%d W, %.2f W/kg)%s\n", a.Name, (a.Scale-1)*100, ftp[a.RiderID], a.WKg, flag)
+	}
+	if implausible > 0 {
+		fmt.Printf("Warning: %d rider(s) fitted to implausible W/kg; review before keeping %s.\n", implausible, path)
+	}
+	if err := db.SetRiderFTPs(ftp); err != nil {
+		fatalf("Error updating riders: %v\n", err)
+	}
+	fmt.Printf("Wrote %s (%d riders) and updated the database.\n", path, len(adj))
+	fmt.Println("Check generalisation with: cycling-sim validate  (see the 2023 hold-out section)")
 }
 
 func cmdImportResults(db *database.DB, dir string) {

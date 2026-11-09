@@ -181,7 +181,7 @@ func KnownRealStageRaces2023() []RealRaceEntry {
 	return []RealRaceEntry{
 		{
 			DisplayName:  "Tour de France 2023 (GC)",
-			InternalName: "Tour de France",
+			InternalName: "Tour de France 2023", // the real 2023 route
 			// 1 Vingegaard 2 Pogačar +7:29 3 A.Yates
 			Top10RiderIDs: []int64{431, 452, 461, 0, 0, 0, 0, 0, 0, 0},
 			Top10GapSecs:  []float64{0, 449, u, u, u, u, u, u, u, u},

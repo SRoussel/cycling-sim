@@ -85,3 +85,65 @@ func TestCourseSegmentsMatchStatedDistance(t *testing.T) {
 		}
 	}
 }
+
+// New seed content (here: everything but the riders) is added to a database
+// that already has riders, without re-creating them.
+func TestSeedAddsMissingContent(t *testing.T) {
+	db, err := database.OpenMemory()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	riders, err := BuildRiders()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.CreateRider(&riders[0]); err != nil {
+		t.Fatal(err)
+	}
+	res, err := Seed(db)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Riders != 0 || res.Courses == 0 || res.StageRaces == 0 {
+		t.Errorf("want only courses/races added, got %+v", res)
+	}
+}
+
+func TestTour2023Route(t *testing.T) {
+	db, err := database.OpenMemory()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	if _, err := Seed(db); err != nil {
+		t.Fatal(err)
+	}
+	srs, _ := db.ListStageRaces()
+	for _, s := range srs {
+		if s.Name != Tour2023 {
+			continue
+		}
+		sr, err := db.GetStageRace(s.ID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(sr.Stages) != 21 {
+			t.Fatalf("want 21 stages, got %d", len(sr.Stages))
+		}
+		km, rests := 0.0, 0
+		for _, st := range sr.Stages {
+			r, _ := db.GetRace(st.RaceID)
+			c, _ := db.GetCourse(r.CourseID)
+			km += c.TotalDistanceKm
+			if st.RestDayBefore {
+				rests++
+			}
+		}
+		if math.Abs(km-3405.6) > 0.1 || rests != 2 {
+			t.Errorf("route: %.1f km, %d rest days; want 3405.6 km, 2", km, rests)
+		}
+		return
+	}
+	t.Fatalf("%s not seeded", Tour2023)
+}

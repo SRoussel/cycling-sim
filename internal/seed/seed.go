@@ -31,32 +31,35 @@ func Seed(db *database.DB) (Result, error) {
 		return res, fmt.Errorf("db is nil")
 	}
 
+	// Riders are seeded into an empty database only (later rating changes go
+	// through ApplyRatings). Courses, races and stage races are added by name
+	// when missing, so new seed content reaches an existing database without
+	// clearing its saved results.
 	riders, _ := db.ListRiders()
-	if len(riders) > 0 {
-		return res, nil
-	}
-
-	riders, err := BuildRiders()
-	if err != nil {
-		return res, err
-	}
-	for i := range riders {
-		if err := db.CreateRider(&riders[i]); err != nil {
-			continue
+	if len(riders) == 0 {
+		var err error
+		riders, err = BuildRiders()
+		if err != nil {
+			return res, err
 		}
-		res.Riders++
+		for i := range riders {
+			if err := db.CreateRider(&riders[i]); err != nil {
+				continue
+			}
+			res.Riders++
+		}
 	}
 
-	courseIDs, warnings := seedCourses(db)
-	res.Courses = len(courseIDs)
+	courseIDs, created, warnings := seedCourses(db)
+	res.Courses = created
 	res.Warnings += warnings
 
-	raceIDs, warnings := seedRaces(db, courseIDs)
-	res.Races = len(raceIDs)
+	raceIDs, created, warnings := seedRaces(db, courseIDs)
+	res.Races = created
 	res.Warnings += warnings
 
-	srCount, warnings := seedStageRaces(db, raceIDs)
-	res.StageRaces = srCount
+	created, warnings = seedStageRaces(db, raceIDs)
+	res.StageRaces = created
 	res.Warnings += warnings
 
 	return res, nil
@@ -309,7 +312,7 @@ func cobbles(order int, name string, distKm, gradPct float64) model.Segment {
 	return seg(order, name, distKm, gradPct, model.SurfaceCobbles, true)
 }
 
-func seedCourses(db *database.DB) (map[string]int64, int) {
+func seedCourses(db *database.DB) (map[string]int64, int, int) {
 	courses := []courseData{
 		cd("Milan-San Remo", 290, []model.Segment{road(1, "Flat approach", 230, 0), road(2, "Cipressa", 5.6, 4.1), road(3, "Cipressa descent", 6, -4.0), road(4, "Poggio", 3.7, 3.7), road(5, "Poggio descent", 4, -5.0), road(6, "Via Roma finish", 1, 0)}),
 		cd("Tour of Flanders", 270, []model.Segment{road(1, "Flat approach", 140, 0), cobbles(2, "Oude Kwaremont", 2.2, 4.0), road(3, "Road section", 20, 0.3), cobbles(4, "Koppenberg", 0.6, 11.6), road(5, "Road section", 30, 0.3), cobbles(6, "Paterberg", 0.4, 12.9), road(7, "Road section", 15, 0.3), cobbles(8, "Oude Kwaremont (2nd)", 2.2, 4.0), road(9, "Road section", 10, 0.3), cobbles(10, "Paterberg (2nd)", 0.4, 12.9), road(11, "Run-in to Oudenaarde", 18, 0)}),
@@ -344,6 +347,7 @@ func seedCourses(db *database.DB) (map[string]int64, int) {
 		cd("Vuelta Steep Summit", 155, []model.Segment{road(1, "Valley approach", 35, 0.3), road(2, "Cat 1 climb", 10, 7.2), road(3, "Descent", 12, -6.0), road(4, "Valley road", 20, 0.3), road(5, "Cat 1 climb", 12, 7.5), road(6, "Descent", 14, -5.5), road(7, "Short valley", 5, 0.3), road(8, "Angliru / Lagos finish", 12.5, 9.8)}),
 		cd("Short Prologue TT", 5, []model.Segment{road(1, "Urban circuit", 5, 0.3)}),
 	}
+	courses = append(courses, tdf2023Courses(courses)...)
 	// Real route profiles imported from locally installed stage files
 	// (cycling-sim import-stages) replace the hand-written segments.
 	if local, err := stagefile.Load(DataPath(LocalProfilesFile)); err == nil {
@@ -355,14 +359,23 @@ func seedCourses(db *database.DB) (map[string]int64, int) {
 	}
 
 	ids := make(map[string]int64)
-	warnings := 0
+	if existing, err := db.ListCourses(); err == nil {
+		for _, c := range existing {
+			ids[c.Name] = c.ID
+		}
+	}
+	created, warnings := 0, 0
 	for _, cdef := range courses {
 		c := cdef.course
+		if _, ok := ids[c.Name]; ok {
+			continue
+		}
 		if err := db.CreateCourse(&c); err != nil {
 			warnings++
 			continue
 		}
 		ids[c.Name] = c.ID
+		created++
 		for _, s := range cdef.segments {
 			s.CourseID = c.ID
 			if err := db.CreateSegment(&s); err != nil {
@@ -370,10 +383,10 @@ func seedCourses(db *database.DB) (map[string]int64, int) {
 			}
 		}
 	}
-	return ids, warnings
+	return ids, created, warnings
 }
 
-func seedRaces(db *database.DB, cIDs map[string]int64) (map[string]int64, int) {
+func seedRaces(db *database.DB, cIDs map[string]int64) (map[string]int64, int, int) {
 	d := func(y, m, day int) time.Time { return time.Date(y, time.Month(m), day, 0, 0, 0, 0, time.UTC) }
 
 	races := []model.Race{
@@ -506,9 +519,19 @@ func seedRaces(db *database.DB, cIDs map[string]int64) (map[string]int64, int) {
 		{Name: "Romandie Stage 5 - ITT", CourseID: cIDs["Short ITT"], RaceType: model.RaceTypeTT, Date: d(2025, 5, 4), Temperature: 16, WindSpeedKmh: 8},
 	}
 
+	races = append(races, tdf2023Races(cIDs)...)
+
 	ids := make(map[string]int64)
-	warnings := 0
+	if existing, err := db.ListRaces(); err == nil {
+		for _, r := range existing {
+			ids[r.Name] = r.ID
+		}
+	}
+	created, warnings := 0, 0
 	for i := range races {
+		if _, ok := ids[races[i].Name]; ok {
+			continue
+		}
 		if races[i].CourseID == 0 {
 			warnings++
 			continue
@@ -521,8 +544,9 @@ func seedRaces(db *database.DB, cIDs map[string]int64) (map[string]int64, int) {
 			continue
 		}
 		ids[races[i].Name] = races[i].ID
+		created++
 	}
-	return ids, warnings
+	return ids, created, warnings
 }
 
 func seedStageRaces(db *database.DB, rIDs map[string]int64) (int, int) {
@@ -710,9 +734,24 @@ func seedStageRaces(db *database.DB, rIDs map[string]int64) (int, int) {
 		}},
 	}
 
+	tdf := srDef{name: Tour2023}
+	for i, s := range tdf2023Stages() {
+		tdf.stages = append(tdf.stages, stg(s.name(i+1), i+1, s.rest))
+	}
+	stageRaces = append(stageRaces, tdf)
+
+	have := map[string]bool{}
+	if existing, err := db.ListStageRaces(); err == nil {
+		for _, sr := range existing {
+			have[sr.Name] = true
+		}
+	}
 	count := 0
 	warnings := 0
 	for _, def := range stageRaces {
+		if have[def.name] {
+			continue
+		}
 		sr := model.StageRace{Name: def.name}
 		if err := db.CreateStageRace(&sr); err != nil {
 			warnings++

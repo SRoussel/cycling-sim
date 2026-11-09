@@ -3,13 +3,13 @@
 // profile and cobbled/gravel sectors into course segments.
 //
 // The format is undocumented; what this package relies on was worked out from
-// files and checked against known climbs (Liège's Redoute ~9.5%, Roche-aux-
-// Faucons ~11%) and sectors (Paris-Roubaix's five-star sectors):
+// files and checked against the climb records each file carries, known climbs
+// and sectors (Paris-Roubaix's five-star sectors):
 //
 //   - the stage name is the first length-prefixed string after the header;
 //   - the profile is an int32 count followed by (distance, altitude) float32
-//     pairs, every ~20 units, with distance and altitude in the same unit
-//     (~10 m), so their ratio is the gradient;
+//     pairs, every 20 units; distance is in 10 m units and altitude in 7.5 m
+//     units (see AltitudeUnitM);
 //   - sectors are records of int32 name length, UTF-8 name, int32 difficulty
 //     (1-5 stars), float32 start and float32 end (profile units).
 //
@@ -67,6 +67,15 @@ func ParseFile(path string) (*Stage, error) {
 	}
 	return st, nil
 }
+
+// Profile units. Distance is in 10 m units and altitude in 7.5 m units: the
+// climb records each file carries (start, end, length and height gain in
+// metres) give 7.5 m per altitude unit in every file checked, and match
+// published climbs (Koppenberg 0.5 km at 11.7%, Redoute 1.5 km at 9.4%).
+const (
+	DistanceUnitM = 10.0
+	AltitudeUnitM = 7.5
+)
 
 var magic = []byte("CTStageData")
 

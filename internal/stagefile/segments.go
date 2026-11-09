@@ -16,11 +16,6 @@ const (
 	// MinSegmentKm: shorter road pieces are merged into a neighbour (sectors
 	// are always kept, however short).
 	MinSegmentKm = 0.5
-	// SmoothM: altitudes are averaged over this distance first. The game
-	// profiles carry small undulations that inflate total climbing ~20% above
-	// published figures and create artificial short ramps. 600 m keeps
-	// Liège's Redoute/Roche-aux-Faucons gradients; sectors use the raw profile.
-	SmoothM = 600.0
 	// maxGradient keeps segments within the model's valid range.
 	maxGradient = 25.0
 )
@@ -37,13 +32,15 @@ func Segments(st *Stage, totalKm float64) ([]model.Segment, error) {
 	if L <= 0 || len(st.Profile) < 2 {
 		return nil, fmt.Errorf("stage %q has no profile", st.Name)
 	}
-	scale := totalKm * 1000 / L // metres per profile unit
+	// Metres per distance unit, stretching the file's route to the stated
+	// distance; altitude is stretched by the same factor so gradients keep
+	// their file values.
+	scale := totalKm * 1000 / L
+	altScale := scale * AltitudeUnitM / DistanceUnitM
 	pts := make([]node, len(st.Profile))
 	for i, p := range st.Profile {
-		pts[i] = node{p.D * scale, p.Alt * scale}
+		pts[i] = node{p.D * scale, p.Alt * altScale}
 	}
-	raw := pts
-	pts = smooth(pts, SmoothM)
 	keep := simplify(pts, ToleranceM)
 
 	// Breakpoints: simplified profile vertices plus sector boundaries.
@@ -79,13 +76,7 @@ func Segments(st *Stage, totalKm float64) ([]model.Segment, error) {
 				break
 			}
 		}
-		// Sectors are explicit and often short and steep (Paterberg 360 m at
-		// ~13%): take their gradient from the unsmoothed profile.
-		prof := pts
-		if sec != nil {
-			prof = raw
-		}
-		pieces = append(pieces, piece{node{a, altAt(prof, a)}, node{b, altAt(prof, b)}, sec})
+		pieces = append(pieces, piece{node{a, altAt(pts, a)}, node{b, altAt(pts, b)}, sec})
 	}
 
 	// Merge short road pieces into the previous piece of the same surface.
@@ -128,28 +119,6 @@ func Segments(st *Stage, totalKm float64) ([]model.Segment, error) {
 		segs = append(segs, s)
 	}
 	return segs, nil
-}
-
-// smooth returns the profile with altitudes averaged over a window of w
-// metres (centred; shorter at the ends).
-func smooth(pts []node, w float64) []node {
-	if w <= 0 || len(pts) < 3 {
-		return pts
-	}
-	out := make([]node, len(pts))
-	lo, hi, sum := 0, 0, 0.0
-	for i, p := range pts {
-		for hi < len(pts) && pts[hi].d <= p.d+w/2 {
-			sum += pts[hi].alt
-			hi++
-		}
-		for pts[lo].d < p.d-w/2 {
-			sum -= pts[lo].alt
-			lo++
-		}
-		out[i] = node{p.d, sum / float64(hi-lo)}
-	}
-	return out
 }
 
 // altAt interpolates the profile altitude at distance d (metres).

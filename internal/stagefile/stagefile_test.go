@@ -40,17 +40,17 @@ func fixture(t *testing.T, profile [][2]float32, sectors []Sector) []byte {
 	return b.Bytes()
 }
 
-// A 10,000-unit stage: flat, then a 1,000-unit climb at 8% from unit 6,000,
-// then flat; one cobbled sector on the flat.
+// A 10,000-unit stage (100 km): flat, then a 10 km climb at 8% from km 60,
+// then flat; one cobbled sector on the flat. Altitude is in 7.5 m units.
 func testStage(t *testing.T) []byte {
 	var prof [][2]float32
 	for d := 0; d <= 10000; d += 20 {
 		alt := 10.0
 		switch {
 		case d > 6000 && d <= 7000:
-			alt += 0.08 * float64(d-6000)
+			alt += 0.08 * float64(d-6000) * DistanceUnitM / AltitudeUnitM
 		case d > 7000:
-			alt += 80
+			alt += 80 * DistanceUnitM / AltitudeUnitM
 		}
 		prof = append(prof, [2]float32{float32(d), float32(alt)})
 	}
@@ -96,11 +96,10 @@ func TestSegmentsPreserveGradientAndDistance(t *testing.T) {
 	if math.Abs(cob-3) > 0.01 {
 		t.Errorf("cobbles %.2f km, want 3", cob)
 	}
-	// Smoothing softens the corners but the climb keeps its gradient.
-	if steepest < 7 || steepest > 8.5 {
+	if math.Abs(steepest-8) > 0.1 {
 		t.Errorf("steepest %.1f%%, want ~8%%", steepest)
 	}
-	if c := ClimbingM(segs); math.Abs(c-800) > 60 {
+	if c := ClimbingM(segs); math.Abs(c-800) > 10 {
 		t.Errorf("climbing %.0f m, want ~800", c)
 	}
 }

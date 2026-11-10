@@ -320,7 +320,28 @@ func RunRealRaceValidationFor(db *database.DB, allRiders []model.Rider, entries 
 			}
 			return SimulateRoadRace(cfg)
 		})
+		var finish FinishShape
+		var margins []float64
 		for _, simResults := range allRuns {
+			gaps := make([]float64, 0, 20)
+			for p := 1; p <= 20; p++ {
+				for _, res := range simResults {
+					if res.Position == p {
+						gaps = append(gaps, res.TimeGapSeconds)
+					}
+				}
+			}
+			switch finishKind(gaps) {
+			case "solo":
+				finish.Solo++
+			case "bunch":
+				finish.Bunch++
+			default:
+				finish.Small++
+			}
+			if len(gaps) > 1 {
+				margins = append(margins, gaps[1])
+			}
 			for _, res := range simResults {
 				if res.Position == 1 {
 					wins[res.RiderID]++
@@ -407,6 +428,14 @@ func RunRealRaceValidationFor(db *database.DB, allRiders []model.Rider, entries 
 			})
 		}
 		intruders := findIntruders(entry, top10Hits, wins, runs, avgPos, avgGap)
+		if n := float64(len(allRuns)); n > 0 {
+			finish.Solo, finish.Small, finish.Bunch = finish.Solo/n, finish.Small/n, finish.Bunch/n
+		}
+		if len(margins) > 0 {
+			finish.Margin = medianOf(margins)
+		}
+		finish.RealMargin = entry.Top10GapSecs[1]
+		finish.RealKind = finishKind(entry.Top10GapSecs)
 
 		results = append(results, ValidationSummary{
 			Name:                 entry.DisplayName,
@@ -419,6 +448,7 @@ func RunRealRaceValidationFor(db *database.DB, allRiders []model.Rider, entries 
 			Details:              details,
 			Riders:               checks,
 			Intruders:            intruders,
+			Finish:               &finish,
 		})
 	}
 	return results

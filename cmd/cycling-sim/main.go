@@ -502,6 +502,32 @@ func cmdValidateSets(db *database.DB, n int, crossSeason bool) {
 		}
 		fmt.Printf("  %-30s 2nd %8s (real %8s)   10th %8s (real %8s)\n", r.Name, clock(s2), clock(r.Spread[0].Real2), clock(s10), clock(r.Spread[0].Real10))
 	}
+	fmt.Println("One-day finishes (share of runs solo / small group / bunch; median winning margin, sim vs real)")
+	var nSolo, realSolo, nRaces float64
+	for _, r := range results {
+		if len(r.Finish) == 0 {
+			continue
+		}
+		var f simulation.FinishShape
+		for _, x := range r.Finish {
+			k := float64(len(r.Finish))
+			f.Solo += x.Solo / k
+			f.Small += x.Small / k
+			f.Bunch += x.Bunch / k
+			f.Margin += x.Margin / k
+		}
+		real := r.Finish[0]
+		fmt.Printf("  %-26s solo %3.0f%%  small %3.0f%%  bunch %3.0f%%  margin %6s (real %-11s %s)\n", r.Name,
+			f.Solo*100, f.Small*100, f.Bunch*100, clock(f.Margin), real.RealKind+",", clock(real.RealMargin))
+		nSolo += f.Solo
+		nRaces++
+		if real.RealKind == "solo" {
+			realSolo++
+		}
+	}
+	if nRaces > 0 {
+		fmt.Printf("  %-26s solo %3.0f%% of races (real %3.0f%%)\n", "All one-day races", nSolo/nRaces*100, realSolo/nRaces*100)
+	}
 	fmt.Println("Race shape: how stages are won, averaged per race kind (judge on these); per race as detail")
 	var detail []string
 	for set := 0; set < n; set++ {

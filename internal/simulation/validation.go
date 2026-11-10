@@ -31,7 +31,40 @@ type ValidationSummary struct {
 	// place next to the real ones, whoever holds those places: how spread
 	// out the race is, independent of the exact field.
 	Spread *GCSpread `json:",omitempty"`
+	// Finish (one-day races): how the race ended over the runs (solo, small
+	// group, bunch) and the winning margin, next to the real race.
+	Finish *FinishShape `json:",omitempty"`
 }
+
+// FinishShape is how one-day races ended: shares of solo wins (2nd place 5 s
+// or more behind), small groups and bunches (15+ within 5 s), and the median
+// winning margin; Real* describe the real race.
+type FinishShape struct {
+	Solo, Small, Bunch float64
+	Margin, RealMargin float64
+	RealKind           string
+}
+
+// finishKind classifies a finish from the gaps of the riders behind the
+// winner (in finishing order).
+func finishKind(gaps []float64) string {
+	if len(gaps) < 2 || gaps[1] >= finishSoloS {
+		return "solo"
+	}
+	n := 1
+	for _, g := range gaps[1:] {
+		if g >= 0 && g < finishSoloS {
+			n++
+		}
+	}
+	if n >= sprintGroupSize || n == len(gaps) && len(gaps) >= 10 {
+		return "bunch"
+	}
+	return "small group"
+}
+
+// finishSoloS: a winner this far ahead of 2nd place won alone.
+const finishSoloS = 5.0
 
 // GCSpread is a stage race's GC spread: gaps of 2nd and 10th place.
 type GCSpread struct {
@@ -57,10 +90,11 @@ var ValidationSeedBase int64
 // SeedSetResult is one reference race scored over several seed sets.
 type SeedSetResult struct {
 	Name         string
-	MAE          []float64  // gap error per seed set
-	MedianMAE    []float64  // median-gap error per seed set (stage races)
-	RealWinnerPc float64    // mean share of runs the real winner wins
-	Spread       []GCSpread // per seed set (stage races)
+	MAE          []float64     // gap error per seed set
+	MedianMAE    []float64     // median-gap error per seed set (stage races)
+	RealWinnerPc float64       // mean share of runs the real winner wins
+	Spread       []GCSpread    // per seed set (stage races)
+	Finish       []FinishShape // per seed set (one-day races)
 }
 
 // RunSeedSets scores the 2024 references (the ratings' season) over several
@@ -95,6 +129,9 @@ func RunSeedSets(db *database.DB, sets int, crossSeason bool) []SeedSetResult {
 			out[i].MedianMAE = append(out[i].MedianMAE, r.MedianGapErrorSecs)
 			if r.Spread != nil {
 				out[i].Spread = append(out[i].Spread, *r.Spread)
+			}
+			if r.Finish != nil {
+				out[i].Finish = append(out[i].Finish, *r.Finish)
 			}
 			for _, c := range r.Riders {
 				if c.RealPos == 1 {

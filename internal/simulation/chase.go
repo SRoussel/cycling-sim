@@ -76,8 +76,9 @@ func (s *RaceState) planChase(group []*RiderState) chasePlan {
 	for lead, brk := range ahead {
 		allowed := math.Inf(1)
 		teams := map[string]bool{}
-		hunters := map[string]bool{}  // favourites' teams that would like the stage
-		allow := map[string]float64{} // each interested team's allowance
+		hunters := map[string]bool{}       // favourites' teams that would like the stage
+		allow := map[string]float64{}      // each interested team's allowance
+		placeAllow := map[string]float64{} // place defenders' allowances (affordable chases only)
 		for _, p := range group {
 			if p.DNF {
 				continue
@@ -97,13 +98,22 @@ func (s *RaceState) planChase(group []*RiderState) chasePlan {
 					if s.isDangerous(p) {
 						a = -catchMarginS
 					}
-				} else if s.gcContender(p) && s.gcPlace(p) <= gcPlacesProtected {
+				} else if place := s.gcPlace(p); s.gcContender(p) && place <= gcPlacesProtected {
 					for _, r := range brk {
 						if r.Rider.Team != p.Rider.Team {
 							if g, ok := s.GCGaps[r.Rider.ID]; ok {
 								a = math.Min(a, math.Max(0, g-s.GCGaps[p.Rider.ID]))
 							}
 						}
+					}
+					// The race leader's team defends the jersey whatever it
+					// costs; teams defending a lower place (or, before any
+					// GC, every contender's) chase only when it's affordable.
+					if place != 1 && a < math.Inf(1) {
+						if old, ok := placeAllow[p.Rider.Team]; !ok || a < old {
+							placeAllow[p.Rider.Team] = a
+						}
+						a = math.Inf(1)
 					}
 				}
 			case RoleSprinter:
@@ -143,6 +153,29 @@ func (s *RaceState) planChase(group []*RiderState) chasePlan {
 		if len(teams) > 0 && allowed < math.Inf(1) {
 			if chasers := chaseLine(group, teams); len(chasers) > 0 {
 				f = s.requiredIntensity(chasers, topLine(brk), lead, allowed)
+			}
+		}
+		// Place defence: teams defending a GC place below the lead join the
+		// chase when a steady tempo keeps the break within their allowance;
+		// a costlier chase isn't worth a day of their domestiques for a
+		// minor place.
+		if len(placeAllow) > 0 {
+			all := map[string]bool{}
+			for t := range teams {
+				all[t] = true
+			}
+			tightest := allowed
+			for t, a := range placeAllow {
+				all[t] = true
+				tightest = math.Min(tightest, a)
+			}
+			if chasers := chaseLine(group, all); len(chasers) > 0 {
+				if h := s.requiredIntensity(chasers, topLine(brk), lead, tightest); h <= stageHuntMax {
+					if h > easyIntensity {
+						teams = all
+						f = math.Max(f, h)
+					}
+				}
 			}
 		}
 		// Stage hunting: a favourite's team chases for the stage when that

@@ -399,9 +399,10 @@ func riderEffort(rs *RiderState, action Action, segment *model.Segment, remainin
 		}
 		// Stage races: with a break up the road and nobody chasing it to
 		// a plan, the bunch rides easy (chasers return earlier, see
-		// chaseAt). In a one-day race the race is the result: the bunch
+		// chaseAt). A group dropped behind the main field rides its tempo
+		// (not easy). In a one-day race the race is the result: the bunch
 		// keeps racing for placings.
-		if state != nil && state.IsStageRace && state.HasBreakaway && !state.BreakawayRiders[r.ID] {
+		if state != nil && state.IsStageRace && state.HasBreakaway && !state.BreakawayRiders[r.ID] && !state.behindMainField() {
 			return threshold * easyIntensity
 		}
 		return threshold * IntensityForPhase(phase)

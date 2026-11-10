@@ -59,9 +59,15 @@ type RealRaceEntry struct {
 	// DidNotStart lists riders in the DB who didn't ride the real race; they
 	// are removed from the simulated start list so the field is comparable.
 	DidNotStart []int64
-	// StartList, when set, is the real field (rider names): only DB riders
-	// on it can start (matched case- and space-insensitively).
-	StartList []string
+	// StartList, when set, is the real field: only DB riders on it start
+	// (names matched case- and space-insensitively), each for the team they
+	// rode for then (today's rosters differ).
+	StartList []Starter
+}
+
+// Starter is a rider on a reference race's real start list.
+type Starter struct {
+	Name, Team string
 }
 
 // KnownRealRaces returns 2024 reference results for the six seeded classics.
@@ -314,7 +320,13 @@ func RunRealRaceValidationFor(db *database.DB, allRiders []model.Rider, entries 
 		pool := make([]model.Rider, 0, len(allRiders))
 		field := entry.field()
 		for _, r := range allRiders {
-			if !dns[r.ID] && (field == nil || field[fieldName(r.Name)]) {
+			if dns[r.ID] {
+				continue
+			}
+			if field == nil {
+				pool = append(pool, r)
+			} else if team, ok := field[fieldName(r.Name)]; ok {
+				r.Team = team
 				pool = append(pool, r)
 			}
 		}
@@ -527,7 +539,13 @@ func RunRealStageRaceValidationFor(db *database.DB, allRiders []model.Rider, ent
 		pool := make([]model.Rider, 0, len(allRiders))
 		field := entry.field()
 		for _, r := range allRiders {
-			if !dns[r.ID] && (field == nil || field[fieldName(r.Name)]) {
+			if dns[r.ID] {
+				continue
+			}
+			if field == nil {
+				pool = append(pool, r)
+			} else if team, ok := field[fieldName(r.Name)]; ok {
+				r.Team = team
 				pool = append(pool, r)
 			}
 		}
@@ -752,14 +770,15 @@ func withoutNonStarters(stageRace string, riders []model.Rider) []model.Rider {
 	return out
 }
 
-// field is the entry's real start list as a name set (nil: no list).
-func (e RealRaceEntry) field() map[string]bool {
+// field maps the entry's real start list to each rider's team then (nil:
+// no list).
+func (e RealRaceEntry) field() map[string]string {
 	if len(e.StartList) == 0 {
 		return nil
 	}
-	out := make(map[string]bool, len(e.StartList))
-	for _, n := range e.StartList {
-		out[fieldName(n)] = true
+	out := make(map[string]string, len(e.StartList))
+	for _, s := range e.StartList {
+		out[fieldName(s.Name)] = s.Team
 	}
 	return out
 }

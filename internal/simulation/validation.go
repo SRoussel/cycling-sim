@@ -53,9 +53,10 @@ type SeedSetResult struct {
 	RealWinnerPc float64   // mean share of runs the real winner wins
 }
 
-// RunSeedSets scores every reference race (2024 and the 2023 hold-out) over
-// sets independent seed sets of the usual run counts.
-func RunSeedSets(db *database.DB, sets int) []SeedSetResult {
+// RunSeedSets scores the 2024 references (the ratings' season) over several
+// seed sets; crossSeason adds the 2023 references (informational: form
+// changes between seasons are part of their error).
+func RunSeedSets(db *database.DB, sets int, crossSeason bool) []SeedSetResult {
 	riders, err := db.ListRiders()
 	if err != nil || len(riders) == 0 {
 		return nil
@@ -68,8 +69,11 @@ func RunSeedSets(db *database.DB, sets int) []SeedSetResult {
 		var rows []ValidationSummary
 		rows = append(rows, RunRealRaceValidationFor(db, riders, KnownRealRaces(), realValidationRuns)...)
 		rows = append(rows, RunRealStageRaceValidationFor(db, riders, KnownRealStageRaces(), realStageRaceRuns)...)
-		rows = append(rows, RunRealRaceValidationFor(db, riders, KnownRealRaces2023(), realValidationRuns)...)
-		rows = append(rows, RunRealStageRaceValidationFor(db, riders, KnownRealStageRaces2023(), realStageRaceRuns)...)
+		rows = append(rows, RunRealStageRaceValidationFor(db, riders, KnownSameSeasonStageRaces(), realStageRaceRuns)...)
+		if crossSeason {
+			rows = append(rows, RunRealRaceValidationFor(db, riders, KnownRealRaces2023(), realValidationRuns)...)
+			rows = append(rows, RunRealStageRaceValidationFor(db, riders, KnownRealStageRaces2023(), realStageRaceRuns)...)
+		}
 		for _, r := range rows {
 			i, ok := index[r.Name]
 			if !ok {

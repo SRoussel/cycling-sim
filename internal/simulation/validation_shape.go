@@ -13,6 +13,7 @@ type RealShape struct {
 	DisplayName  string
 	InternalName string
 	Stages       []Outcome // by stage number - 1
+	CrossSeason  bool      // not the ratings' season (2024): informational
 }
 
 // KnownRealShapes: the 2023 Tour on its real route. From the English
@@ -24,9 +25,19 @@ type RealShape struct {
 func KnownRealShapes() []RealShape {
 	S, B, X, T := OutcomeSprint, OutcomeBreakaway, OutcomeSelection, OutcomeTT
 	return []RealShape{{
+		// Giro 2024 (Wikipedia stage table and race reports): sprints by
+		// Merlier, Milan and Kooij; breaks won by B. Thomas, P. Sánchez,
+		// V. Paret-Peintre, Alaphilippe, Steinhauser and Vendrame; Narváez
+		// from a three-rider move on stage 1 and Pogačar's five stage wins
+		// from selections; two time trials.
+		DisplayName:  "Giro d'Italia 2024 (race shape)",
+		InternalName: "Giro d'Italia 2024",
+		Stages:       []Outcome{X, X, S, S, B, B, T, X, S, B, S, B, S, T, X, X, B, S, B, X, S},
+	}, {
 		DisplayName:  "Tour de France 2023 (race shape)",
 		InternalName: "Tour de France 2023",
 		Stages:       []Outcome{X, X, S, S, B, X, S, S, B, B, S, B, B, X, B, T, B, B, B, X, S},
+		CrossSeason:  true,
 	}}
 }
 
@@ -44,7 +55,7 @@ type ShapeResult struct {
 
 // RunShapeValidation simulates each known stage race and classifies how
 // every stage was won.
-func RunShapeValidation(db *database.DB) []ShapeResult {
+func RunShapeValidation(db *database.DB, crossSeason bool) []ShapeResult {
 	if db == nil {
 		return nil
 	}
@@ -58,6 +69,9 @@ func RunShapeValidation(db *database.DB) []ShapeResult {
 	}
 	var out []ShapeResult
 	for _, ref := range KnownRealShapes() {
+		if ref.CrossSeason && !crossSeason {
+			continue
+		}
 		var sr *model.StageRace
 		for i := range srs {
 			if srs[i].Name == ref.InternalName {
@@ -78,7 +92,7 @@ func RunShapeValidation(db *database.DB) []ShapeResult {
 			stages = append(stages, StageConfig{Race: race, Course: course, StageNumber: st.StageNumber, RestDayBefore: st.RestDayBefore, Prestige: st.Prestige})
 			infos = append(infos, selection.StageInfo{Course: course, RaceType: race.RaceType})
 		}
-		start := selection.SelectStageRaceStartList(withoutNonStarters(ref.InternalName, riders), infos, selection.DefaultConfig(model.RaceTypeRoad, true, len(stages)))
+		start := selection.SelectStageRaceStartList(stageRaceField(ref.InternalName, riders), infos, selection.DefaultConfig(model.RaceTypeRoad, true, len(stages)))
 		runs := parallelRuns(shapeRuns, func(run int) []Outcome {
 			own := make([]StageConfig, len(stages))
 			copy(own, stages)

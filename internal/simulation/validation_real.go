@@ -184,8 +184,9 @@ func KnownRealRaces2023() []RealRaceEntry {
 	}
 }
 
-// KnownRealStageRaces2023 is the stage-race hold-out, never fitted: the
-// 2023 Tour (real route) and the 2024 Giro (real route and real field).
+// KnownRealStageRaces2023 is a cross-season check, never fitted: the 2023
+// Tour on its real route. Ratings are 2024 form, so part of its error is
+// riders' form changing between seasons; it isn't in the judging total.
 func KnownRealStageRaces2023() []RealRaceEntry {
 	const u = gapUnknown
 	return []RealRaceEntry{
@@ -207,17 +208,6 @@ func KnownRealStageRaces2023() []RealRaceEntry {
 			// (before 18). (Wikipedia, List of teams and cyclists in the 2023
 			// Tour de France.)
 			DidNotStart: []int64{294, 306, 433, 174, 36, 179, 315, 37, 54, 259, 44, 145, 342, 245, 93, 416, 429},
-		},
-		{
-			DisplayName:  "Giro d'Italia 2024 (GC)",
-			InternalName: "Giro d'Italia 2024", // real route (import-stages)
-			// 1 Pogačar 2 D.Martínez +9:56 3 G.Thomas* +10:24 4 O'Connor +12:07
-			// 5 Tiberi +12:49 6 Arensman +14:31 7 Rubio +15:52 8 Hirt +18:05
-			// 9 Bardet* +20:32 10 Storer* +21:11 (Wikipedia, 2024 Giro d'Italia;
-			// * not in the DB).
-			Top10RiderIDs: []int64{452, 301, 0, 370, 54, 145, 254, 270, 0, 0},
-			Top10GapSecs:  []float64{0, 596, 624, 727, 769, 871, 952, 1085, 1232, 1271},
-			StartList:     giro2024Field,
 		},
 	}
 }
@@ -313,23 +303,7 @@ func RunRealRaceValidationFor(db *database.DB, allRiders []model.Rider, entries 
 		wins := make(map[int64]int)
 		top10Hits := make(map[int64]int) // runs in which a rider finished top-10
 
-		dns := make(map[int64]bool, len(entry.DidNotStart))
-		for _, id := range entry.DidNotStart {
-			dns[id] = true
-		}
-		pool := make([]model.Rider, 0, len(allRiders))
-		field := entry.field()
-		for _, r := range allRiders {
-			if dns[r.ID] {
-				continue
-			}
-			if field == nil {
-				pool = append(pool, r)
-			} else if team, ok := field[fieldName(r.Name)]; ok {
-				r.Team = team
-				pool = append(pool, r)
-			}
-		}
+		pool := entry.pool(allRiders)
 		var refIDs []int64
 		for _, m := range matched {
 			refIDs = append(refIDs, m.riderID)
@@ -491,7 +465,7 @@ func RunRealStageRaceValidation(db *database.DB) []ValidationSummary {
 	if err != nil || len(allRiders) == 0 {
 		return nil
 	}
-	return RunRealStageRaceValidationFor(db, allRiders, KnownRealStageRaces(), realStageRaceRuns)
+	return RunRealStageRaceValidationFor(db, allRiders, append(KnownRealStageRaces(), KnownSameSeasonStageRaces()...), realStageRaceRuns)
 }
 
 // RunRealStageRaceValidationFor validates stage-race references with a given
@@ -532,23 +506,7 @@ func RunRealStageRaceValidationFor(db *database.DB, allRiders []model.Rider, ent
 			stages = append(stages, StageConfig{Race: race, Course: course, StageNumber: st.StageNumber, RestDayBefore: st.RestDayBefore, Prestige: st.Prestige})
 			infos = append(infos, selection.StageInfo{Course: course, RaceType: race.RaceType})
 		}
-		dns := make(map[int64]bool, len(entry.DidNotStart))
-		for _, id := range entry.DidNotStart {
-			dns[id] = true
-		}
-		pool := make([]model.Rider, 0, len(allRiders))
-		field := entry.field()
-		for _, r := range allRiders {
-			if dns[r.ID] {
-				continue
-			}
-			if field == nil {
-				pool = append(pool, r)
-			} else if team, ok := field[fieldName(r.Name)]; ok {
-				r.Team = team
-				pool = append(pool, r)
-			}
-		}
+		pool := entry.pool(allRiders)
 		var refIDs []int64
 		for _, id := range entry.Top10RiderIDs {
 			if id > 0 {
@@ -736,7 +694,7 @@ func findRaceByName(races []model.Race, name string) *model.Race {
 	return nil
 }
 
-// RunHoldoutValidation validates the 2023 hold-out references.
+// RunHoldoutValidation validates the cross-season (2023) references.
 func RunHoldoutValidation(db *database.DB) []ValidationSummary {
 	if db == nil {
 		return nil
@@ -747,27 +705,6 @@ func RunHoldoutValidation(db *database.DB) []ValidationSummary {
 	}
 	return append(RunRealRaceValidationFor(db, allRiders, KnownRealRaces2023(), realValidationRuns),
 		RunRealStageRaceValidationFor(db, allRiders, KnownRealStageRaces2023(), realStageRaceRuns)...)
-}
-
-// withoutNonStarters drops the verified non-starters of a reference stage
-// race (its DidNotStart list) from a rider pool, so every validation of that
-// race simulates the field that actually rode it.
-func withoutNonStarters(stageRace string, riders []model.Rider) []model.Rider {
-	dns := map[int64]bool{}
-	for _, e := range append(KnownRealStageRaces(), KnownRealStageRaces2023()...) {
-		if e.InternalName == stageRace {
-			for _, id := range e.DidNotStart {
-				dns[id] = true
-			}
-		}
-	}
-	out := make([]model.Rider, 0, len(riders))
-	for _, r := range riders {
-		if !dns[r.ID] {
-			out = append(out, r)
-		}
-	}
-	return out
 }
 
 // field maps the entry's real start list to each rider's team then (nil:
@@ -785,3 +722,57 @@ func (e RealRaceEntry) field() map[string]string {
 
 // fieldName matches rider names case- and space-insensitively.
 func fieldName(s string) string { return strings.ToLower(strings.Join(strings.Fields(s), " ")) }
+
+// KnownSameSeasonStageRaces are 2024 stage races the ratings are never fitted
+// to (fit-ratings uses KnownRealStageRaces): the test of the model in the
+// season the ratings describe.
+func KnownSameSeasonStageRaces() []RealRaceEntry {
+	const u = gapUnknown
+	return []RealRaceEntry{
+		{
+			DisplayName:  "Giro d'Italia 2024 (GC)",
+			InternalName: "Giro d'Italia 2024", // real route (import-stages)
+			// 1 Pogačar 2 D.Martínez +9:56 3 G.Thomas* +10:24 4 O'Connor +12:07
+			// 5 Tiberi +12:49 6 Arensman +14:31 7 Rubio +15:52 8 Hirt +18:05
+			// 9 Bardet* +20:32 10 Storer* +21:11 (Wikipedia, 2024 Giro d'Italia;
+			// * not in the DB).
+			Top10RiderIDs: []int64{452, 301, 0, 370, 54, 145, 254, 270, 0, 0},
+			Top10GapSecs:  []float64{0, 596, 624, 727, 769, 871, 952, 1085, 1232, 1271},
+			StartList:     giro2024Field,
+		},
+	}
+}
+
+// stageRaceField is the field of a reference stage race: the rider pool
+// without its verified non-starters, restricted to its real start list (each
+// rider for the team they rode for then) when it has one.
+func stageRaceField(stageRace string, riders []model.Rider) []model.Rider {
+	for _, e := range append(append(KnownRealStageRaces(), KnownSameSeasonStageRaces()...), KnownRealStageRaces2023()...) {
+		if e.InternalName == stageRace {
+			return e.pool(riders)
+		}
+	}
+	return riders
+}
+
+// pool is the riders who can start this reference race (see stageRaceField).
+func (e RealRaceEntry) pool(riders []model.Rider) []model.Rider {
+	dns := make(map[int64]bool, len(e.DidNotStart))
+	for _, id := range e.DidNotStart {
+		dns[id] = true
+	}
+	field := e.field()
+	out := make([]model.Rider, 0, len(riders))
+	for _, r := range riders {
+		if dns[r.ID] {
+			continue
+		}
+		if field == nil {
+			out = append(out, r)
+		} else if team, ok := field[fieldName(r.Name)]; ok {
+			r.Team = team
+			out = append(out, r)
+		}
+	}
+	return out
+}

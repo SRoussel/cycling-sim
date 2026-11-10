@@ -64,9 +64,9 @@ func main() {
 		if len(args) > 1 && args[0] == "--sets" {
 			n, err := strconv.Atoi(args[1])
 			if err != nil || n < 1 {
-				fatalf("Usage: cycling-sim validate --sets N\n")
+				fatalf("Usage: cycling-sim validate --sets N [--cross-season]\n")
 			}
-			cmdValidateSets(db, n)
+			cmdValidateSets(db, n, len(args) > 2 && args[2] == "--cross-season")
 			break
 		}
 		cmdValidate(db, len(args) > 0 && (args[0] == "-v" || args[0] == "--verbose"))
@@ -171,6 +171,8 @@ Commands:
   run-stage-race <stage-race-id> Simulate a stage race
                                  (both accept --seed N for reproducible runs)
   validate [-v]                  Run synthetic + real-race validation (-v: per rider)
+  validate --sets N [--cross-season]  2024 references over N seed sets (judge changes);
+                                 --cross-season adds the 2023 races
   import-results [dir]           Derive ratings from saved result pages in
                                  dir/<sprint|hilly|mountain|cobbles|tt>/
                                  (default data/results); writes
@@ -445,10 +447,10 @@ func formatDuration(seconds float64) string {
 
 // cmdValidateSets scores the reference races over n independent seed sets:
 // a change is real when it moves the mean by more than the spread.
-func cmdValidateSets(db *database.DB, n int) {
+func cmdValidateSets(db *database.DB, n int, crossSeason bool) {
 	fmt.Printf("Reference races over %d seed sets (gap error: mean, min-max; real winner's win rate)\n", n)
 	var total float64
-	for _, r := range simulation.RunSeedSets(db, n) {
+	for _, r := range simulation.RunSeedSets(db, n, crossSeason) {
 		mean, lo, hi := 0.0, math.Inf(1), math.Inf(-1)
 		for _, v := range r.MAE {
 			mean += v / float64(len(r.MAE))
@@ -468,7 +470,7 @@ func cmdValidateSets(db *database.DB, n int) {
 	fmt.Printf("  %-30s %5.0fs\n", "Sum of mean gap errors", total)
 	for set := 0; set < n; set++ {
 		simulation.ValidationSeedBase = int64(set) * 1000
-		for _, r := range simulation.RunShapeValidation(db) {
+		for _, r := range simulation.RunShapeValidation(db, crossSeason) {
 			fmt.Printf("  set %d %-28s %s\n", set+1, r.Name, r.Summary())
 		}
 	}
@@ -524,11 +526,11 @@ func cmdValidate(db *database.DB, verbose bool) {
 	holdout := simulation.RunHoldoutValidation(db)
 	speeds := simulation.RunSpeedValidation(db)
 	p1 := print("Synthetic fields", synth)
-	p2 := print("Real races (2024; fit-ratings fits to these)", real)
-	p3 := print("Hold-out (2023 + Giro 2024, never fitted)", holdout)
+	p2 := print("2024 races (the ratings' season; fit-ratings fits the Tour GC only)", real)
+	p3 := print("Cross-season (2023, informational: form changes between seasons)", holdout)
 	p4 := print("Race speeds", speeds)
 	fmt.Println("== Race shape (how stages were won) ==")
-	for _, r := range simulation.RunShapeValidation(db) {
+	for _, r := range simulation.RunShapeValidation(db, true) {
 		fmt.Printf("%-34s %s\n", r.Name, r.Summary())
 		if verbose {
 			for i, per := range r.PerStage {
@@ -538,7 +540,7 @@ func cmdValidate(db *database.DB, verbose bool) {
 		}
 	}
 	fmt.Println()
-	fmt.Printf("Passed %d/%d synthetic, %d/%d real, %d/%d hold-out, %d/%d speeds\n",
+	fmt.Printf("Passed %d/%d synthetic, %d/%d 2024, %d/%d cross-season, %d/%d speeds\n",
 		p1, len(synth), p2, len(real), p3, len(holdout), p4, len(speeds))
 }
 

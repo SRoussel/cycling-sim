@@ -137,7 +137,7 @@ func stageRaceWinnerSpeed(db *database.DB, riders []model.Rider, name string) (f
 		stages = append(stages, StageConfig{Race: race, Course: course, StageNumber: st.StageNumber, RestDayBefore: st.RestDayBefore, Prestige: st.Prestige})
 		infos = append(infos, selection.StageInfo{Course: course, RaceType: race.RaceType})
 	}
-	start := selection.SelectStageRaceStartList(withoutNonStarters(sr.Name, riders), infos, selection.DefaultConfig(model.RaceTypeRoad, true, len(stages)))
+	start := selection.SelectStageRaceStartList(stageRaceField(sr.Name, riders), infos, selection.DefaultConfig(model.RaceTypeRoad, true, len(stages)))
 	_, standings := SimulateStageRace(sr, stages, start, 1)
 	if len(standings) == 0 || len(standings[len(standings)-1]) == 0 {
 		return 0, fmt.Errorf("no GC")

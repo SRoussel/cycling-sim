@@ -86,8 +86,8 @@ func TestCourseSegmentsMatchStatedDistance(t *testing.T) {
 	}
 }
 
-// New seed content (here: everything but the riders) is added to a database
-// that already has riders, without re-creating them.
+// New seed content is added to a database that already has riders, without
+// re-creating them: only riders missing by name are added.
 func TestSeedAddsMissingContent(t *testing.T) {
 	db, err := database.OpenMemory()
 	if err != nil {
@@ -98,15 +98,20 @@ func TestSeedAddsMissingContent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := db.CreateRider(&riders[0]); err != nil {
-		t.Fatal(err)
+	for i := range riders[1:] {
+		if err := db.CreateRider(&riders[i+1]); err != nil {
+			t.Fatal(err)
+		}
 	}
 	res, err := Seed(db)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if res.Riders != 0 || res.Courses == 0 || res.StageRaces == 0 {
-		t.Errorf("want only courses/races added, got %+v", res)
+	if res.Riders != 1 || res.Courses == 0 || res.StageRaces == 0 {
+		t.Errorf("want the one missing rider and the courses/races added, got %+v", res)
+	}
+	if res, _ := Seed(db); res.Riders != 0 {
+		t.Errorf("a second seed added %d riders", res.Riders)
 	}
 }
 

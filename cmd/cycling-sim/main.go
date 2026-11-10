@@ -70,6 +70,16 @@ func main() {
 			break
 		}
 		cmdValidate(db, len(args) > 0 && (args[0] == "-v" || args[0] == "--verbose"))
+	case "import-riders":
+		if len(args) == 0 {
+			fatalf("Usage: cycling-sim import-riders <WorldDB mod dir or OfficialRelease.cdb>\n")
+		}
+		n, err := seed.ImportWorldDB(args[0], seed.DataPath(seed.WorldDBFile))
+		if err != nil {
+			fatalf("Error importing riders: %v\n", err)
+		}
+		fmt.Printf("Wrote %d WorldTeam and ProTeam riders to %s (local only; not committed).\n", n, seed.DataPath(seed.WorldDBFile))
+		fmt.Println("Run `cycling-sim seed` to add the missing riders and `cycling-sim apply-ratings` to update ages.")
 	case "import-stages":
 		if len(args) == 0 {
 			fatalf("Usage: cycling-sim import-stages <stage-files-dir>\n")
@@ -171,6 +181,8 @@ Commands:
   run-stage-race <stage-race-id> Simulate a stage race
                                  (both accept --seed N for reproducible runs)
   validate [-v]                  Run synthetic + real-race validation (-v: per rider)
+  import-riders <dir>            Read riders from a local WorldDB mod (real ages, missing
+                                 WorldTeam/ProTeam riders) into data/local/
   validate --sets N [--cross-season]  2024 references over N seed sets (judge changes);
                                  --cross-season adds the 2023 races
   import-results [dir]           Derive ratings from saved result pages in

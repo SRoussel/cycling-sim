@@ -36,19 +36,25 @@ func Seed(db *database.DB) (Result, error) {
 	// through ApplyRatings). Courses, races and stage races are added by name
 	// when missing, so new seed content reaches an existing database without
 	// clearing its saved results.
-	riders, _ := db.ListRiders()
-	if len(riders) == 0 {
-		var err error
-		riders, err = BuildRiders()
-		if err != nil {
-			return res, err
+	// Riders missing by name are added (a new riders.csv row or a WorldDB
+	// import), so they reach an existing database too.
+	existing, _ := db.ListRiders()
+	have := make(map[string]bool, len(existing))
+	for _, r := range existing {
+		have[normalizeName(r.Name)] = true
+	}
+	built, err := BuildRiders()
+	if err != nil {
+		return res, err
+	}
+	for i := range built {
+		if have[normalizeName(built[i].Name)] {
+			continue
 		}
-		for i := range riders {
-			if err := db.CreateRider(&riders[i]); err != nil {
-				continue
-			}
-			res.Riders++
+		if err := db.CreateRider(&built[i]); err != nil {
+			continue
 		}
+		res.Riders++
 	}
 
 	courseIDs, created, warnings := seedCourses(db)
@@ -114,7 +120,9 @@ func findDataFile(name string) string {
 // imported results, curated overrides, and fitted threshold corrections.
 var RatingLayers = []string{"rider_llm.csv", "rider_derived.csv", "rider_overrides.csv", FittedFile}
 
-// BuildRiders reads riders.csv and applies every rating layer.
+// BuildRiders reads riders.csv and applies every rating layer; with a
+// WorldDB import (WorldDBFile) it also sets real ages and adds the WorldTeam
+// and ProTeam riders riders.csv lacks (see worlddb.go).
 func BuildRiders() ([]model.Rider, error) {
 	var layers []map[string]RiderOverride
 	for _, name := range RatingLayers {
@@ -124,7 +132,21 @@ func BuildRiders() ([]model.Rider, error) {
 		}
 		layers = append(layers, l)
 	}
-	return readRidersCSV(findDataFile("riders.csv"), layers...)
+	riders, err := readRidersCSV(findDataFile("riders.csv"), layers...)
+	if err != nil {
+		return nil, err
+	}
+	wdb, err := loadWorldDB()
+	if err != nil || wdb == nil {
+		return riders, err
+	}
+	// Fits are trained on ratings without the fitted layer (a correction
+	// for particular races, not a property of the rating scale).
+	train, err := readRidersCSV(findDataFile("riders.csv"), layers[:len(layers)-1]...)
+	if err != nil {
+		return nil, err
+	}
+	return withWorldDB(riders, train, wdb), nil
 }
 
 // UnfittedFTPs returns each rider's threshold from every rating layer except
@@ -145,6 +167,11 @@ func UnfittedFTPs() (map[string]int, error) {
 	riders, err := readRidersCSV(findDataFile("riders.csv"), layers...)
 	if err != nil {
 		return nil, err
+	}
+	if wdb, err := loadWorldDB(); err != nil {
+		return nil, err
+	} else if wdb != nil {
+		riders = withWorldDB(riders, riders, wdb)
 	}
 	out := make(map[string]int, len(riders))
 	for _, r := range riders {

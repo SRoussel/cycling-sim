@@ -203,11 +203,10 @@ func KnownRealStageRaces2023() []RealRaceEntry {
 			Top10GapSecs:  []float64{0, 449, 656, u, u, u, u, u, u, u},
 			// Didn't start (Giro/Vuelta or injured): Evenepoel, Roglič,
 			// Almeida, Ayuso, Buitrago, Geoghegan Hart, Vlasov, Caruso, Tiberi,
-			// Uijtdebroeks, L.Martinez, Arensman, Van Wilder. Abandoned: Mas
-			// (stage 1), Carapaz (before 2), Jorgenson (before 16), van Aert
-			// (before 18). (Wikipedia, List of teams and cyclists in the 2023
-			// Tour de France.)
-			DidNotStart: []int64{294, 306, 433, 174, 36, 179, 315, 37, 54, 259, 44, 145, 342, 245, 93, 416, 429},
+			// Uijtdebroeks, L.Martinez, Arensman, Van Wilder (Wikipedia, List of
+			// teams and cyclists in the 2023 Tour de France). Riders who
+			// abandoned (Mas, Carapaz, Jorgenson, van Aert) ride.
+			DidNotStart: []int64{294, 306, 433, 174, 36, 179, 315, 37, 54, 259, 44, 145, 342},
 		},
 	}
 }
@@ -446,11 +445,12 @@ func KnownRealStageRaces() []RealRaceEntry {
 			// against the young rider classification; gaps for 4-6 unverified).
 			Top10RiderIDs: []int64{452, 431, 294, 433, 326, 461, 161, 416, 0, 36},
 			Top10GapSecs:  []float64{0, 377, 558, u, u, u, 1504, 1594, 1641, 1743},
-			// Roglič and Ayuso abandoned on stage 13 and Vlasov before stage
-			// 10, so they have no final GC. O'Connor, Tiberi, Uijtdebroeks and
-			// Arensman didn't start (Giro/Vuelta instead; Wikipedia, List of
-			// teams and cyclists in the 2024 Tour de France).
-			DidNotStart: []int64{306, 174, 315, 370, 54, 259, 145},
+			// O'Connor, Tiberi, Uijtdebroeks and Arensman didn't start
+			// (Giro/Vuelta instead; Wikipedia, List of teams and cyclists in the
+			// 2024 Tour de France). Riders who started and abandoned (Roglič,
+			// Ayuso, Vlasov) ride: abandons are chance the sim can't know, and
+			// the gap error only scores reference riders.
+			DidNotStart: []int64{370, 54, 259, 145},
 		},
 	}
 }

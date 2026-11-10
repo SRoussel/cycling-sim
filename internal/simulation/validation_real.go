@@ -182,9 +182,21 @@ func KnownRealStageRaces2023() []RealRaceEntry {
 		{
 			DisplayName:  "Tour de France 2023 (GC)",
 			InternalName: "Tour de France 2023", // the real 2023 route
-			// 1 Vingegaard 2 Pogačar +7:29 3 A.Yates
+			// 1 Vingegaard 2 Pogačar +7:29 3 A.Yates +10:56 4 S.Yates* +12:23
+			// 5 C.Rodríguez +13:17 6 Bilbao +13:27 7 Hindley +14:44
+			// 8 Gall +16:09 9 Gaudu +23:08 10 G.Martin +26:30
+			// (Wikipedia, 2023 Tour de France; * not in the DB). Only the
+			// podium is scored until the reference uses 2023 rosters: today's
+			// teams make Bilbao, Gaudu and Martin domestiques (+2 h).
 			Top10RiderIDs: []int64{431, 452, 461, 0, 0, 0, 0, 0, 0, 0},
-			Top10GapSecs:  []float64{0, 449, u, u, u, u, u, u, u, u},
+			Top10GapSecs:  []float64{0, 449, 656, u, u, u, u, u, u, u},
+			// Didn't start (Giro/Vuelta or injured): Evenepoel, Roglič,
+			// Almeida, Ayuso, Buitrago, Geoghegan Hart, Vlasov, Caruso, Tiberi,
+			// Uijtdebroeks, L.Martinez, Arensman, Van Wilder. Abandoned: Mas
+			// (stage 1), Carapaz (before 2), Jorgenson (before 16), van Aert
+			// (before 18). (Wikipedia, List of teams and cyclists in the 2023
+			// Tour de France.)
+			DidNotStart: []int64{294, 306, 433, 174, 36, 179, 315, 37, 54, 259, 44, 145, 342, 245, 93, 416, 429},
 		},
 	}
 }
@@ -432,8 +444,11 @@ func KnownRealStageRaces() []RealRaceEntry {
 			// against the young rider classification; gaps for 4-6 unverified).
 			Top10RiderIDs: []int64{452, 431, 294, 433, 326, 461, 161, 416, 0, 36},
 			Top10GapSecs:  []float64{0, 377, 558, u, u, u, 1504, 1594, 1641, 1743},
-			// Roglič and Ayuso abandoned on stage 13, so they have no final GC.
-			DidNotStart: []int64{306, 174},
+			// Roglič and Ayuso abandoned on stage 13 and Vlasov before stage
+			// 10, so they have no final GC. O'Connor, Tiberi, Uijtdebroeks and
+			// Arensman didn't start (Giro/Vuelta instead; Wikipedia, List of
+			// teams and cyclists in the 2024 Tour de France).
+			DidNotStart: []int64{306, 174, 315, 370, 54, 259, 145},
 		},
 	}
 }
@@ -697,4 +712,25 @@ func RunHoldoutValidation(db *database.DB) []ValidationSummary {
 	}
 	return append(RunRealRaceValidationFor(db, allRiders, KnownRealRaces2023(), realValidationRuns),
 		RunRealStageRaceValidationFor(db, allRiders, KnownRealStageRaces2023(), realStageRaceRuns)...)
+}
+
+// withoutNonStarters drops the verified non-starters of a reference stage
+// race (its DidNotStart list) from a rider pool, so every validation of that
+// race simulates the field that actually rode it.
+func withoutNonStarters(stageRace string, riders []model.Rider) []model.Rider {
+	dns := map[int64]bool{}
+	for _, e := range append(KnownRealStageRaces(), KnownRealStageRaces2023()...) {
+		if e.InternalName == stageRace {
+			for _, id := range e.DidNotStart {
+				dns[id] = true
+			}
+		}
+	}
+	out := make([]model.Rider, 0, len(riders))
+	for _, r := range riders {
+		if !dns[r.ID] {
+			out = append(out, r)
+		}
+	}
+	return out
 }

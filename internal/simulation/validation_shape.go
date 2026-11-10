@@ -78,7 +78,7 @@ func RunShapeValidation(db *database.DB) []ShapeResult {
 			stages = append(stages, StageConfig{Race: race, Course: course, StageNumber: st.StageNumber, RestDayBefore: st.RestDayBefore, Prestige: st.Prestige})
 			infos = append(infos, selection.StageInfo{Course: course, RaceType: race.RaceType})
 		}
-		start := selection.SelectStageRaceStartList(riders, infos, selection.DefaultConfig(model.RaceTypeRoad, true, len(stages)))
+		start := selection.SelectStageRaceStartList(withoutNonStarters(ref.InternalName, riders), infos, selection.DefaultConfig(model.RaceTypeRoad, true, len(stages)))
 		runs := parallelRuns(shapeRuns, func(run int) []Outcome {
 			own := make([]StageConfig, len(stages))
 			copy(own, stages)

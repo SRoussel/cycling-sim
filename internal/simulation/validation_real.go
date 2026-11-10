@@ -452,6 +452,17 @@ func KnownRealStageRaces() []RealRaceEntry {
 			// the gap error only scores reference riders.
 			DidNotStart: []int64{370, 54, 259, 145},
 		},
+		{
+			DisplayName:  "Giro d'Italia 2024 (GC)",
+			InternalName: "Giro d'Italia 2024", // real route (import-stages)
+			// 1 Pogačar 2 D.Martínez +9:56 3 G.Thomas* +10:24 4 O'Connor +12:07
+			// 5 Tiberi +12:49 6 Arensman +14:31 7 Rubio +15:52 8 Hirt +18:05
+			// 9 Bardet* +20:32 10 Storer* +21:11 (Wikipedia, 2024 Giro d'Italia;
+			// * not in the DB).
+			Top10RiderIDs: []int64{452, 301, 0, 370, 54, 145, 254, 270, 0, 0},
+			Top10GapSecs:  []float64{0, 596, 624, 727, 769, 871, 952, 1085, 1232, 1271},
+			StartList:     giro2024Field,
+		},
 	}
 }
 
@@ -743,22 +754,11 @@ func (e RealRaceEntry) field() map[string]string {
 func fieldName(s string) string { return strings.ToLower(strings.Join(strings.Fields(s), " ")) }
 
 // KnownSameSeasonStageRaces are 2024 stage races the ratings are never fitted
-// to (fit-ratings uses KnownRealStageRaces): the test of the model in the
-// season the ratings describe.
+// to (fit-ratings uses KnownRealStageRaces: the Tour and Giro GC): the test
+// of the model in the season the ratings describe.
 func KnownSameSeasonStageRaces() []RealRaceEntry {
 	const u = gapUnknown
 	return []RealRaceEntry{
-		{
-			DisplayName:  "Giro d'Italia 2024 (GC)",
-			InternalName: "Giro d'Italia 2024", // real route (import-stages)
-			// 1 Pogačar 2 D.Martínez +9:56 3 G.Thomas* +10:24 4 O'Connor +12:07
-			// 5 Tiberi +12:49 6 Arensman +14:31 7 Rubio +15:52 8 Hirt +18:05
-			// 9 Bardet* +20:32 10 Storer* +21:11 (Wikipedia, 2024 Giro d'Italia;
-			// * not in the DB).
-			Top10RiderIDs: []int64{452, 301, 0, 370, 54, 145, 254, 270, 0, 0},
-			Top10GapSecs:  []float64{0, 596, 624, 727, 769, 871, 952, 1085, 1232, 1271},
-			StartList:     giro2024Field,
-		},
 		{
 			DisplayName:  "Tirreno-Adriatico 2024 (GC)",
 			InternalName: "Tirreno-Adriatico 2024", // real route; approximate field

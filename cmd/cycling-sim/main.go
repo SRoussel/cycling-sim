@@ -548,7 +548,7 @@ func cmdValidate(db *database.DB, verbose bool) {
 	holdout := simulation.RunHoldoutValidation(db)
 	speeds := simulation.RunSpeedValidation(db)
 	p1 := print("Synthetic fields", synth)
-	p2 := print("2024 races (the ratings' season; fit-ratings fits the Tour GC only)", real)
+	p2 := print("2024 races (the ratings' season; fit-ratings fits the Tour and Giro GC)", real)
 	p3 := print("Cross-season (2023, informational: form changes between seasons)", holdout)
 	p4 := print("Race speeds", speeds)
 	fmt.Println("== Race shape (how stages were won) ==")

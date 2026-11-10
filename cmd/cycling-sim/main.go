@@ -445,12 +445,22 @@ func formatDuration(seconds float64) string {
 	return fmt.Sprintf("%d\"", s)
 }
 
+// clock formats a GC gap as m'ss" (or h:mm:ss over an hour).
+func clock(secs float64) string {
+	t := int(math.Round(secs))
+	if t >= 3600 {
+		return fmt.Sprintf("%d:%02d:%02d", t/3600, t%3600/60, t%60)
+	}
+	return fmt.Sprintf("%d'%02d\"", t/60, t%60)
+}
+
 // cmdValidateSets scores the reference races over n independent seed sets:
 // a change is real when it moves the mean by more than the spread.
 func cmdValidateSets(db *database.DB, n int, crossSeason bool) {
 	fmt.Printf("Reference races over %d seed sets (gap error: mean, min-max; real winner's win rate)\n", n)
 	var total float64
-	for _, r := range simulation.RunSeedSets(db, n, crossSeason) {
+	results := simulation.RunSeedSets(db, n, crossSeason)
+	for _, r := range results {
 		mean, lo, hi := 0.0, math.Inf(1), math.Inf(-1)
 		for _, v := range r.MAE {
 			mean += v / float64(len(r.MAE))
@@ -468,6 +478,18 @@ func cmdValidateSets(db *database.DB, n int, crossSeason bool) {
 		fmt.Printf("  %-30s %5.0fs  (%4.0f-%4.0f)  winner %3.0f%%%s\n", r.Name, mean, lo, hi, r.RealWinnerPc, med)
 	}
 	fmt.Printf("  %-30s %5.0fs\n", "Sum of mean gap errors", total)
+	fmt.Println("GC spread (median gap of 2nd and 10th place, sim vs real; who holds the place doesn't matter)")
+	for _, r := range results {
+		if len(r.Spread) == 0 {
+			continue
+		}
+		var s2, s10 float64
+		for _, s := range r.Spread {
+			s2 += s.Sim2 / float64(len(r.Spread))
+			s10 += s.Sim10 / float64(len(r.Spread))
+		}
+		fmt.Printf("  %-30s 2nd %8s (real %8s)   10th %8s (real %8s)\n", r.Name, clock(s2), clock(r.Spread[0].Real2), clock(s10), clock(r.Spread[0].Real10))
+	}
 	for set := 0; set < n; set++ {
 		simulation.ValidationSeedBase = int64(set) * 1000
 		for _, r := range simulation.RunShapeValidation(db, crossSeason) {

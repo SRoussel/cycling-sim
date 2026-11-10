@@ -78,7 +78,7 @@ type StageRaceStage struct {
 // They are used to distinguish stage-race stages from standalone one-day races.
 var StageRaceNamePrefixes = []string{
 	"TdF ", "Giro ", "Vuelta ", "Paris-Nice ", "Tirreno ",
-	"Suisse ", "Dauphine ", "Basque ", "Romandie ",
+	"Suisse ", "Dauphine ", "Basque ", "Romandie ", "Catalunya ",
 }
 
 // IsStageRaceStageName reports whether name matches a known stage-race stage prefix.

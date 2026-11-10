@@ -34,6 +34,18 @@ func KnownRealShapes() []RealShape {
 		InternalName: "Giro d'Italia 2024",
 		Stages:       []Outcome{X, X, S, S, B, B, T, X, S, B, S, B, S, T, X, X, B, S, B, X, S},
 	}, {
+		// Tirreno 2024: opening ITT; sprints by Philipsen, Bauhaus and Milan
+		// (twice); Vingegaard's two mountain wins.
+		DisplayName:  "Tirreno-Adriatico 2024 (race shape)",
+		InternalName: "Tirreno-Adriatico 2024",
+		Stages:       []Outcome{T, S, S, S, X, X, S},
+	}, {
+		// Catalunya 2024: Schultz from a select group (stage 1), Pogačar's
+		// four wins from selections, sprints on stages 4 and 5.
+		DisplayName:  "Volta a Catalunya 2024 (race shape)",
+		InternalName: "Volta a Catalunya 2024",
+		Stages:       []Outcome{X, X, X, S, S, X, X},
+	}, {
 		DisplayName:  "Tour de France 2023 (race shape)",
 		InternalName: "Tour de France 2023",
 		Stages:       []Outcome{X, X, S, S, B, X, S, S, B, B, S, B, B, X, B, T, B, B, B, X, S},

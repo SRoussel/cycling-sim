@@ -27,6 +27,15 @@ type ValidationSummary struct {
 	// were not in the real top 10 (real-race cases only).
 	Riders    []RiderCheck `json:",omitempty"`
 	Intruders []RiderCheck `json:",omitempty"`
+	// Spread (stage races): the median simulated GC gap of 2nd and 10th
+	// place next to the real ones, whoever holds those places: how spread
+	// out the race is, independent of the exact field.
+	Spread *GCSpread `json:",omitempty"`
+}
+
+// GCSpread is a stage race's GC spread: gaps of 2nd and 10th place.
+type GCSpread struct {
+	Sim2, Real2, Sim10, Real10 float64
 }
 
 // RiderCheck is one rider's real result next to their simulated average.
@@ -48,9 +57,10 @@ var ValidationSeedBase int64
 // SeedSetResult is one reference race scored over several seed sets.
 type SeedSetResult struct {
 	Name         string
-	MAE          []float64 // gap error per seed set
-	MedianMAE    []float64 // median-gap error per seed set (stage races)
-	RealWinnerPc float64   // mean share of runs the real winner wins
+	MAE          []float64  // gap error per seed set
+	MedianMAE    []float64  // median-gap error per seed set (stage races)
+	RealWinnerPc float64    // mean share of runs the real winner wins
+	Spread       []GCSpread // per seed set (stage races)
 }
 
 // RunSeedSets scores the 2024 references (the ratings' season) over several
@@ -83,6 +93,9 @@ func RunSeedSets(db *database.DB, sets int, crossSeason bool) []SeedSetResult {
 			}
 			out[i].MAE = append(out[i].MAE, r.MeanTimeGapErrorSecs)
 			out[i].MedianMAE = append(out[i].MedianMAE, r.MedianGapErrorSecs)
+			if r.Spread != nil {
+				out[i].Spread = append(out[i].Spread, *r.Spread)
+			}
 			for _, c := range r.Riders {
 				if c.RealPos == 1 {
 					out[i].RealWinnerPc += c.WinPct / float64(sets)

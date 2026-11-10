@@ -544,6 +544,19 @@ func RunRealStageRaceValidationFor(db *database.DB, allRiders []model.Rider, ent
 				posSum[g.RiderID] += float64(g.GCPosition)
 			}
 		}
+		var at2, at10 []float64 // GC gap of 2nd and 10th place per run
+		for _, standings := range allRuns {
+			if len(standings) == 0 || len(standings[len(standings)-1]) < 10 {
+				continue
+			}
+			final := standings[len(standings)-1]
+			at2 = append(at2, final[1].TotalTimeSeconds-final[0].TotalTimeSeconds)
+			at10 = append(at10, final[9].TotalTimeSeconds-final[0].TotalTimeSeconds)
+		}
+		var spread *GCSpread
+		if len(at2) > 0 && entry.Top10GapSecs[1] != gapUnknown && entry.Top10GapSecs[9] != gapUnknown {
+			spread = &GCSpread{Sim2: medianOf(at2), Real2: entry.Top10GapSecs[1], Sim10: medianOf(at10), Real10: entry.Top10GapSecs[9]}
+		}
 		var matched []int64
 		var refPos []int
 		for i, id := range entry.Top10RiderIDs {
@@ -612,10 +625,16 @@ func RunRealStageRaceValidationFor(db *database.DB, allRiders []model.Rider, ent
 			Correlation: corr, Top10Accuracy: overlap, MeanTimeGapErrorSecs: mae, MedianGapErrorSecs: medMAE, MatchedRiders: len(matched),
 			Details: fmt.Sprintf("Matched %d | Corr %.2f | GC top-10 overlap %.0f%% (≥%.0f%%) | GC gap MAE %.0fs over %d (≤%.0fs), median-gap MAE %.0fs | Real winner wins %.0f%%",
 				len(matched), corr, overlap, realPassTop10Target, mae, n, realStageRaceGapMAE, medMAE, winPct),
-			Riders: checks, Intruders: intruders,
+			Riders: checks, Intruders: intruders, Spread: spread,
 		})
 	}
 	return out
+}
+
+func medianOf(xs []float64) float64 {
+	s := append([]float64(nil), xs...)
+	sort.Float64s(s)
+	return s[len(s)/2]
 }
 
 // withStarters adds riders who really started (the reference top 10) to a
@@ -739,6 +758,24 @@ func KnownSameSeasonStageRaces() []RealRaceEntry {
 			Top10RiderIDs: []int64{452, 301, 0, 370, 54, 145, 254, 270, 0, 0},
 			Top10GapSecs:  []float64{0, 596, 624, 727, 769, 871, 952, 1085, 1232, 1271},
 			StartList:     giro2024Field,
+		},
+		{
+			DisplayName:  "Tirreno-Adriatico 2024 (GC)",
+			InternalName: "Tirreno-Adriatico 2024", // real route; approximate field
+			// 1 Vingegaard 2 Ayuso +1:24 3 Hindley +1:52 4 del Toro +2:20
+			// 5 O'Connor +2:24 6 Arensman +2:25 7 Uijtdebroeks +3:10
+			// 8 Kämna +4:02 9 Pidcock* +4:05 10 Vauquelin +4:24 (Wikipedia).
+			Top10RiderIDs: []int64{431, 174, 298, 439, 370, 145, 259, 181, 0, 170},
+			Top10GapSecs:  []float64{0, 84, 112, 140, 144, 145, 190, 242, 245, 264},
+		},
+		{
+			DisplayName:  "Volta a Catalunya 2024 (GC)",
+			InternalName: "Volta a Catalunya 2024", // real route; approximate field
+			// 1 Pogačar 2 Landa +3:41 3 Bernal +5:03 4 Vlasov +5:56 5 Mas +6:01
+			// 6 Harper* +6:01 7 L.Martinez +6:02 8 Tiberi +6:33 9 Almeida +6:33
+			// 10 Fortunato +7:27 (Wikipedia).
+			Top10RiderIDs: []int64{452, 326, 147, 315, 245, 0, 44, 54, 433, 497},
+			Top10GapSecs:  []float64{0, 221, 303, 356, 361, 361, 362, 393, 393, 447},
 		},
 	}
 }

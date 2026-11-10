@@ -587,7 +587,7 @@ func SimulateStageRaceWithProgress(stageRace *model.StageRace, stages []StageCon
 				delete(fatigueMap, res.RiderID)
 				continue
 			}
-			gcTimes[res.RiderID] += res.FinishTimeSeconds
+			gcTimes[res.RiderID] += res.FinishTimeSeconds - stageBonus(res.Position, stage.Race.RaceType)
 			stageStress := StageStress(stage.Course, stage.Race.RaceType, res.TimeGapSeconds)
 			if f, ok := fatigueMap[res.RiderID]; ok {
 				f.AddStageStress(stageStress)

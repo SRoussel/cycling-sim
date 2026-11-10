@@ -583,6 +583,19 @@ const huntOrdinary = 0.5
 // keen to hunt (the margin is theirs to keep, not to grow).
 const huntComfortS = 180.0
 
+// stageBonuses: time bonuses (seconds) for the first three on a road stage
+// of a stage race, as at the Grand Tours and most week-long races.
+var stageBonuses = [3]float64{10, 6, 4}
+
+// stageBonus is the GC time bonus for a finishing position (none in a time
+// trial).
+func stageBonus(position int, rt model.RaceType) float64 {
+	if rt == model.RaceTypeTT || position < 1 || position > len(stageBonuses) {
+		return 0
+	}
+	return stageBonuses[position-1]
+}
+
 // huntChance is the chance a favourite's team hunts today's stage.
 func (s *RaceState) huntChance(leader *RiderState, prestige float64, wins int) float64 {
 	p := huntOrdinary + (1-huntOrdinary)*math.Max(0, math.Min(1, prestige))

@@ -69,10 +69,11 @@ type RaceState struct {
 	// riders can look ahead to the line (see escape.go).
 	Course                []model.Segment
 	SegIndex              int
-	lineTime              map[lineKey]float64  // per-step cache of timeToLine
-	reach                 float64              // per-step cache of breakReach
-	canFollow             map[*RiderState]bool // per-step cache of sprinterCanFollow
-	Climb                 float64              // ClimbFactor of the current step
+	lineTime              map[lineKey]float64       // per-step cache of timeToLine
+	reach                 float64                   // per-step cache of breakReach
+	canFollow             map[*RiderState]bool      // per-step cache of sprinterCanFollow
+	fastLines             map[fastKey][]*RiderState // per-step cache of fastestLine
+	Climb                 float64                   // ClimbFactor of the current step
 	BreakawayHasDangerous bool
 	SprintChaseActive     bool
 	BreakawayActive       bool

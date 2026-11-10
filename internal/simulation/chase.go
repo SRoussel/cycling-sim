@@ -252,13 +252,7 @@ func (s *RaceState) sprinterCanFollow(sp *RiderState, group []*RiderState) bool 
 }
 
 func (s *RaceState) sprinterFollows(sp *RiderState, group []*RiderState) bool {
-	var others []*RiderState
-	for _, rs := range group {
-		if rs != sp && !rs.DNF {
-			others = append(others, rs)
-		}
-	}
-	if len(others) == 0 {
+	if len(group) <= 1 {
 		return true
 	}
 	r := sp.Rider
@@ -269,7 +263,10 @@ func (s *RaceState) sprinterFollows(sp *RiderState, group []*RiderState) bool {
 		if i == s.SegIndex && s.SegmentKmLeft > 0 && s.SegmentKmLeft < km {
 			km = s.SegmentKmLeft
 		}
-		line := fastestLine(others, seg)
+		line := s.fastLineWithout(group, i, sp)
+		if len(line) == 0 {
+			return true
+		}
 		n := float64(len(line))
 		var p, m, cda, handling float64
 		for _, rs := range line {
@@ -291,24 +288,66 @@ func (s *RaceState) sprinterFollows(sp *RiderState, group []*RiderState) bool {
 	return true
 }
 
-// fastestLine is the pace line a group's fastest riders on this segment
-// would form (climbers on a climb, big engines on the flat).
-func fastestLine(group []*RiderState, seg *model.Segment) []*RiderState {
+// fastKey identifies a group's fastest line on one course segment.
+type fastKey struct {
+	first *RiderState
+	n     int
+	seg   int
+}
+
+// fastLineWithout is the pace line the group's fastest riders on course
+// segment i would form (climbers on a climb, big engines on the flat),
+// leaving out one rider. The ranking is shared by every rider asking within a
+// step (cached).
+func (s *RaceState) fastLineWithout(group []*RiderState, i int, without *RiderState) []*RiderState {
+	key := fastKey{group[0], len(group), i}
+	top, ok := s.fastLines[key]
+	if !ok {
+		top = fastestRiders(group, &s.Course[i], maxRotation+1)
+		if s.fastLines == nil {
+			s.fastLines = map[fastKey][]*RiderState{}
+		}
+		s.fastLines[key] = top
+	}
+	out := make([]*RiderState, 0, maxRotation)
+	for _, rs := range top {
+		if rs != without && len(out) < maxRotation {
+			out = append(out, rs)
+		}
+	}
+	return out
+}
+
+// fastestRiders returns the k riders of a group fastest on a segment at
+// threshold, fastest first (DNF riders left out).
+func fastestRiders(group []*RiderState, seg *model.Segment, k int) []*RiderState {
 	type rv struct {
 		rs *RiderState
 		v  float64
 	}
-	vs := make([]rv, 0, len(group))
+	best := make([]rv, 0, k+1)
 	for _, rs := range group {
+		if rs.DNF {
+			continue
+		}
 		r := rs.Rider
-		vs = append(vs, rv{rs, segmentSpeed(EffectivePower(r, rs.CurrentFTP(), seg, false), r.TotalMassKg(), r.CdA, seg, r.Handling)})
+		v := segmentSpeed(EffectivePower(r, rs.CurrentFTP(), seg, false), r.TotalMassKg(), r.CdA, seg, r.Handling)
+		if len(best) == k && v <= best[k-1].v {
+			continue
+		}
+		j := len(best)
+		best = append(best, rv{rs, v})
+		for j > 0 && best[j-1].v < v {
+			best[j] = best[j-1]
+			j--
+		}
+		best[j] = rv{rs, v}
+		if len(best) > k {
+			best = best[:k]
+		}
 	}
-	sort.SliceStable(vs, func(i, j int) bool { return vs[i].v > vs[j].v })
-	if len(vs) > maxRotation {
-		vs = vs[:maxRotation]
-	}
-	out := make([]*RiderState, len(vs))
-	for i, x := range vs {
+	out := make([]*RiderState, len(best))
+	for i, x := range best {
 		out[i] = x.rs
 	}
 	return out
@@ -423,7 +462,7 @@ func (s *RaceState) setBreakIntent(states []*RiderState, segments []model.Segmen
 			s.WantsBreak[rs.Rider.ID] = true
 		}
 	}
-	s.canFollow, s.reach, s.Road = nil, 0, nil
+	s.canFollow, s.fastLines, s.reach, s.Road = nil, nil, 0, nil
 }
 
 // gcWatched: teams watch the riders this high on GC (twice the protected

@@ -186,6 +186,7 @@ func simulateStep(riders []*RiderState, segment *model.Segment, isTT bool, dista
 		state.lineTime = nil // fatigue and position changed since the last step
 		state.reach = 0
 		state.canFollow = nil
+		state.fastLines = nil
 	}
 	for ci, cluster := range clusters {
 		if state != nil {

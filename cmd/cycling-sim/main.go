@@ -490,11 +490,20 @@ func cmdValidateSets(db *database.DB, n int, crossSeason bool) {
 		}
 		fmt.Printf("  %-30s 2nd %8s (real %8s)   10th %8s (real %8s)\n", r.Name, clock(s2), clock(r.Spread[0].Real2), clock(s10), clock(r.Spread[0].Real10))
 	}
+	fmt.Println("Race shape: how stages are won, averaged per race kind (judge on these); per race as detail")
+	var detail []string
 	for set := 0; set < n; set++ {
 		simulation.ValidationSeedBase = int64(set) * 1000
-		for _, r := range simulation.RunShapeValidation(db, crossSeason) {
-			fmt.Printf("  set %d %-28s %s\n", set+1, r.Name, r.Summary())
+		shapes := simulation.RunShapeValidation(db)
+		for _, a := range simulation.ShapeAverages(shapes) {
+			fmt.Printf("  set %d %-16s (%d) %s\n", set+1, a.Kind, a.Races, a.Summary())
 		}
+		for _, r := range shapes {
+			detail = append(detail, fmt.Sprintf("  set %d %-36s %s", set+1, r.Name, r.Summary()))
+		}
+	}
+	for _, d := range detail {
+		fmt.Println(d)
 	}
 	simulation.ValidationSeedBase = 0
 }
@@ -552,7 +561,11 @@ func cmdValidate(db *database.DB, verbose bool) {
 	p3 := print("Cross-season (2023, informational: form changes between seasons)", holdout)
 	p4 := print("Race speeds", speeds)
 	fmt.Println("== Race shape (how stages were won) ==")
-	for _, r := range simulation.RunShapeValidation(db, true) {
+	shapes := simulation.RunShapeValidation(db)
+	for _, a := range simulation.ShapeAverages(shapes) {
+		fmt.Printf("%-34s (%d) %s\n", a.Kind, a.Races, a.Summary())
+	}
+	for _, r := range shapes {
 		fmt.Printf("%-34s %s\n", r.Name, r.Summary())
 		if verbose {
 			for i, per := range r.PerStage {

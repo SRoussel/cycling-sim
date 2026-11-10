@@ -13,8 +13,15 @@ type RealShape struct {
 	DisplayName  string
 	InternalName string
 	Stages       []Outcome // by stage number - 1
-	CrossSeason  bool      // not the ratings' season (2024): informational
+	Kind         string    // ShapeGrandTour or ShapeWeekLong: averages are per kind
 }
+
+// Race-shape kinds: breakaway rates differ between three-week and
+// week-long races, so outcomes are averaged per kind.
+const (
+	ShapeGrandTour = "Grand Tours"
+	ShapeWeekLong  = "Week-long races"
+)
 
 // KnownRealShapes: the 2023 Tour on its real route. From the English
 // Wikipedia race overview and stage articles (read Nov 2026); stages 12, 13,
@@ -32,24 +39,29 @@ func KnownRealShapes() []RealShape {
 		// from selections; two time trials.
 		DisplayName:  "Giro d'Italia 2024 (race shape)",
 		InternalName: "Giro d'Italia 2024",
+		Kind:         ShapeGrandTour,
 		Stages:       []Outcome{X, X, S, S, B, B, T, X, S, B, S, B, S, T, X, X, B, S, B, X, S},
 	}, {
 		// Tirreno 2024: opening ITT; sprints by Philipsen, Bauhaus and Milan
 		// (twice); Vingegaard's two mountain wins.
 		DisplayName:  "Tirreno-Adriatico 2024 (race shape)",
 		InternalName: "Tirreno-Adriatico 2024",
+		Kind:         ShapeWeekLong,
 		Stages:       []Outcome{T, S, S, S, X, X, S},
 	}, {
 		// Catalunya 2024: Schultz from a select group (stage 1), Pogačar's
 		// four wins from selections, sprints on stages 4 and 5.
 		DisplayName:  "Volta a Catalunya 2024 (race shape)",
 		InternalName: "Volta a Catalunya 2024",
+		Kind:         ShapeWeekLong,
 		Stages:       []Outcome{X, X, X, S, S, X, X},
 	}, {
 		DisplayName:  "Tour de France 2023 (race shape)",
 		InternalName: "Tour de France 2023",
 		Stages:       []Outcome{X, X, S, S, B, X, S, S, B, B, S, B, B, X, B, T, B, B, B, X, S},
-		CrossSeason:  true,
+		// How stages are won is race character, not riders' form, so the
+		// 2023 Tour counts towards the Grand Tour averages.
+		Kind: ShapeGrandTour,
 	}}
 }
 
@@ -59,6 +71,7 @@ const shapeRuns = 32
 // ShapeResult is a stage race's simulated outcomes against the real ones.
 type ShapeResult struct {
 	Name      string
+	Kind      string
 	Agreement float64             // share of (stage, run) outcomes matching the real one
 	Real, Sim map[Outcome]float64 // outcomes per race (sim: mean over runs)
 	PerStage  []map[Outcome]float64
@@ -67,7 +80,7 @@ type ShapeResult struct {
 
 // RunShapeValidation simulates each known stage race and classifies how
 // every stage was won.
-func RunShapeValidation(db *database.DB, crossSeason bool) []ShapeResult {
+func RunShapeValidation(db *database.DB) []ShapeResult {
 	if db == nil {
 		return nil
 	}
@@ -81,9 +94,6 @@ func RunShapeValidation(db *database.DB, crossSeason bool) []ShapeResult {
 	}
 	var out []ShapeResult
 	for _, ref := range KnownRealShapes() {
-		if ref.CrossSeason && !crossSeason {
-			continue
-		}
 		var sr *model.StageRace
 		for i := range srs {
 			if srs[i].Name == ref.InternalName {
@@ -120,7 +130,7 @@ func RunShapeValidation(db *database.DB, crossSeason bool) []ShapeResult {
 			}
 			return o
 		})
-		res := ShapeResult{Name: ref.DisplayName, Real: map[Outcome]float64{}, Sim: map[Outcome]float64{}, Stages: ref.Stages}
+		res := ShapeResult{Name: ref.DisplayName, Kind: ref.Kind, Real: map[Outcome]float64{}, Sim: map[Outcome]float64{}, Stages: ref.Stages}
 		match := 0.0
 		for i, want := range ref.Stages {
 			res.Real[want]++
@@ -146,4 +156,50 @@ func (r ShapeResult) Summary() string {
 	return fmt.Sprintf("Stage outcomes match %.0f%% | sprints %s (real %s), breakaways %s (real %s), selections %s (real %s)",
 		r.Agreement*100, f(r.Sim, OutcomeSprint), f(r.Real, OutcomeSprint), f(r.Sim, OutcomeBreakaway), f(r.Real, OutcomeBreakaway),
 		f(r.Sim, OutcomeSelection), f(r.Real, OutcomeSelection))
+}
+
+// ShapeAverage is the mean outcomes per race of one kind, sim and real.
+type ShapeAverage struct {
+	Kind      string
+	Races     int
+	Real, Sim map[Outcome]float64
+}
+
+// ShapeAverages averages race shapes per kind (per race).
+func ShapeAverages(results []ShapeResult) []ShapeAverage {
+	var out []ShapeAverage
+	for _, kind := range []string{ShapeGrandTour, ShapeWeekLong} {
+		a := ShapeAverage{Kind: kind, Real: map[Outcome]float64{}, Sim: map[Outcome]float64{}}
+		for _, r := range results {
+			if r.Kind != kind {
+				continue
+			}
+			a.Races++
+			for o, v := range r.Real {
+				a.Real[o] += v
+			}
+			for o, v := range r.Sim {
+				a.Sim[o] += v
+			}
+		}
+		if a.Races == 0 {
+			continue
+		}
+		for o := range a.Real {
+			a.Real[o] /= float64(a.Races)
+		}
+		for o := range a.Sim {
+			a.Sim[o] /= float64(a.Races)
+		}
+		out = append(out, a)
+	}
+	return out
+}
+
+// Summary compares a kind's average outcomes per race.
+func (a ShapeAverage) Summary() string {
+	f := func(m map[Outcome]float64, o Outcome) string { return fmt.Sprintf("%.1f", m[o]) }
+	return fmt.Sprintf("per race: sprints %s (real %s), breakaways %s (real %s), selections %s (real %s)",
+		f(a.Sim, OutcomeSprint), f(a.Real, OutcomeSprint), f(a.Sim, OutcomeBreakaway), f(a.Real, OutcomeBreakaway),
+		f(a.Sim, OutcomeSelection), f(a.Real, OutcomeSelection))
 }

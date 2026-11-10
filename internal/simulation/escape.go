@@ -10,11 +10,12 @@ import (
 // GC rivals), so after the early phase they go when that pays from here, judged by physics on the
 // remaining course rather than by gradient or distance rules:
 //
-//   - attack (attackPays): from a group with rival leaders, when the
-//     strongest of them couldn't hold the wheel at the attacker's burst speed
-//     here (on flat roads the draft makes that impossible; on climbs and
-//     rough roads it isn't), and riding to the line alone at threshold would
-//     beat that group chasing in a rotating pace line;
+//   - attack (attackPays): from a group with rival leaders, when it drops a
+//     rival worth dropping who couldn't hold the wheel at the attacker's
+//     burst speed here (on flat roads the draft makes that impossible; on
+//     climbs and rough roads it isn't), and riding to the line alone at
+//     threshold would beat the rest chasing in a rotating pace line (rivals
+//     who follow sit on);
 //   - commit (escapeHolds): in a road group with no rival leader ahead and a
 //     threatening one behind (at least as strong as the group's weakest
 //     leader), alone or as a front selection of rivals, ride to the line
@@ -51,33 +52,55 @@ func chaseOf(rs *RiderState, group []*RiderState) []*RiderState {
 	return out
 }
 
-// attackPays reports whether a leader should attack from their road group.
+// attackPays reports whether a leader should attack from their road group:
+// the attack drops at least one rival worth dropping (in a one-day race any
+// rival leader, all of them race for the win; in a stage race a favourite or
+// a GC contender) who can't hold the wheel at the attacker's burst speed
+// here, and the attacker alone would ride to the line faster than the rest
+// of the group chasing. Rivals who can follow don't stop the attack (they
+// go with it), but they sit on rather than share the work, so the attacker
+// is judged by what they can do alone.
 func (s *RaceState) attackPays(rs *RiderState, seg *model.Segment) bool {
 	if !s.escapeEligible(rs) || s.rivalAhead(rs) {
 		return false
 	}
-	var rival *RiderState // the strongest rival leader who would try to follow
-	for _, o := range s.Road {
-		if rivalLeaderOf(rs, o) && (rival == nil || o.CurrentFTP()/o.Rider.TotalMassKg() > rival.CurrentFTP()/rival.Rider.TotalMassKg()) {
-			rival = o
-		}
-	}
-	if rival == nil {
-		return false
-	}
-	// Can the rival hold the wheel here?
 	r := rs.Rider
 	threshold := EffectivePower(r, rs.CurrentFTP(), seg, false)
 	v0 := segmentSpeed(threshold, r.TotalMassKg(), r.CdA, seg, r.Handling)
 	burst := threshold + rs.WPrime.AvailablePowerAboveFTP(SegmentTime(v0, seg.DistanceKm))
 	v := segmentSpeed(burst, r.TotalMassKg(), r.CdA, seg, r.Handling)
-	o := rival.Rider
-	need := segmentPower(v, o.TotalMassKg(), o.CdA*groupDraft(2, false, seg, v), seg, o.Handling)
-	avail := EffectivePower(o, rival.CurrentFTP(), seg, false) + rival.WPrime.AvailablePowerAboveFTP(SegmentTime(v, seg.DistanceKm))
-	if need <= avail {
+	holds := func(o *RiderState) bool {
+		or := o.Rider
+		need := segmentPower(v, or.TotalMassKg(), or.CdA*groupDraft(2, false, seg, v), seg, or.Handling)
+		avail := EffectivePower(or, o.CurrentFTP(), seg, false) + o.WPrime.AvailablePowerAboveFTP(SegmentTime(v, seg.DistanceKm))
+		return need <= avail
+	}
+	own := []*RiderState{rs}
+	inOwn := map[*RiderState]bool{rs: true}
+	dropsThreat := false
+	for _, o := range s.Road {
+		if !rivalLeaderOf(rs, o) {
+			continue
+		}
+		if holds(o) {
+			if len(own) < maxRotation {
+				own = append(own, o)
+				inOwn[o] = true
+			}
+		} else if !s.IsStageRace || s.isDangerous(o) || s.gcContender(o) {
+			dropsThreat = true
+		}
+	}
+	if !dropsThreat {
 		return false
 	}
-	chase := chaseOf(rs, s.Road)
+	var rest []*RiderState
+	for _, o := range s.Road {
+		if !inOwn[o] {
+			rest = append(rest, o)
+		}
+	}
+	chase := chaseOf(rs, rest)
 	if len(chase) == 0 {
 		return false
 	}

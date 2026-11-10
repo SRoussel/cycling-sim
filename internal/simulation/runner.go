@@ -226,6 +226,8 @@ func SimulateRoadRaceWithProgress(config RaceConfig, onProgress func(ProgressSna
 	raceState.Overrides = config.ActionOverrides
 	raceState.GCGaps = config.GCGaps
 	AssignCoLeaders(states, config.GCGaps, config.TeamPlan, raceState.IsStageRace)
+	raceState.setBreakIntent(states, segments, rng) // needs GC gaps and roles
+	raceState.setHunting(states, config.Prestige, config.StageWins, rng)
 	eventIndex := 0
 	routeProfile := buildRouteProfile(config.Course)
 
@@ -384,6 +386,7 @@ func SimulateStageRaceWithProgress(stageRace *model.StageRace, stages []StageCon
 	for _, r := range riders {
 		plan[r.ID] = planRNG.Float64()
 	}
+	stageWins := map[int64]int{}
 
 	fatigueMap := make(map[int64]*StageFatigueState)
 	for i := range riders {
@@ -473,6 +476,8 @@ func SimulateStageRaceWithProgress(stageRace *model.StageRace, stages []StageCon
 			GCGaps:          gcGaps,
 			TeamPlan:        plan,
 			Shape:           stage.Shape,
+			Prestige:        stage.Prestige,
+			StageWins:       stageWins,
 		}
 
 		var results []model.RaceResult
@@ -551,6 +556,9 @@ func SimulateStageRaceWithProgress(stageRace *model.StageRace, stages []StageCon
 			}
 		}
 
+		if len(results) > 0 {
+			stageWins[results[0].RiderID]++
+		}
 		if cut := ApplyTimeCut(results, stage.Course, stage.Race.RaceType); cut > 0 && onProgress != nil {
 			onProgress(StageProgressSnapshot{
 				StageNumber:      stage.StageNumber,

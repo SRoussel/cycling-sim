@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
+	"strings"
 	"time"
 
 	"cycling_sim/internal/database"
@@ -61,6 +62,7 @@ func Seed(db *database.DB) (Result, error) {
 	created, warnings = seedStageRaces(db, raceIDs)
 	res.StageRaces = created
 	res.Warnings += warnings
+	res.Warnings += ApplyStagePrestige(db)
 
 	return res, nil
 }
@@ -794,4 +796,62 @@ func seedStageRaces(db *database.DB, rIDs map[string]int64) (int, int) {
 		count++
 	}
 	return count, warnings
+}
+
+// StagePrestigeFile lists how coveted each stage is (stage race name, stage
+// number, prestige 0-1); unlisted stages are ordinary.
+const StagePrestigeFile = "stage_prestige.csv"
+
+// ApplyStagePrestige sets every stage's prestige from StagePrestigeFile, in
+// place (existing stage races keep their results). Returns warnings.
+func ApplyStagePrestige(db *database.DB) int {
+	f, err := os.Open(findDataFile(StagePrestigeFile))
+	if err != nil {
+		return 0 // no data: every stage is ordinary
+	}
+	defer f.Close()
+	r := csv.NewReader(f)
+	r.Comment = '#'
+	r.FieldsPerRecord = -1
+	rows, err := r.ReadAll()
+	if err != nil {
+		return 1
+	}
+	want := map[string]map[int]float64{}
+	for i, row := range rows {
+		if i == 0 || len(row) < 3 {
+			continue // header
+		}
+		n, err1 := strconv.Atoi(strings.TrimSpace(row[1]))
+		p, err2 := strconv.ParseFloat(strings.TrimSpace(row[2]), 64)
+		if err1 != nil || err2 != nil || p < 0 || p > 1 {
+			continue
+		}
+		name := strings.TrimSpace(row[0])
+		if want[name] == nil {
+			want[name] = map[int]float64{}
+		}
+		want[name][n] = p
+	}
+	srs, err := db.ListStageRaces()
+	if err != nil {
+		return 1
+	}
+	warnings := 0
+	for _, sr := range srs {
+		full, err := db.GetStageRace(sr.ID)
+		if err != nil {
+			warnings++
+			continue
+		}
+		for _, st := range full.Stages {
+			p := want[sr.Name][st.StageNumber] // 0 when unlisted
+			if p != st.Prestige {
+				if db.SetStagePrestige(sr.ID, st.StageNumber, p) != nil {
+					warnings++
+				}
+			}
+		}
+	}
+	return warnings
 }

@@ -486,7 +486,7 @@ func RunRealStageRaceValidationFor(db *database.DB, allRiders []model.Rider, ent
 			if err2 != nil {
 				continue
 			}
-			stages = append(stages, StageConfig{Race: race, Course: course, StageNumber: st.StageNumber, RestDayBefore: st.RestDayBefore})
+			stages = append(stages, StageConfig{Race: race, Course: course, StageNumber: st.StageNumber, RestDayBefore: st.RestDayBefore, Prestige: st.Prestige})
 			infos = append(infos, selection.StageInfo{Course: course, RaceType: race.RaceType})
 		}
 		dns := make(map[int64]bool, len(entry.DidNotStart))

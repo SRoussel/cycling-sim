@@ -84,6 +84,10 @@ type RaceState struct {
 	// GCGaps maps rider ID → cumulative GC deficit in seconds vs. leader (0 = race leader).
 	// Populated at the start of each stage race stage. Nil for one-day races.
 	GCGaps map[int64]float64
+	// WantsBreak: riders who want to be in today's break (setBreakIntent).
+	WantsBreak map[int64]bool
+	// Hunting: teams riding for today's stage win (stage races; setHunting).
+	Hunting map[string]bool
 	// Clusters are the road groups of the last step, front first.
 	Clusters [][]*RiderState
 	// Favourites are the riders the bunch marks (see markFavourites).
@@ -413,7 +417,9 @@ func (s *RaceState) rivalAhead(rs *RiderState) bool {
 		return false
 	}
 	if s.IsStageRace {
-		if rs.TeamRole != RoleLeader {
+		// Only a GC contender races for GC places; a leader out of contention
+		// lets a rival far down on GC go.
+		if rs.TeamRole != RoleLeader || !s.gcContender(rs) {
 			return false
 		}
 		mine := s.GCGaps[rs.Rider.ID]

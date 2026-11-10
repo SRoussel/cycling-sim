@@ -25,6 +25,10 @@ type RaceConfig struct {
 	TeamPlan map[int64]float64
 	// Shape, when set, records how the race unfolds (see RaceShape).
 	Shape *RaceShape
+	// Stage races: how coveted this stage is (0-1) and the stages each rider
+	// has won so far (see setHunting).
+	Prestige  float64
+	StageWins map[int64]int
 }
 
 // SimulateRoadRace runs a complete road race simulation and returns results.
@@ -124,6 +128,7 @@ type StageConfig struct {
 	Course        *model.Course
 	StageNumber   int
 	RestDayBefore bool
+	Prestige      float64 // how coveted the stage is (0-1)
 	// Shape, when set, records how the stage unfolds (see RaceShape).
 	Shape *RaceShape
 }

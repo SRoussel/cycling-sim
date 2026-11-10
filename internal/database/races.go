@@ -108,9 +108,9 @@ func (db *DB) CreateStageRace(sr *model.StageRace) error {
 // AddStageToRace links a race as a stage in a stage race.
 func (db *DB) AddStageToRace(srs *model.StageRaceStage) error {
 	result, err := db.Exec(`
-		INSERT INTO stage_race_stages (stage_race_id, race_id, stage_number, rest_day_before)
-		VALUES (?, ?, ?, ?)`,
-		srs.StageRaceID, srs.RaceID, srs.StageNumber, boolToInt(srs.RestDayBefore))
+		INSERT INTO stage_race_stages (stage_race_id, race_id, stage_number, rest_day_before, prestige)
+		VALUES (?, ?, ?, ?, ?)`,
+		srs.StageRaceID, srs.RaceID, srs.StageNumber, boolToInt(srs.RestDayBefore), srs.Prestige)
 	if err != nil {
 		return fmt.Errorf("adding stage to race: %w", err)
 	}
@@ -156,7 +156,7 @@ func (db *DB) GetStageRace(id int64) (*model.StageRace, error) {
 	}
 
 	rows, err := db.Query(`
-		SELECT id, stage_race_id, race_id, stage_number, rest_day_before
+		SELECT id, stage_race_id, race_id, stage_number, rest_day_before, prestige
 		FROM stage_race_stages WHERE stage_race_id = ? ORDER BY stage_number`, id)
 	if err != nil {
 		return nil, fmt.Errorf("getting stages: %w", err)
@@ -166,11 +166,21 @@ func (db *DB) GetStageRace(id int64) (*model.StageRace, error) {
 	for rows.Next() {
 		var s model.StageRaceStage
 		var restDay int
-		if err := rows.Scan(&s.ID, &s.StageRaceID, &s.RaceID, &s.StageNumber, &restDay); err != nil {
+		if err := rows.Scan(&s.ID, &s.StageRaceID, &s.RaceID, &s.StageNumber, &restDay, &s.Prestige); err != nil {
 			return nil, fmt.Errorf("scanning stage: %w", err)
 		}
 		s.RestDayBefore = restDay != 0
 		sr.Stages = append(sr.Stages, s)
 	}
 	return sr, rows.Err()
+}
+
+// SetStagePrestige sets a stage's prestige (in place; keeps results).
+func (db *DB) SetStagePrestige(stageRaceID int64, stageNumber int, prestige float64) error {
+	_, err := db.Exec(`UPDATE stage_race_stages SET prestige = ? WHERE stage_race_id = ? AND stage_number = ?`,
+		prestige, stageRaceID, stageNumber)
+	if err != nil {
+		return fmt.Errorf("setting stage prestige: %w", err)
+	}
+	return nil
 }

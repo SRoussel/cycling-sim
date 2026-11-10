@@ -147,3 +147,42 @@ func TestTour2023Route(t *testing.T) {
 	}
 	t.Fatalf("%s not seeded", Tour2023)
 }
+
+// Stage prestige comes from data/stage_prestige.csv and is applied in place.
+func TestStagePrestigeSeeded(t *testing.T) {
+	db, err := database.OpenMemory()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	if _, err := Seed(db); err != nil {
+		t.Fatal(err)
+	}
+	srs, _ := db.ListStageRaces()
+	for _, sr := range srs {
+		if sr.Name != Tour2023 {
+			continue
+		}
+		full, _ := db.GetStageRace(sr.ID)
+		got := map[int]float64{}
+		for _, st := range full.Stages {
+			got[st.StageNumber] = st.Prestige
+		}
+		if got[17] != 1.0 || got[4] != 0 {
+			t.Errorf("prestige: stage 17 %.1f (want 1.0), stage 4 %.1f (want 0)", got[17], got[4])
+		}
+		// In place: a changed value is put back by the next seed.
+		_ = db.SetStagePrestige(sr.ID, 17, 0.2)
+		if w := ApplyStagePrestige(db); w != 0 {
+			t.Errorf("%d warnings", w)
+		}
+		full, _ = db.GetStageRace(sr.ID)
+		for _, st := range full.Stages {
+			if st.StageNumber == 17 && st.Prestige != 1.0 {
+				t.Errorf("stage 17 prestige %.1f after re-apply", st.Prestige)
+			}
+		}
+		return
+	}
+	t.Fatal("Tour de France 2023 not seeded")
+}

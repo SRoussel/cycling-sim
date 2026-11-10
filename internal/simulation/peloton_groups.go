@@ -153,6 +153,23 @@ func FormGroups(riders []*RiderState, segment *model.Segment, isTT bool, remaini
 		}
 	}
 
+	// A leader chasing a rival sits in while the team does the chasing. When
+	// the teammates here can't stop the rival's group gaining and the leader
+	// would be faster alone (flat-terrain domestiques on a climb), the leader
+	// goes to the front.
+	for i, rp := range rps {
+		if rp.sheltered && rp.action == ActionChase && rp.state.TeamRole == RoleLeader {
+			var mates []*RiderState
+			for _, o := range rps {
+				if o.state != rp.state && o.state.Rider.Team == rp.state.Rider.Team && !o.sheltered {
+					mates = append(mates, o.state)
+				}
+			}
+			if state.leaderGoes(rp.state, mates) {
+				rps[i].sheltered = false
+			}
+		}
+	}
 	// Attackers ride away as their own group; everyone else follows the same
 	// physical rule. Gaps then grow or shrink from speed differences alone.
 	breakawayLeaderTeams := make(map[string]bool)
@@ -182,10 +199,37 @@ func FormGroups(riders []*RiderState, segment *model.Segment, isTT bool, remaini
 	}
 	var groups []*Group
 	if len(attackers) > 0 && len(others) > 0 {
-		groups = followSplit(attackers, segment, 0, false, true)
-		for _, g := range groups {
-			g.IsBreakaway = true
+		// Riders who want the break today go with the move if they can hold
+		// the wheel (state.WantsBreak); those who can't stay in the bunch.
+		move := attackers
+		var bunch []riderPower
+		for _, rp := range others {
+			if state != nil && state.WantsBreak[rp.state.Rider.ID] && rp.action != ActionChase &&
+				!state.BreakawayRiders[rp.state.Rider.ID] {
+				move = append(move, rp)
+			} else {
+				bunch = append(bunch, rp)
+			}
 		}
+		for i, g := range followSplit(move, segment, 0, false, true) {
+			var kept []*RiderState
+			for _, rs := range g.Riders {
+				if i > 0 && !riderPowerOf(rs, move).breakaway {
+					bunch = append(bunch, riderPowerOf(rs, move)) // couldn't hold it
+				} else {
+					kept = append(kept, rs)
+				}
+			}
+			if len(kept) == 0 {
+				continue
+			}
+			g.Riders, g.ID, g.IsBreakaway = kept, len(groups), true
+			for _, rs := range kept {
+				rs.GroupID = g.ID
+			}
+			groups = append(groups, g)
+		}
+		others = bunch
 	} else {
 		others = rps
 	}
@@ -199,7 +243,19 @@ func FormGroups(riders []*RiderState, segment *model.Segment, isTT bool, remaini
 			}
 		}
 	}
+	if len(others) == 0 {
+		return groups
+	}
 	return append(groups, followSplit(others, segment, len(groups), chasing, finale)...)
+}
+
+func riderPowerOf(rs *RiderState, rps []riderPower) riderPower {
+	for _, rp := range rps {
+		if rp.state == rs {
+			return rp
+		}
+	}
+	return riderPower{state: rs}
 }
 
 // assignTeamPositions reorders riders in a group so domestiques ride at the front
@@ -284,12 +340,8 @@ func drivingTeams(riders []*RiderState, segment *model.Segment, state *RaceState
 		if rs.TeamRole != RoleLeader || rs.Rider.Team == f.Team {
 			continue
 		}
-		r := rs.Rider
-		pace := segmentSpeed(EffectivePower(r, rs.CurrentFTP(), segment, false)*IntensityForPhase(state.Phase), r.TotalMassKg(), r.CdA, segment, r.Handling)
-		segTime := SegmentTime(pace, segment.DistanceKm)
-		required := segmentPower(pace, f.TotalMassKg(), f.CdA*groupDraft(3, false, segment, pace), segment, f.Handling)
-		available := finisherFTP + finisher.WPrime.AvailablePowerAboveFTP(segTime)
-		if required >= available*(1-driveMargin) {
+		if state.tempoDrops(rs, finisher, segment, finisherFTP) {
+			r := rs.Rider
 			if cur := out[r.Team]; cur == nil || climbingWKg(r) > climbingWKg(cur.Rider) {
 				out[r.Team] = rs // co-leaders: ride for the strongest
 			}

@@ -2,7 +2,10 @@ package simulation
 
 import (
 	"math"
+	"math/rand"
 	"sort"
+
+	"cycling_sim/internal/model"
 )
 
 // Planned chases (stage races). A bunch doesn't chase because every rider
@@ -73,7 +76,8 @@ func (s *RaceState) planChase(group []*RiderState) chasePlan {
 	for lead, brk := range ahead {
 		allowed := math.Inf(1)
 		teams := map[string]bool{}
-		hunters := map[string]bool{} // favourites' teams that would like the stage
+		hunters := map[string]bool{}  // favourites' teams that would like the stage
+		allow := map[string]float64{} // each interested team's allowance
 		for _, p := range group {
 			if p.DNF {
 				continue
@@ -81,12 +85,19 @@ func (s *RaceState) planChase(group []*RiderState) chasePlan {
 			a := math.Inf(1)
 			switch p.TeamRole {
 			case RoleLeader:
-				// GC teams defend against contenders only: one in a move
-				// gains nothing. Others may take the stage (or the jersey
-				// for a day); they lose it in the mountains.
-				for _, r := range brk {
-					if r.Rider.Team != p.Rider.Team && s.gcContender(r) {
-						a = 0
+				// A GC contender's team defends its leader's place when it is
+				// worth a day's work (in the top gcPlacesProtected; before any
+				// GC, every contender): the break may gain until its
+				// best-placed rider would pass the leader on GC (a rival in
+				// the move gains nothing; a break of riders far down may take
+				// the stage, or the jersey for a day).
+				if s.gcContender(p) && s.gcPlace(p) <= gcPlacesProtected {
+					for _, r := range brk {
+						if r.Rider.Team != p.Rider.Team {
+							if g, ok := s.GCGaps[r.Rider.ID]; ok {
+								a = math.Min(a, math.Max(0, g-s.GCGaps[p.Rider.ID]))
+							}
+						}
 					}
 				}
 			case RoleSprinter:
@@ -98,10 +109,28 @@ func (s *RaceState) planChase(group []*RiderState) chasePlan {
 				continue
 			}
 			if a < math.Inf(1) {
-				teams[p.Rider.Team] = true
-				allowed = math.Min(allowed, a)
-			} else if p.TeamRole == RoleLeader && s.isDangerous(p) {
+				if old, ok := allow[p.Rider.Team]; !ok || a < old {
+					allow[p.Rider.Team] = a
+				}
+			} else if p.TeamRole == RoleLeader && s.isDangerous(p) && s.Hunting[p.Rider.Team] {
 				hunters[p.Rider.Team] = true
+			}
+		}
+		// Only teams whose allowance an easy bunch wouldn't respect chase;
+		// the tightest of those sets the pace.
+		if len(allow) > 0 {
+			all := map[string]bool{}
+			for t := range allow {
+				all[t] = true
+			}
+			if line := chaseLine(group, all); len(line) > 0 {
+				easyAdv := lead + s.timeToLineAt(line, easyIntensity) - s.timeToLine(topLine(brk))
+				for t, a := range allow {
+					if a < easyAdv {
+						teams[t] = true
+						allowed = math.Min(allowed, a)
+					}
+				}
 			}
 		}
 		f := 0.0
@@ -207,9 +236,9 @@ func teamIn(group []*RiderState, team string) bool {
 
 // sprinterCanFollow reports whether a sprinter can stay with this group to
 // the line: on every remaining segment, sitting in the bunch, they can hold
-// the speed the group's strongest pace line rides at threshold (how hard a
-// bunch races over a climb) with their threshold plus the W' they can spend
-// there. If not, the finish isn't theirs and their team won't chase for it.
+// the speed the group's fastest pace line there rides at threshold (how hard a
+// bunch races over a climb) with their threshold plus W', one tank spent and
+// refilled along the way (not a full one per segment). If not, the finish isn't theirs and their team won't chase for it.
 func (s *RaceState) sprinterCanFollow(sp *RiderState, group []*RiderState) bool {
 	if v, ok := s.canFollow[sp]; ok {
 		return v
@@ -232,15 +261,16 @@ func (s *RaceState) sprinterFollows(sp *RiderState, group []*RiderState) bool {
 	if len(others) == 0 {
 		return true
 	}
-	line := topLine(others)
-	n := float64(len(line))
 	r := sp.Rider
+	wp := *sp.WPrime
 	for i := s.SegIndex; i < len(s.Course); i++ {
 		seg := &s.Course[i]
 		km := seg.DistanceKm
 		if i == s.SegIndex && s.SegmentKmLeft > 0 && s.SegmentKmLeft < km {
 			km = s.SegmentKmLeft
 		}
+		line := fastestLine(others, seg)
+		n := float64(len(line))
 		var p, m, cda, handling float64
 		for _, rs := range line {
 			p += EffectivePower(rs.Rider, rs.CurrentFTP(), seg, false)
@@ -250,12 +280,38 @@ func (s *RaceState) sprinterFollows(sp *RiderState, group []*RiderState) bool {
 		}
 		v := segmentSpeed(p/n, m/n, cda/n*rotationFactor(len(line), seg.SurfaceType), seg, int(handling/n))
 		need := segmentPower(v, r.TotalMassKg(), r.CdA*groupDraft(maxRotation+1, false, seg, v), seg, r.Handling)
-		avail := EffectivePower(r, sp.CurrentFTP(), seg, false) + sp.WPrime.AvailablePowerAboveFTP(SegmentTime(v, km))
-		if need > avail {
-			return false
+		thr := EffectivePower(r, sp.CurrentFTP(), seg, false)
+		t := SegmentTime(v, km)
+		if need > thr && (need-thr)*t > wp.WPrimeCurrent {
+			return false // W' runs out: dropped
 		}
+		wp.Update(need, int(thr), t) // one W' tank over the whole run-in
+
 	}
 	return true
+}
+
+// fastestLine is the pace line a group's fastest riders on this segment
+// would form (climbers on a climb, big engines on the flat).
+func fastestLine(group []*RiderState, seg *model.Segment) []*RiderState {
+	type rv struct {
+		rs *RiderState
+		v  float64
+	}
+	vs := make([]rv, 0, len(group))
+	for _, rs := range group {
+		r := rs.Rider
+		vs = append(vs, rv{rs, segmentSpeed(EffectivePower(r, rs.CurrentFTP(), seg, false), r.TotalMassKg(), r.CdA, seg, r.Handling)})
+	}
+	sort.SliceStable(vs, func(i, j int) bool { return vs[i].v > vs[j].v })
+	if len(vs) > maxRotation {
+		vs = vs[:maxRotation]
+	}
+	out := make([]*RiderState, len(vs))
+	for i, x := range vs {
+		out[i] = x.rs
+	}
+	return out
 }
 
 // timeToLineAt is timeToLine at a fraction of threshold (not cached).
@@ -300,13 +356,14 @@ func sustainableFraction(hours float64) float64 {
 }
 
 // gcContender reports whether a stage-race rider could turn time gained in a
-// break into a GC result: a team leader (best climber or freed co-leader)
-// within reach of the race lead, i.e. less far behind than a break could
-// gain today. Contenders are marked (FormGroups doesn't let their attacks
-// go); a leader further down, like Gall 18 min behind before his 2023 stage
-// win, may go in the break.
+// break into a GC result: a team leader (best climber or freed co-leader), or
+// any rider high on GC (teams watch the top of the standings whatever a
+// rider's role), within reach of the race lead, i.e. less far behind than a
+// break could gain today. Contenders are marked (FormGroups doesn't let their
+// attacks go); a leader further down, like Gall 18 min behind before his 2023
+// stage win, may go in the break.
 func (s *RaceState) gcContender(rs *RiderState) bool {
-	if s == nil || !s.IsStageRace || rs.TeamRole != RoleLeader {
+	if s == nil || !s.IsStageRace || (rs.TeamRole != RoleLeader && !s.highOnGC(rs)) {
 		return false
 	}
 	lead := math.Inf(1)
@@ -331,4 +388,189 @@ func (s *RaceState) breakReach() float64 {
 	t := s.timeToLine(line)
 	s.reach = math.Max(easy-s.timeToLineAt(line, sustainableFraction(t/3600)), 1)
 	return s.reach
+}
+
+// breakAppetite: the share of free riders of average aggression (tactical
+// awareness 70) who want to be in today's break; scales with (TA/70)^2.
+const breakAppetite = 0.25
+
+// setBreakIntent decides, once per stage, who wants to be in the break: free
+// riders, i.e. domestiques whose team doesn't need them today (no sprinter
+// who can contest the finish, no leader who is a favourite or GC contender)
+// and leaders out of contention. They go with moves (FormGroups), so breaks
+// form from many riders at once, as real ones do.
+func (s *RaceState) setBreakIntent(states []*RiderState, segments []model.Segment, rng *rand.Rand) {
+	if s == nil || !s.IsStageRace {
+		return
+	}
+	// The whole field is on the road at the start (breakReach needs it).
+	s.Course, s.SegIndex, s.SegmentKmLeft, s.Road = segments, 0, 0, states
+	needs := map[string]bool{}
+	for _, rs := range states {
+		switch {
+		case rs.TeamRole == RoleSprinter && s.sprinterCanFollow(rs, states):
+			needs[rs.Rider.Team] = true
+		case rs.TeamRole == RoleLeader && (s.isDangerous(rs) || s.gcContender(rs)):
+			needs[rs.Rider.Team] = true
+		}
+	}
+	s.WantsBreak = map[int64]bool{}
+	for _, rs := range states {
+		free := !s.isDangerous(rs) && !s.gcContender(rs) &&
+			((rs.TeamRole == RoleDomestique && !needs[rs.Rider.Team]) || rs.TeamRole == RoleLeader)
+		ta := float64(rs.Rider.TacticalAwareness) / 70
+		if free && rng.Float64() < breakAppetite*ta*ta {
+			s.WantsBreak[rs.Rider.ID] = true
+		}
+	}
+	s.canFollow, s.reach, s.Road = nil, 0, nil
+}
+
+// gcWatched: teams watch the riders this high on GC (twice the protected
+// top-10 places: riders 11-20 can still move into them).
+const gcWatched = 2 * gcPlacesProtected
+
+// highOnGC reports whether a rider is among the gcWatched best on GC.
+func (s *RaceState) highOnGC(rs *RiderState) bool {
+	p := s.gcPlace(rs)
+	return p > 0 && p <= gcWatched
+}
+
+// gcPlace is a rider's place on GC (0 before any GC or if unclassified).
+func (s *RaceState) gcPlace(rs *RiderState) int {
+	mine, ok := s.GCGaps[rs.Rider.ID]
+	if !ok {
+		return 0
+	}
+	better := 0
+	for id, g := range s.GCGaps {
+		if g < mine || (g == mine && id < rs.Rider.ID) {
+			better++
+		}
+	}
+	return better + 1
+}
+
+// leaderGoes reports whether a leader chasing a rival should ride the chase
+// themself: their teammates' pace line (at threshold) loses time to the
+// rival's group over the rest of the stage, and the leader alone would ride
+// to the line faster than the teammates.
+func (s *RaceState) leaderGoes(leader *RiderState, mates []*RiderState) bool {
+	if s == nil || len(s.Course) == 0 {
+		return false
+	}
+	if len(mates) == 0 {
+		return true
+	}
+	rivals := s.rivalGroup(leader)
+	if len(rivals) == 0 {
+		return false
+	}
+	team := s.timeToLineAt(topLine(mates), 1)
+	if team <= s.timeToLine(topLine(rivals)) {
+		return false // the team is closing
+	}
+	return s.timeToLineAt([]*RiderState{leader}, 1) < team
+}
+
+// rivalGroup is the closest group ahead holding a rival leader (see
+// rivalAhead).
+func (s *RaceState) rivalGroup(rs *RiderState) []*RiderState {
+	best := math.Inf(1)
+	for other, lead := range s.Ahead {
+		if other.TeamRole == RoleLeader && other.Rider.Team != rs.Rider.Team && lead < best &&
+			(!s.IsStageRace || s.GCGaps[other.Rider.ID] < s.GCGaps[rs.Rider.ID]+lead) {
+			best = lead
+		}
+	}
+	var out []*RiderState
+	for other, lead := range s.Ahead {
+		if lead == best && !other.DNF {
+			out = append(out, other)
+		}
+	}
+	return out
+}
+
+// Stage hunting. Whether a favourite's team rides for the stage is a choice
+// made each morning, not a rule: teams let big breaks go on many mountain
+// stages, and are keener on the coveted ones (prestige) than once their
+// leader has a stage win or a comfortable lead.
+
+// huntOrdinary: the chance a favourite's team hunts an ordinary stage (a
+// stage with prestige 1 is always hunted, before wins and comfort).
+const huntOrdinary = 0.5
+
+// huntComfortS: a race leader this far clear of the next rider is half as
+// keen to hunt (the margin is theirs to keep, not to grow).
+const huntComfortS = 180.0
+
+// huntChance is the chance a favourite's team hunts today's stage.
+func (s *RaceState) huntChance(leader *RiderState, prestige float64, wins int) float64 {
+	p := huntOrdinary + (1-huntOrdinary)*math.Max(0, math.Min(1, prestige))
+	p *= math.Pow(0.5, float64(wins)) // each stage won halves the hunger
+	if mine, ok := s.GCGaps[leader.Rider.ID]; ok && mine == 0 {
+		next := math.Inf(1)
+		for id, g := range s.GCGaps {
+			if id != leader.Rider.ID {
+				next = math.Min(next, g)
+			}
+		}
+		if next < math.Inf(1) {
+			p *= huntComfortS / (huntComfortS + next)
+		}
+	}
+	return p
+}
+
+// setHunting draws, once before a stage-race stage, which favourites' teams
+// ride for the stage win today.
+func (s *RaceState) setHunting(states []*RiderState, prestige float64, wins map[int64]int, rng *rand.Rand) {
+	if s == nil || !s.IsStageRace {
+		return
+	}
+	s.Hunting = map[string]bool{}
+	for _, rs := range states {
+		if rs.TeamRole == RoleLeader && s.isDangerous(rs) && !s.Hunting[rs.Rider.Team] {
+			s.Hunting[rs.Rider.Team] = rng.Float64() < s.huntChance(rs, prestige, wins[rs.Rider.ID])
+		}
+	}
+}
+
+// tempoDrops reports whether a leader's tempo (the phase intensity, ridden by
+// the team at the speed the leader holds on the wheel) drops the finisher on
+// the hard stretch ahead: the run of segments from here where the finisher
+// needs more than threshold on the wheel, with one W' tank for the whole
+// stretch (not a full one per segment). Without a course, this segment alone.
+func (s *RaceState) tempoDrops(leader, finisher *RiderState, segment *model.Segment, finisherFTP float64) bool {
+	f := finisher.Rider
+	intensity := IntensityForPhase(s.Phase)
+	needOn := func(seg *model.Segment) (need, thr, v float64) {
+		r := leader.Rider
+		v = segmentSpeed(EffectivePower(r, leader.CurrentFTP(), seg, false)*intensity, r.TotalMassKg(), r.CdA, seg, r.Handling)
+		need = segmentPower(v, f.TotalMassKg(), f.CdA*groupDraft(3, false, seg, v), seg, f.Handling)
+		return need, EffectivePower(f, finisher.CurrentFTP(), seg, false), v
+	}
+	if len(s.Course) == 0 {
+		need, _, v := needOn(segment)
+		avail := finisherFTP + finisher.WPrime.AvailablePowerAboveFTP(SegmentTime(v, segment.DistanceKm))
+		return need >= avail*(1-driveMargin)
+	}
+	w := finisher.WPrime.WPrimeCurrent
+	for i := s.SegIndex; i < len(s.Course); i++ {
+		seg := &s.Course[i]
+		km := seg.DistanceKm
+		if i == s.SegIndex && s.SegmentKmLeft > 0 && s.SegmentKmLeft < km {
+			km = s.SegmentKmLeft
+		}
+		need, thr, v := needOn(seg)
+		if need <= thr*(1-driveMargin) {
+			return false // the stretch ends before the finisher cracks
+		}
+		w -= (need - thr*(1-driveMargin)) * SegmentTime(v, km)
+		if w <= 0 {
+			return true
+		}
+	}
+	return false
 }

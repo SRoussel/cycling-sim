@@ -49,7 +49,7 @@ func TestGCRivalAhead(t *testing.T) {
 	me := stateFor(1, "A", 400, 62, RoleLeader)
 	rival := stateFor(2, "B", 400, 62, RoleLeader)
 	mate := stateFor(3, "A", 400, 62, RoleLeader)
-	s := &RaceState{IsStageRace: true, GCGaps: map[int64]float64{1: 60, 2: 300, 3: 0}}
+	s := &RaceState{IsStageRace: true, GCGaps: map[int64]float64{1: 60, 2: 300, 3: 0}, reach: 1800}
 
 	s.Ahead = map[*RiderState]float64{rival: 120}
 	if s.rivalAhead(me) {
@@ -63,6 +63,12 @@ func TestGCRivalAhead(t *testing.T) {
 	if s.rivalAhead(me) {
 		t.Error("a teammate up the road is not a rival")
 	}
+	s.reach = 30 // a break could gain 30 s today: I'm out of contention
+	s.Ahead = map[*RiderState]float64{rival: 400}
+	if s.rivalAhead(me) {
+		t.Error("a leader out of GC contention doesn't race a rival for places")
+	}
+	s.reach = 1800
 	s.IsStageRace = false
 	s.Ahead = map[*RiderState]float64{rival: 120}
 	s.Phase = PhaseEarly

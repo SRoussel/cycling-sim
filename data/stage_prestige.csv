@@ -1,0 +1,14 @@
+# How coveted a stage is (0-1): favourites' teams are keener to hunt the win.
+# Unlisted stages are 0 (ordinary). Applied by `cycling-sim seed` in place.
+# Judged from each stage's standing before it was raced, not its outcome.
+stage_race,stage,prestige,why
+Tour de France 2023,1,0.5,Grand Depart: the first yellow jersey
+Tour de France 2023,6,0.7,Tourmalet then Cauterets: first big Pyrenean summit
+Tour de France 2023,9,1.0,Puy de Dome: iconic summit back after 35 years
+Tour de France 2023,13,0.8,Grand Colombier on Bastille Day
+Tour de France 2023,17,1.0,Col de la Loze to Courchevel: queen stage
+Tour de France 2023,20,0.7,Le Markstein: last mountain stage
+Tour de France,11,0.7,generic Tour: first Pyrenean summit finish
+Tour de France,15,0.7,generic Tour: summit finish
+Tour de France,19,1.0,generic Tour: Alpine summit (queen stage)
+Tour de France,20,0.7,generic Tour: last mountain stage

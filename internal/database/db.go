@@ -109,6 +109,7 @@ func (db *DB) migrate() error {
 		race_id INTEGER NOT NULL,
 		stage_number INTEGER NOT NULL,
 		rest_day_before INTEGER NOT NULL DEFAULT 0,
+		prestige REAL NOT NULL DEFAULT 0,
 		FOREIGN KEY (stage_race_id) REFERENCES stage_races(id) ON DELETE CASCADE,
 		FOREIGN KEY (race_id) REFERENCES races(id)
 	);
@@ -213,6 +214,7 @@ func (db *DB) migrate() error {
 	for _, stmt := range []string{
 		`ALTER TABLE riders ADD COLUMN age INTEGER NOT NULL DEFAULT 28`,
 		`ALTER TABLE segments ADD COLUMN heading_deg REAL NOT NULL DEFAULT 0`,
+		`ALTER TABLE stage_race_stages ADD COLUMN prestige REAL NOT NULL DEFAULT 0`,
 	} {
 		if _, err := db.Exec(stmt); err != nil && !strings.Contains(strings.ToLower(err.Error()), "duplicate column") {
 			return err

@@ -134,7 +134,7 @@ func stageRaceWinnerSpeed(db *database.DB, riders []model.Rider, name string) (f
 			continue
 		}
 		km += course.TotalDistanceKm
-		stages = append(stages, StageConfig{Race: race, Course: course, StageNumber: st.StageNumber, RestDayBefore: st.RestDayBefore})
+		stages = append(stages, StageConfig{Race: race, Course: course, StageNumber: st.StageNumber, RestDayBefore: st.RestDayBefore, Prestige: st.Prestige})
 		infos = append(infos, selection.StageInfo{Course: course, RaceType: race.RaceType})
 	}
 	start := selection.SelectStageRaceStartList(riders, infos, selection.DefaultConfig(model.RaceTypeRoad, true, len(stages)))

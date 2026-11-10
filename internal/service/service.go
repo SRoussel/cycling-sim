@@ -110,6 +110,7 @@ func BuildStageConfigs(db *database.DB, sr *model.StageRace, clearResults bool) 
 			Course:        course,
 			StageNumber:   s.StageNumber,
 			RestDayBefore: s.RestDayBefore,
+			Prestige:      s.Prestige,
 		})
 		infos = append(infos, selection.StageInfo{Course: course, RaceType: race.RaceType})
 	}

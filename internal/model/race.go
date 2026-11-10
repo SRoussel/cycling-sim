@@ -68,6 +68,10 @@ type StageRaceStage struct {
 	RaceID        int64
 	StageNumber   int
 	RestDayBefore bool
+	// Prestige (0-1) is how coveted the stage is (iconic summits, the queen
+	// stage): favourites' teams are keener to hunt the win (seed data,
+	// data/stage_prestige.csv).
+	Prestige float64
 }
 
 // StageRaceNamePrefixes are race name prefixes that identify stages within stage races.

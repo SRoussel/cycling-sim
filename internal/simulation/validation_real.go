@@ -71,7 +71,7 @@ func KnownRealRaces() []RealRaceEntry {
 	return []RealRaceEntry{
 		{
 			DisplayName:  "Strade Bianche 2024",
-			InternalName: "Strade Bianche",
+			InternalName: "Strade Bianche 2024", // the 215 km 2024 route
 			// 1 Pogačar  2 Skujiņš +2:44  3 Van Gils +2:47  4 Pidcock*  8 L.Martinez  9 Zana  10 Laporte
 			Top10RiderIDs: []int64{452, 193, 312, 0, 0, 0, 0, 44, 347, 421},
 			Top10GapSecs:  []float64{0, 164, 167, u, u, u, u, 288, 289, 317},
@@ -167,7 +167,7 @@ func KnownRealRaces2023() []RealRaceEntry {
 			Top10GapSecs:  []float64{0, 66, 66, 68, 84, 85, 97, 108, 108, 108},
 		},
 		{
-			DisplayName: "Il Lombardia 2023", InternalName: "Il Lombardia",
+			DisplayName: "Il Lombardia 2023", InternalName: "Il Lombardia 2023", // Como-Bergamo
 			// 1 Pogačar 2 Bagioli 3 Roglič 4 Vlasov 5 S.Yates* 6 A.Yates 7 C.Rodríguez 8 Carapaz 9 Evenepoel 10 Kron
 			Top10RiderIDs: []int64{452, 175, 306, 315, 0, 461, 161, 93, 294, 479},
 			Top10GapSecs:  []float64{0, 52, 52, 52, 52, 52, 52, 66, 86, 86},

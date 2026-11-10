@@ -42,7 +42,7 @@ func KnownRealSpeeds() []RealSpeed {
 		{"Tour of Flanders 2023", "Tour of Flanders", false, 273.4, hms(6, 12, 7)},
 		{"Paris-Roubaix 2023", "Paris-Roubaix", false, 256.6, hms(5, 28, 41)},
 		{"Liege-Bastogne-Liege 2023", "Liege-Bastogne-Liege", false, 258.1, hms(6, 15, 49)},
-		{"Il Lombardia 2023", "Il Lombardia", false, 238, hms(5, 55, 33)},
+		{"Il Lombardia 2023", "Il Lombardia 2023", false, 238, hms(5, 55, 33)},
 		{"Tour de France 2023", "Tour de France 2023", true, 3405.6, hms(82, 5, 42)},
 		{"Tour de France 2024", "Tour de France", true, 3498, hms(83, 38, 56)},
 	}

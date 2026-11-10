@@ -61,7 +61,7 @@ func (p chasePlan) chasing(rs *RiderState, teammates map[string]int) bool {
 
 // planChase works out a road group's chase of the groups ahead.
 func (s *RaceState) planChase(group []*RiderState) chasePlan {
-	if s == nil || !s.IsStageRace || len(s.Ahead) == 0 || len(s.Course) == 0 {
+	if s == nil || len(s.Ahead) == 0 || len(s.Course) == 0 {
 		return chasePlan{}
 	}
 	// Groups ahead, by their lead.
@@ -91,7 +91,13 @@ func (s *RaceState) planChase(group []*RiderState) chasePlan {
 				// best-placed rider would pass the leader on GC (a rival in
 				// the move gains nothing; a break of riders far down may take
 				// the stage, or the jersey for a day).
-				if s.gcContender(p) && s.gcPlace(p) <= gcPlacesProtected {
+				if !s.IsStageRace {
+					// One-day race: the race is the only objective, so a
+					// favourite's team has the break back before the line.
+					if s.isDangerous(p) {
+						a = -catchMarginS
+					}
+				} else if s.gcContender(p) && s.gcPlace(p) <= gcPlacesProtected {
 					for _, r := range brk {
 						if r.Rider.Team != p.Rider.Team {
 							if g, ok := s.GCGaps[r.Rider.ID]; ok {

@@ -234,51 +234,27 @@ func DecideAction(rs *RiderState, state *RaceState, hasLeader bool, rng *rand.Ra
 		if state.Phase == PhaseFinal && rs.TeamRole == RoleSprinter {
 			return ActionChase
 		}
-		// Generic breakaway chase — applies everywhere, including non-leaders
-		// and leaders on flat/rolling terrain (mountain leaders already evaluated above).
-		isLeaderOnMountain := rs.TeamRole == RoleLeader && state.Segment != nil && climbOf(state.Segment) > terrainClimb
-		inBreak := state.BreakawayRiders[rs.Rider.ID]
-		// Stage races chase to a plan instead (chase.go, applied in FormGroups).
-		if !isLeaderOnMountain && !inBreak && !state.IsStageRace {
-			// One-day classics on flat/rolling non-cobble terrain: the peloton
-			// always controls the pace when a breakaway forms (sprint teams drive
-			// the chase). This prevents unrealistic solo gaps on opening flats
-			// and rolling terrain like the Poggio (3.7%).
-			onFlatOrRolling := state.Segment != nil &&
-				climbOf(state.Segment) >= terrainDescent && climbOf(state.Segment) < terrainClimb &&
-				state.Segment.SurfaceType != model.SurfaceCobbles
-			if state.HasBreakaway && onFlatOrRolling && !state.IsStageRace {
-				return ActionChase
-			}
-			// Cobbles classics (Paris-Roubaix): dangerous riders (cobbles specialists)
-			// always chase when a non-dangerous breakaway escapes. This ensures vdP,
-			// van Aert, Pedersen etc. control the race on the pavé sectors.
-			onCobbles := state.Segment != nil && state.Segment.SurfaceType == model.SurfaceCobbles
-			isDangerous := state.isDangerous(rs)
-			if state.HasBreakaway && onCobbles && !state.IsStageRace {
-				if isDangerous || state.BreakawayHasDangerous || state.BreakawayGap > 30 {
-					return ActionChase
-				}
-			}
-			// A dangerous rider up the road is chased in any phase; other
-			// breaks only once the race is on.
-			if state.HasBreakaway && (state.BreakawayHasDangerous || (state.BreakawayGap > 20 && state.Phase != PhaseEarly)) {
-				return ActionChase
-			}
+		// Breaks are chased to a plan (chase.go, applied in FormGroups): teams
+		// with an interest chase at the pace that brings the break back in
+		// time, not by rule. One-day races: once the race is on, the race is
+		// the result, so every group behind a move races for placings.
+		if !state.IsStageRace && state.HasBreakaway && state.Phase != PhaseEarly && !state.BreakawayRiders[rs.Rider.ID] {
+			return ActionChase
+		}
+		// One-day races: a rider dropped behind the main field chases to get
+		// back into the race (in a stage race the gruppetto rides to the cut).
+		if !state.IsStageRace && state.behindMainField() {
+			return ActionChase
 		}
 		// What a team rides for follows from its roster, not a random
 		// objective: a team with a sprinter drives the final for the sprint;
-		// a leader saves themselves on flat and rolling roads until the final
-		// and has a dangerous or sizeable break chased.
+		// a leader saves themselves on flat and rolling roads until the final.
 		if ctx := state.TeamContexts[rs.Rider.Team]; ctx != nil && ctx.SprinterID != 0 && state.Phase == PhaseFinal && !state.IsStageRace {
 			return ActionChase
 		}
 		if rs.TeamRole == RoleLeader {
 			if state.Segment != nil && state.Segment.SurfaceType != model.SurfaceCobbles && climbOf(state.Segment) < terrainRolling && state.Phase != PhaseFinal {
 				return ActionConserve
-			}
-			if !state.IsStageRace && state.HasBreakaway && (state.BreakawayGap > 25 || state.BreakawayHasDangerous) && state.Phase != PhaseEarly {
-				return ActionChase
 			}
 		}
 	}
@@ -476,4 +452,22 @@ func (s *RaceState) markFavourites(states []*RiderState, segments []model.Segmen
 // isDangerous reports whether a rider is one of the race favourites.
 func (s *RaceState) isDangerous(rs *RiderState) bool {
 	return s != nil && s.Favourites[rs.Rider.ID]
+}
+
+// behindMainField reports whether the road group being decided (s.Road) is
+// behind the main field: the largest road group is further up the road.
+func (s *RaceState) behindMainField() bool {
+	if s == nil || len(s.Road) == 0 || len(s.Clusters) < 2 {
+		return false
+	}
+	main, mine := -1, -1
+	for i, c := range s.Clusters {
+		if main < 0 || len(c) > len(s.Clusters[main]) {
+			main = i
+		}
+		if len(c) > 0 && c[0] == s.Road[0] {
+			mine = i
+		}
+	}
+	return mine > main
 }

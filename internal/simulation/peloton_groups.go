@@ -397,8 +397,10 @@ func riderEffort(rs *RiderState, action Action, segment *model.Segment, remainin
 		if phase == PhaseFinal {
 			return threshold
 		}
-		// Stage races: with a break up the road and nobody chasing it to a
-		// plan, the bunch rides easy (chasers return earlier, see chaseAt).
+		// Stage races: with a break up the road and nobody chasing it to
+		// a plan, the bunch rides easy (chasers return earlier, see
+		// chaseAt). In a one-day race the race is the result: the bunch
+		// keeps racing for placings.
 		if state != nil && state.IsStageRace && state.HasBreakaway && !state.BreakawayRiders[r.ID] {
 			return threshold * easyIntensity
 		}

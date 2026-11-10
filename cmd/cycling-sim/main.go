@@ -525,7 +525,7 @@ func cmdValidate(db *database.DB, verbose bool) {
 	speeds := simulation.RunSpeedValidation(db)
 	p1 := print("Synthetic fields", synth)
 	p2 := print("Real races (2024; fit-ratings fits to these)", real)
-	p3 := print("Hold-out (2023, never fitted)", holdout)
+	p3 := print("Hold-out (2023 + Giro 2024, never fitted)", holdout)
 	p4 := print("Race speeds", speeds)
 	fmt.Println("== Race shape (how stages were won) ==")
 	for _, r := range simulation.RunShapeValidation(db) {

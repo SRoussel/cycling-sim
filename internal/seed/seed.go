@@ -348,7 +348,7 @@ func seedCourses(db *database.DB) (map[string]int64, int, int) {
 		cd("Liege-Bastogne-Liege", 258, []model.Segment{road(1, "Liege to Bastogne", 60, 0.3), road(2, "Early Ardennes approach", 40, 0.5), road(3, "Cote de Wanne", 5, 7.5), road(4, "Descent to Stavelot", 7, -3.5), road(5, "Cote de Stockeu", 1, 12.0), road(6, "Valley road", 22, 0.2), road(7, "Cote de Haute Levee", 4, 6.0), road(8, "Road to Redoute", 12, 0.2), road(9, "Cote de la Redoute", 2.0, 8.8), road(10, "Valley between climbs", 8, -1.0), road(11, "Roche aux Faucons", 1.5, 11.0), road(12, "Road section", 8, -0.5), road(13, "Cote de Saint-Nicolas", 1.2, 8.6), road(14, "Descent to Liege", 3, -4.0), road(15, "Liege finish", 2, 0)}),
 		cd("Il Lombardia", 243, []model.Segment{road(1, "Bergamo start", 20, 0.1), road(2, "Lake Como approach", 50, 0.3), road(3, "Madonna del Ghisallo", 10, 5.5), road(4, "Ghisallo descent", 8, -5.5), road(5, "Valley road to Civiglio", 20, 0.3), road(6, "Civiglio", 4.2, 9.7), road(7, "Civiglio descent", 5, -6.0), road(8, "Valley to San Fermo", 20, 0.3), road(9, "San Fermo della Battaglia", 2.7, 7.2), road(10, "Descent and road", 20, -0.8), road(11, "Run-in to Como", 10, 0)}),
 		cd("Strade Bianche", 184, []model.Segment{road(1, "Road section", 50, 0.3), seg(2, "Sterrato sector 1", 3, 2.0, model.SurfaceCobbles, true), road(3, "Road section", 30, 0.5), seg(4, "Sterrato sector 2", 4, 3.0, model.SurfaceCobbles, true), road(5, "Road section", 25, 0.5), seg(6, "Sterrato sector 3", 5, 2.5, model.SurfaceCobbles, true), road(7, "Road to Siena", 20, 1.0), road(8, "Piazza del Campo climb", 3, 7.0)}),
-		cd("Strade Bianche 2024", 215, []model.Segment{road(1, "Road section", 50, 0.3), seg(2, "Sterrato sector 1", 3, 2.0, model.SurfaceCobbles, true), road(3, "Road section", 30, 0.5), seg(4, "Sterrato sector 2", 4, 3.0, model.SurfaceCobbles, true), road(5, "Road section", 25, 0.5), seg(6, "Sterrato sector 3", 5, 2.5, model.SurfaceCobbles, true), road(7, "Road to Siena", 20, 1.0), road(8, "Piazza del Campo climb", 3, 7.0)}), // 2024 edition: 215 km (real profile via import-stages)
+		cd("Strade Bianche 2024", 215, []model.Segment{road(1, "Road section", 50, 0.3), seg(2, "Sterrato sector 1", 3, 2.0, model.SurfaceCobbles, true), road(3, "Road section", 30, 0.5), seg(4, "Sterrato sector 2", 4, 3.0, model.SurfaceCobbles, true), road(5, "Road section", 25, 0.5), seg(6, "Sterrato sector 3", 5, 2.5, model.SurfaceCobbles, true), road(7, "Road to Siena", 20, 1.0), road(8, "Piazza del Campo climb", 3, 7.0)}),                                                         // 2024 edition: 215 km (real profile via import-stages)
 		cd("Il Lombardia 2023", 238, []model.Segment{road(1, "Bergamo start", 20, 0.1), road(2, "Lake Como approach", 50, 0.3), road(3, "Madonna del Ghisallo", 10, 5.5), road(4, "Ghisallo descent", 8, -5.5), road(5, "Valley road to Civiglio", 20, 0.3), road(6, "Civiglio", 4.2, 9.7), road(7, "Civiglio descent", 5, -6.0), road(8, "Valley to San Fermo", 20, 0.3), road(9, "San Fermo della Battaglia", 2.7, 7.2), road(10, "Descent and road", 20, -0.8), road(11, "Run-in to Como", 10, 0)}), // Como-Bergamo editions (2021, 2023); template until import-stages
 		cd("E3 Saxo Classic", 204, []model.Segment{road(1, "Flat approach", 100, 0), cobbles(2, "Paterberg", 0.4, 12.9), road(3, "Road section", 25, 0.3), cobbles(4, "Oude Kwaremont", 2.2, 4.0), road(5, "Road section", 20, 0.3), cobbles(6, "Tiegemberg", 0.8, 6.8), road(7, "Road to finish", 30, 0)}),
 		cd("Gent-Wevelgem", 261, []model.Segment{road(1, "Flat approach", 140, 0), road(2, "Kemmelberg", 0.8, 9.3), road(3, "Descent", 2, -5.0), road(4, "Road section", 30, 0), road(5, "Kemmelberg (2nd)", 0.8, 9.3), road(6, "Descent", 2, -5.0), road(7, "Flat run-in", 50, 0), road(8, "Sprint finish", 5, 0)}),
@@ -377,7 +377,7 @@ func seedCourses(db *database.DB) (map[string]int64, int, int) {
 		cd("Vuelta Steep Summit", 155, []model.Segment{road(1, "Valley approach", 35, 0.3), road(2, "Cat 1 climb", 10, 7.2), road(3, "Descent", 12, -6.0), road(4, "Valley road", 20, 0.3), road(5, "Cat 1 climb", 12, 7.5), road(6, "Descent", 14, -5.5), road(7, "Short valley", 5, 0.3), road(8, "Angliru / Lagos finish", 12.5, 9.8)}),
 		cd("Short Prologue TT", 5, []model.Segment{road(1, "Urban circuit", 5, 0.3)}),
 	}
-	courses = append(courses, tdf2023Courses(courses)...)
+	courses = append(courses, realStageCourses(courses)...)
 	// Real route profiles imported from locally installed stage files
 	// (cycling-sim import-stages) replace the hand-written segments.
 	if local, err := stagefile.Load(DataPath(LocalProfilesFile)); err == nil {
@@ -552,7 +552,7 @@ func seedRaces(db *database.DB, cIDs map[string]int64) (map[string]int64, int, i
 		{Name: "Romandie Stage 5 - ITT", CourseID: cIDs["Short ITT"], RaceType: model.RaceTypeTT, Date: d(2025, 5, 4), Temperature: 16, WindSpeedKmh: 8},
 	}
 
-	races = append(races, tdf2023Races(cIDs)...)
+	races = append(races, realStageRaceRaces(cIDs)...)
 
 	ids := make(map[string]int64)
 	if existing, err := db.ListRaces(); err == nil {
@@ -767,11 +767,13 @@ func seedStageRaces(db *database.DB, rIDs map[string]int64) (int, int) {
 		}},
 	}
 
-	tdf := srDef{name: Tour2023}
-	for i, s := range tdf2023Stages() {
-		tdf.stages = append(tdf.stages, stg(s.name(i+1), i+1, s.rest))
+	for _, r := range realStageRaces() {
+		def := srDef{name: r.name}
+		for i, s := range r.stages {
+			def.stages = append(def.stages, stg(r.stageName(i+1), i+1, s.rest))
+		}
+		stageRaces = append(stageRaces, def)
 	}
-	stageRaces = append(stageRaces, tdf)
 
 	have := map[string]bool{}
 	if existing, err := db.ListStageRaces(); err == nil {

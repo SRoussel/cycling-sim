@@ -23,8 +23,23 @@ type realStage struct {
 	date     time.Time
 }
 
-func (s realStage) name(n int) string {
-	return fmt.Sprintf("TdF 2023 Stage %d: %s", n, s.route)
+// realStageRace is a stage race seeded on its real route.
+type realStageRace struct {
+	name   string // stage race name
+	prefix string // stage race names start with it (model.StageRaceNamePrefixes)
+	stages []realStage
+}
+
+func (r realStageRace) stageName(n int) string {
+	return fmt.Sprintf("%s Stage %d: %s", r.prefix, n, r.stages[n-1].route)
+}
+
+// realStageRaces are the stage races seeded on their real routes.
+func realStageRaces() []realStageRace {
+	return []realStageRace{
+		{Tour2023, "TdF 2023", tdf2023Stages()},
+		{Giro2024, "Giro 2024", giro2024Stages()},
+	}
 }
 
 func tdf2023Stages() []realStage {
@@ -54,15 +69,18 @@ func tdf2023Stages() []realStage {
 	}
 }
 
-// tdf2023Courses builds the stage courses from their templates' segments.
-func tdf2023Courses(templates []courseData) []courseData {
+// realStageCourses builds the real-route stage courses from their
+// templates' segments.
+func realStageCourses(templates []courseData) []courseData {
 	byName := make(map[string][]model.Segment, len(templates))
 	for _, c := range templates {
 		byName[c.course.Name] = c.segments
 	}
 	var out []courseData
-	for i, s := range tdf2023Stages() {
-		out = append(out, cd(s.name(i+1), s.km, scaleSegments(byName[s.template], s.km)))
+	for _, r := range realStageRaces() {
+		for i, s := range r.stages {
+			out = append(out, cd(r.stageName(i+1), s.km, scaleSegments(byName[s.template], s.km)))
+		}
 	}
 	return out
 }
@@ -80,15 +98,18 @@ func scaleSegments(segs []model.Segment, km float64) []model.Segment {
 	return out
 }
 
-func tdf2023Races(cIDs map[string]int64) []model.Race {
+func realStageRaceRaces(cIDs map[string]int64) []model.Race {
 	var out []model.Race
-	for i, s := range tdf2023Stages() {
-		rt := model.RaceTypeRoad
-		if s.tt {
-			rt = model.RaceTypeTT
+	for _, r := range realStageRaces() {
+		for i, s := range r.stages {
+			rt := model.RaceTypeRoad
+			if s.tt {
+				rt = model.RaceTypeTT
+			}
+			n := r.stageName(i + 1)
+			out = append(out, model.Race{Name: n, CourseID: cIDs[n], RaceType: rt,
+				Date: s.date, Temperature: 25, WindSpeedKmh: 10})
 		}
-		out = append(out, model.Race{Name: s.name(i + 1), CourseID: cIDs[s.name(i+1)], RaceType: rt,
-			Date: s.date, Temperature: 25, WindSpeedKmh: 10})
 	}
 	return out
 }

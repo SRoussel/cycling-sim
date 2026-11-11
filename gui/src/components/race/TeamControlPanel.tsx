@@ -1,5 +1,5 @@
 import { EFFORT_MAX_PCT, EFFORT_MIN_PCT, formatCommandLabel, groupClassName } from '../../sim/shared'
-import { CHASE_ORDER_HELP, CHASE_ORDER_LABELS, ChaseOrder, TeamControl } from '../../sim/useTeamControl'
+import { TEAM_ORDER_KINDS, TEAM_ORDERS, TeamControl, TeamOrderValue } from '../../sim/useTeamControl'
 
 export function TeamControlPanel({ tc }: { tc: TeamControl }) {
   return (
@@ -15,22 +15,30 @@ export function TeamControlPanel({ tc }: { tc: TeamControl }) {
           <div className="sprint-train-header">
             <span>Team orders</span>
           </div>
-          <div className="team-orders-row" role="radiogroup" aria-label="Chase order">
-            <span className="team-orders-label">Chasing</span>
-            {(['auto', 'chase', 'nochase'] as ChaseOrder[]).map((order) => (
-              <button
-                key={order}
-                role="radio"
-                aria-checked={tc.chaseOrder === order}
-                className={tc.chaseOrder === order ? 'team-order selected' : 'team-order secondary'}
-                onClick={() => tc.handleChaseOrder(order)}
-                disabled={!tc.sessionId}
-              >
-                {CHASE_ORDER_LABELS[order]}
-              </button>
-            ))}
-          </div>
-          <div className="team-orders-help">{CHASE_ORDER_HELP[tc.chaseOrder]}</div>
+          {TEAM_ORDER_KINDS.map((kind) => {
+            const spec = TEAM_ORDERS[kind]
+            const current = tc.teamOrders[kind]
+            return (
+              <div key={kind} className="team-order-block">
+                <div className="team-orders-row" role="radiogroup" aria-label={spec.label}>
+                  <span className="team-orders-label">{spec.label}</span>
+                  {(['auto', 'yes', 'no'] as TeamOrderValue[]).map((value) => (
+                    <button
+                      key={value}
+                      role="radio"
+                      aria-checked={current === value}
+                      className={current === value ? 'team-order selected' : 'team-order secondary'}
+                      onClick={() => tc.handleTeamOrder(kind, value)}
+                      disabled={!tc.sessionId}
+                    >
+                      {spec.options[value].label}
+                    </button>
+                  ))}
+                </div>
+                <div className="team-orders-help">{spec.options[current].help}</div>
+              </div>
+            )
+          })}
         </div>
         <div className="sprint-train-panel">
           <div className="sprint-train-header">

@@ -110,8 +110,8 @@ export function SetSprintTrainOrder(arg1, arg2) {
   return window['go']['main']['App']['SetSprintTrainOrder'](arg1, arg2);
 }
 
-export function SetTeamChaseOrder(arg1, arg2) {
-  return window['go']['main']['App']['SetTeamChaseOrder'](arg1, arg2);
+export function SetTeamOrder(arg1, arg2, arg3) {
+  return window['go']['main']['App']['SetTeamOrder'](arg1, arg2, arg3);
 }
 
 export function StartInteractiveSimulation(arg1, arg2, arg3) {

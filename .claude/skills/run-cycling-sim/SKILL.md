@@ -32,7 +32,7 @@ wait 1500
 click Start Simulation
 waitfor Team orders
 click Don't chase
-waitfor Team order: Don't chase
+waitfor Team order: Chasing: Don't chase
 scrollto .team-orders-panel
 shot /tmp/cs-shots/team-orders.png
 text .team-orders-panel

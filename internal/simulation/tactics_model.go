@@ -40,31 +40,45 @@ type ActionOverrideProvider interface {
 	SprintTrainState(kmRemaining float64) *TeamState
 }
 
-// ChaseOrder is a player's standing order on whether their team helps chase
-// breaks and moves up the road.
-type ChaseOrder int
+// Order is a player's standing team order on one question: leave it to the
+// team (OrderAuto), do it (OrderYes) or don't (OrderNo).
+type Order int
 
 const (
-	ChaseAuto ChaseOrder = iota // the team decides (race control, chase.go)
-	ChaseYes                    // the domestiques bring the groups ahead back before the line
-	ChaseNo                     // the domestiques don't chase: they sit in and leave it to others
+	OrderAuto Order = iota
+	OrderYes
+	OrderNo
 )
+
+// TeamOrders are a player's standing orders for their team.
+//   - Chase: Yes, the domestiques bring the groups ahead back before the line;
+//     No, they sit in and leave it to others (chase.go decides otherwise).
+//   - Break: Yes, the team sends riders after the break until one is in it;
+//     No, its riders other than leaders don't go in breaks.
+//   - Pace: Yes, the domestiques set the pace for the team leader in their
+//     group (as a team driving on its own judgement does, drivingTeams);
+//     No, they never drive.
+//
+// A command the player gives a rider directly always wins.
+type TeamOrders struct {
+	Chase, Break, Pace Order
+}
 
 // TeamOrderProvider is optionally implemented by an ActionOverrideProvider
 // (the interactive session): team-level orders for one team.
 type TeamOrderProvider interface {
-	ChaseOrder(team string) ChaseOrder
+	TeamOrders(team string) TeamOrders
 }
 
-// chaseOrder returns a team's chase order (ChaseAuto without one).
-func (s *RaceState) chaseOrder(team string) ChaseOrder {
+// teamOrders returns a team's standing orders (all OrderAuto without any).
+func (s *RaceState) teamOrders(team string) TeamOrders {
 	if s == nil || s.Overrides == nil {
-		return ChaseAuto
+		return TeamOrders{}
 	}
 	if tp, ok := s.Overrides.(TeamOrderProvider); ok {
-		return tp.ChaseOrder(team)
+		return tp.TeamOrders(team)
 	}
-	return ChaseAuto
+	return TeamOrders{}
 }
 
 type TeamState struct {

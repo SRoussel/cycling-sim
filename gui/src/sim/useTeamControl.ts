@@ -92,8 +92,8 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
   const [acceptedButtons, setAcceptedButtons] = useState<Record<string, boolean>>({})
   const [riderCommandLocked, setRiderCommandLocked] = useState<Record<number, boolean>>({})
   const [pauseOnRivalAttacks, setPauseOnRivalAttacks] = useState(true)
-  // Team chase order: whether the team helps chase breaks and moves.
-  const [chaseOrder, setChaseOrderState] = useState<ChaseOrder>('auto')
+  // Standing team orders (chase / break / pace), see SetTeamOrder.
+  const [teamOrders, setTeamOrders] = useState<TeamOrders>(DEFAULT_TEAM_ORDERS)
   const [attackAlert, setAttackAlert] = useState<AttackAlert | null>(null)
   const [followAttackRiderId, setFollowAttackRiderId] = useState<number | null>(null)
   const seenAttackEventsRef = useRef<Set<string>>(new Set())
@@ -212,7 +212,7 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
     setTelemetryByRider({})
     setAttackAlert(null)
     setFollowAttackRiderId(null)
-    setChaseOrderState('auto')
+    setTeamOrders(DEFAULT_TEAM_ORDERS)
     seenAttackEventsRef.current = new Set()
     telemetryDisplayRef.current = {}
     telemetryPrevRef.current = {}
@@ -347,14 +347,14 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
     }
   }
 
-  const handleChaseOrder = async (order: ChaseOrder) => {
+  const handleTeamOrder = async (kind: TeamOrderKind, value: TeamOrderValue) => {
     if (!active) return
     try {
-      await App.SetTeamChaseOrder(sessionId!, order)
-      setChaseOrderState(order)
-      appendEvents([`📣 Team order: ${CHASE_ORDER_LABELS[order]}`])
+      await App.SetTeamOrder(sessionId!, kind, value)
+      setTeamOrders((prev) => ({ ...prev, [kind]: value }))
+      appendEvents([`📣 Team order: ${TEAM_ORDERS[kind].label}: ${TEAM_ORDERS[kind].options[value].label}`])
     } catch (err) {
-      console.error('Failed to set chase order', err)
+      console.error('Failed to set team order', err)
     }
   }
 
@@ -408,7 +408,7 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
     sprintPhaseLabel,
     pauseOnRivalAttacks,
     setPauseOnRivalAttacks,
-    chaseOrder,
+    teamOrders,
     attackAlert,
     followAttackRiderId,
     setFollowAttackRiderId,
@@ -430,23 +430,44 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
     handleFollowChange,
     handleLaunchSprint,
     handleFollowAttack,
-    handleChaseOrder,
+    handleTeamOrder,
   }
 }
 
-// ChaseOrder is the team's standing order on chasing (see SetTeamChaseOrder).
-export type ChaseOrder = 'auto' | 'chase' | 'nochase'
-
-export const CHASE_ORDER_LABELS: Record<ChaseOrder, string> = {
-  auto: 'Team decides',
-  chase: 'Chase',
-  nochase: "Don't chase",
-}
-
-export const CHASE_ORDER_HELP: Record<ChaseOrder, string> = {
-  auto: 'Your domestiques chase when the team has a reason to: a sprint, a leader to protect, a stage to win.',
-  chase: 'Your domestiques ride to bring the groups ahead back before the finish.',
-  nochase: 'Your domestiques sit in and leave the chasing to other teams.',
-}
-
 export type TeamControl = ReturnType<typeof useTeamControl>
+
+// Team orders: standing orders for the player's team (see SetTeamOrder).
+export type TeamOrderKind = 'chase' | 'break' | 'pace'
+export type TeamOrderValue = 'auto' | 'yes' | 'no'
+export type TeamOrders = Record<TeamOrderKind, TeamOrderValue>
+
+export const DEFAULT_TEAM_ORDERS: TeamOrders = { chase: 'auto', break: 'auto', pace: 'auto' }
+
+export const TEAM_ORDER_KINDS: TeamOrderKind[] = ['chase', 'break', 'pace']
+
+export const TEAM_ORDERS: Record<TeamOrderKind, { label: string; options: Record<TeamOrderValue, { label: string; help: string }> }> = {
+  chase: {
+    label: 'Chasing',
+    options: {
+      auto: { label: 'Team decides', help: 'Your domestiques chase when the team has a reason to: a sprint, a leader to protect, a stage to win.' },
+      yes: { label: 'Chase', help: 'Your domestiques ride to bring the groups ahead back before the finish.' },
+      no: { label: "Don't chase", help: 'Your domestiques sit in and leave the chasing to other teams.' },
+    },
+  },
+  break: {
+    label: 'Breakaway',
+    options: {
+      auto: { label: 'Riders decide', help: 'Riders the team can spare today may go with moves.' },
+      yes: { label: 'Get in the break', help: 'Your two strongest domestiques attack until one of them is up the road (not in the finale).' },
+      no: { label: 'Stay together', help: 'Your domestiques don\'t go in breaks; leaders still attack when it pays.' },
+    },
+  },
+  pace: {
+    label: 'Pace',
+    options: {
+      auto: { label: 'Team decides', help: 'Your domestiques set the pace when a hard tempo would drop the fast finishers.' },
+      yes: { label: 'Set the pace', help: 'Your domestiques ride a tempo for your leader at the front of their group.' },
+      no: { label: 'Sit in', help: 'Your domestiques never drive the group.' },
+    },
+  },
+}

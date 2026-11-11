@@ -110,16 +110,23 @@ func TestSessionSpeedBounds(t *testing.T) {
 	}
 }
 
-func TestChaseOrderAppliesToControlledTeamOnly(t *testing.T) {
+func TestTeamOrdersApplyToControlledTeamOnly(t *testing.T) {
 	s := newInteractiveSession("Team A")
-	if got := s.ChaseOrder("Team A"); got != simulation.ChaseAuto {
-		t.Fatalf("default order = %v, want auto", got)
+	if got := s.TeamOrders("Team A"); got != (simulation.TeamOrders{}) {
+		t.Fatalf("default orders = %+v, want auto", got)
 	}
-	s.SetChaseOrder(simulation.ChaseNo)
-	if got := s.ChaseOrder("Team A"); got != simulation.ChaseNo {
-		t.Errorf("controlled team order = %v, want no-chase", got)
+	if !s.SetTeamOrder("chase", simulation.OrderNo) || !s.SetTeamOrder("break", simulation.OrderYes) ||
+		!s.SetTeamOrder("pace", simulation.OrderYes) {
+		t.Fatal("known order kinds rejected")
 	}
-	if got := s.ChaseOrder("Team B"); got != simulation.ChaseAuto {
-		t.Errorf("other team order = %v, want auto", got)
+	if s.SetTeamOrder("sprint", simulation.OrderYes) {
+		t.Error("unknown order kind accepted")
+	}
+	want := simulation.TeamOrders{Chase: simulation.OrderNo, Break: simulation.OrderYes, Pace: simulation.OrderYes}
+	if got := s.TeamOrders("Team A"); got != want {
+		t.Errorf("controlled team orders = %+v, want %+v", got, want)
+	}
+	if got := s.TeamOrders("Team B"); got != (simulation.TeamOrders{}) {
+		t.Errorf("other team orders = %+v, want auto", got)
 	}
 }

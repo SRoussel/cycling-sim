@@ -20,7 +20,7 @@ type interactiveSession struct {
 	sprintTrainOrder []int64
 	followMap        map[int64]int64
 	launchingRiderID int64
-	chaseOrder       simulation.ChaseOrder
+	teamOrders       simulation.TeamOrders
 
 	paused  bool
 	speed   float64
@@ -286,20 +286,31 @@ func (s *interactiveSession) Pace() {
 	}
 }
 
-// ChaseOrder implements simulation.TeamOrderProvider: the player's chase
-// order applies to their own team.
-func (s *interactiveSession) ChaseOrder(team string) simulation.ChaseOrder {
+// TeamOrders implements simulation.TeamOrderProvider: the player's orders
+// apply to their own team.
+func (s *interactiveSession) TeamOrders(team string) simulation.TeamOrders {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if team != s.controlledTeam {
-		return simulation.ChaseAuto
+		return simulation.TeamOrders{}
 	}
-	return s.chaseOrder
+	return s.teamOrders
 }
 
-// SetChaseOrder sets the controlled team's chase order.
-func (s *interactiveSession) SetChaseOrder(order simulation.ChaseOrder) {
+// SetTeamOrder sets one of the controlled team's orders: kind "chase",
+// "break" or "pace". It reports whether the kind is known.
+func (s *interactiveSession) SetTeamOrder(kind string, order simulation.Order) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.chaseOrder = order
+	switch kind {
+	case "chase":
+		s.teamOrders.Chase = order
+	case "break":
+		s.teamOrders.Break = order
+	case "pace":
+		s.teamOrders.Pace = order
+	default:
+		return false
+	}
+	return true
 }

@@ -150,10 +150,14 @@
   gap: 0.35rem;
 }
 
+.team-order-block + .team-order-block {
+  margin-top: 0.55rem;
+}
+
 .team-orders-label {
   font-size: 0.75rem;
   color: var(--color-text-muted);
-  margin-right: 0.25rem;
+  min-width: 4.6rem;
 }
 
 .team-order {

@@ -124,10 +124,10 @@ func (s *RaceState) planChase(group []*RiderState) chasePlan {
 			if teamIn(brk, p.Rider.Team) {
 				continue
 			}
-			switch s.chaseOrder(p.Rider.Team) {
-			case ChaseNo:
+			switch s.teamOrders(p.Rider.Team).Chase {
+			case OrderNo:
 				continue // ordered to sit in
-			case ChaseYes:
+			case OrderYes:
 				a = math.Min(a, -catchMarginS) // ordered to bring it back
 			}
 			if a < math.Inf(1) {

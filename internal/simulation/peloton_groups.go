@@ -44,6 +44,8 @@ func FormGroups(riders []*RiderState, segment *model.Segment, isTT bool, remaini
 	}
 
 	driving := drivingTeams(riders, segment, state)
+	state.applyPaceOrders(driving, riders)
+	sendToBreak := state.breakPicks(riders)
 	// Shelter needs teammates: a protected rider with no domestique in the
 	// group has to take turns like everyone else.
 	helpers := map[string]int{}
@@ -104,13 +106,24 @@ func FormGroups(riders []*RiderState, segment *model.Segment, isTT bool, remaini
 		if action == ActionHold {
 			action = DecideAction(rs, state, hasLeader, rng, *params)
 		}
+		// Break orders: riders sent after the break keep trying until a
+		// teammate is in it; a team told to stay together doesn't go.
+		if !commanded && rs.TeamRole != RoleLeader {
+			switch {
+			case sendToBreak[rs.Rider.ID] && (action == ActionHold || action == ActionConserve) &&
+				rng.Float64() < ScaleToDistance(orderedBreakChance, segment.DistanceKm):
+				action = ActionAttack
+			case state.teamOrders(rs.Rider.Team).Break == OrderNo && action == ActionAttack:
+				action = ActionHold
+			}
+		}
 		chaseAt := 0.0
 		if plan.chasing(rs, helpers) && action != ActionAttack {
 			action, chaseAt = ActionChase, plan.intensity
 		}
 		// A team ordered not to chase: its domestiques sit in (a rider's own
 		// command still wins).
-		holdBack := rs.TeamRole == RoleDomestique && state.chaseOrder(rs.Rider.Team) == ChaseNo && !commanded
+		holdBack := rs.TeamRole == RoleDomestique && state.teamOrders(rs.Rider.Team).Chase == OrderNo && !commanded
 		if holdBack && action == ActionChase {
 			action = ActionHold
 		}
@@ -211,7 +224,7 @@ func FormGroups(riders []*RiderState, segment *model.Segment, isTT bool, remaini
 		move := attackers
 		var bunch []riderPower
 		for _, rp := range others {
-			if state != nil && state.WantsBreak[rp.state.Rider.ID] && rp.action != ActionChase &&
+			if state != nil && state.wantsBreak(rp.state, sendToBreak) && rp.action != ActionChase &&
 				!state.BreakawayRiders[rp.state.Rider.ID] {
 				move = append(move, rp)
 			} else {
@@ -519,4 +532,87 @@ func crosswindTeamOrder(domestiques, protected, others []riderPower) [][]riderPo
 		rest = append(rest, doms[n:]...)
 	}
 	return [][]riderPower{front, rest, others}
+}
+
+// orderedBreakChance: a rider the player sent after the break tries to get
+// away with this chance per 5 km (ScaleToDistance) until a teammate is in it.
+const orderedBreakChance = 0.5
+
+// breakSendCount is how many riders a team sends after the break.
+const breakSendCount = 2
+
+// breakPicks returns the riders whose team was ordered into the break and
+// who go after it: while no teammate is up the road and before the finale,
+// the team's breakSendCount strongest domestiques (threshold W/kg) in this
+// group with at least half their W' left.
+func (s *RaceState) breakPicks(riders []*RiderState) map[int64]bool {
+	if s == nil || s.Overrides == nil || s.Phase == PhaseFinal {
+		return nil
+	}
+	inBreak := map[string]bool{} // teams with a rider up the road
+	for _, rs := range append(append([]*RiderState{}, s.Road...), riders...) {
+		if s.BreakawayRiders[rs.Rider.ID] && !rs.DNF {
+			inBreak[rs.Rider.Team] = true
+		}
+	}
+	byTeam := map[string][]*RiderState{}
+	for _, rs := range riders {
+		t := rs.Rider.Team
+		if rs.TeamRole != RoleDomestique || rs.DNF || inBreak[t] || s.BreakawayRiders[rs.Rider.ID] ||
+			rs.WPrime.FractionRemaining() < 0.5 || s.teamOrders(t).Break != OrderYes {
+			continue
+		}
+		byTeam[t] = append(byTeam[t], rs)
+	}
+	out := map[int64]bool{}
+	for _, cands := range byTeam {
+		sort.Slice(cands, func(i, j int) bool {
+			wi := float64(cands[i].CurrentFTP()) / cands[i].Rider.WeightKg
+			wj := float64(cands[j].CurrentFTP()) / cands[j].Rider.WeightKg
+			if wi != wj {
+				return wi > wj
+			}
+			return cands[i].Rider.ID < cands[j].Rider.ID
+		})
+		for i := 0; i < len(cands) && i < breakSendCount; i++ {
+			out[cands[i].Rider.ID] = true
+		}
+	}
+	return out
+}
+
+// wantsBreak reports whether a rider goes with a move today: they decided to
+// this morning (setBreakIntent) or were sent by the player, unless their
+// team was told to stay together.
+func (s *RaceState) wantsBreak(rs *RiderState, sent map[int64]bool) bool {
+	if sent[rs.Rider.ID] {
+		return true
+	}
+	if rs.TeamRole != RoleLeader && s.teamOrders(rs.Rider.Team).Break == OrderNo {
+		return false
+	}
+	return s.WantsBreak[rs.Rider.ID]
+}
+
+// applyPaceOrders adjusts the driving teams to the player's pace orders: a
+// team told to sit in doesn't drive; a team told to set the pace drives for
+// its strongest climbing leader in the group (if it has one here).
+func (s *RaceState) applyPaceOrders(driving map[string]*RiderState, riders []*RiderState) {
+	if s == nil || s.Overrides == nil {
+		return
+	}
+	for _, rs := range riders {
+		t := rs.Rider.Team
+		switch s.teamOrders(t).Pace {
+		case OrderNo:
+			delete(driving, t)
+		case OrderYes:
+			if rs.TeamRole != RoleLeader || rs.DNF {
+				continue
+			}
+			if cur := driving[t]; cur == nil || climbingWKg(rs.Rider) > climbingWKg(cur.Rider) {
+				driving[t] = rs
+			}
+		}
+	}
 }

@@ -477,6 +477,12 @@ func riderEffort(rs *RiderState, action Action, segment *model.Segment, remainin
 	if !holdBack && teamChase && rs.TeamRole == RoleDomestique {
 		return burstOver(remainingKm), ActionChase
 	}
+	// Stage races: a GC contender with another team's contender up the road
+	// rides to the line as hard as he can sustain: every second lost is lost
+	// on GC (a dropped contender doesn't ride tempo).
+	if !holdBack && state.limitsLosses(rs) {
+		return burstOver(remainingKm), ActionChase
+	}
 	if !holdBack && state.rivalAhead(rs) {
 		// One-day races: a chase of rivals is no pace line. A rider who would
 		// win the sprint of his chase group sits on (why tow the others?);
@@ -823,4 +829,18 @@ func (s *RaceState) outsprintsChase(rs *RiderState) bool {
 		}
 	}
 	return chasers > 1 && faster < chasers/2
+}
+
+// limitsLosses reports whether a GC contender in a stage race has a rival
+// contender (another team's) in a road group ahead.
+func (s *RaceState) limitsLosses(rs *RiderState) bool {
+	if s == nil || !s.IsStageRace || !s.gcContender(rs) || s.BreakawayRiders[rs.Rider.ID] {
+		return false
+	}
+	for o := range s.Ahead {
+		if !o.DNF && o.Rider.Team != rs.Rider.Team && s.gcContender(o) {
+			return true
+		}
+	}
+	return false
 }

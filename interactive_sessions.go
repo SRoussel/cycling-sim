@@ -20,6 +20,7 @@ type interactiveSession struct {
 	sprintTrainOrder []int64
 	followMap        map[int64]int64
 	launchingRiderID int64
+	chaseOrder       simulation.ChaseOrder
 
 	paused  bool
 	speed   float64
@@ -283,4 +284,22 @@ func (s *interactiveSession) Pace() {
 		}
 		time.Sleep(25 * time.Millisecond)
 	}
+}
+
+// ChaseOrder implements simulation.TeamOrderProvider: the player's chase
+// order applies to their own team.
+func (s *interactiveSession) ChaseOrder(team string) simulation.ChaseOrder {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if team != s.controlledTeam {
+		return simulation.ChaseAuto
+	}
+	return s.chaseOrder
+}
+
+// SetChaseOrder sets the controlled team's chase order.
+func (s *interactiveSession) SetChaseOrder(order simulation.ChaseOrder) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.chaseOrder = order
 }

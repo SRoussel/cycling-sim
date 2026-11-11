@@ -102,6 +102,7 @@ SQLite with WAL mode, foreign keys enabled. Schema auto-migrates on open. Use `C
 ## Frontend
 - `gui/src/sim/useTeamControl.ts` holds all live-race state/commands; `gui/src/components/race/` holds the shared panels. Both `Simulation.tsx` and `StageRaceSimulation.tsx` use them.
 - Typecheck with `cd gui && npx tsc --noEmit`.
+- Team orders (Nov 2026): the player's chase order (`SetTeamChaseOrder`: auto / chase / nochase) reaches the engine through `TeamOrderProvider`, an optional interface of the session's `ActionOverrideProvider`. In `planChase` "chase" gives the team the tightest allowance (bring the break back `catchMarginS` before the line), "nochase" leaves it out; in `FormGroups` its domestiques then don't chase unless the player commands a rider directly. AI teams and the CLI are unaffected.
 
 ## Data notes
 - Course segments must sum to the stated distance (`fitToDistance` in seed, enforced by a test). `seed` on an existing DB adds courses/races/stage races that are missing by name (keeps results); changing existing seed data requires `clear` + `seed`.

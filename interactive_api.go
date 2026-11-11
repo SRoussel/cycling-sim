@@ -266,6 +266,23 @@ func (a *App) LaunchSprint(sessionID string, riderID int64) {
 	s.LaunchSprint(riderID)
 }
 
+// SetTeamChaseOrder sets whether the player's team helps chase: "auto" (the
+// team decides), "chase" (bring the groups ahead back) or "nochase" (sit in).
+func (a *App) SetTeamChaseOrder(sessionID string, order string) {
+	sess := a.getSession(sessionID)
+	if sess == nil {
+		return
+	}
+	switch order {
+	case "chase":
+		sess.SetChaseOrder(simulation.ChaseYes)
+	case "nochase":
+		sess.SetChaseOrder(simulation.ChaseNo)
+	default:
+		sess.SetChaseOrder(simulation.ChaseAuto)
+	}
+}
+
 func (a *App) StopInteractiveSession(sessionID string) {
 	s := a.getSession(sessionID)
 	if s == nil {

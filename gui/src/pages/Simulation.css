@@ -135,6 +135,42 @@
   padding-right: 0.25rem;
 }
 
+.team-orders-panel {
+  border: 1px solid var(--color-secondary);
+  border-radius: 4px;
+  padding: 0.6rem;
+  margin-bottom: 0.75rem;
+  background: var(--color-bg);
+}
+
+.team-orders-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.team-orders-label {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  margin-right: 0.25rem;
+}
+
+.team-order {
+  font-size: 0.75rem;
+  padding: 0.2rem 0.6rem;
+}
+
+.team-order.selected {
+  font-weight: 600;
+}
+
+.team-orders-help {
+  margin-top: 0.4rem;
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+}
+
 .sprint-train-panel {
   border: 1px solid var(--color-secondary);
   border-radius: 4px;

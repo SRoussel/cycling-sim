@@ -1,5 +1,5 @@
 import { EFFORT_MAX_PCT, EFFORT_MIN_PCT, formatCommandLabel, groupClassName } from '../../sim/shared'
-import { TeamControl } from '../../sim/useTeamControl'
+import { CHASE_ORDER_HELP, CHASE_ORDER_LABELS, ChaseOrder, TeamControl } from '../../sim/useTeamControl'
 
 export function TeamControlPanel({ tc }: { tc: TeamControl }) {
   return (
@@ -11,6 +11,27 @@ export function TeamControlPanel({ tc }: { tc: TeamControl }) {
         <div className="empty-state">No riders found for {tc.controlledTeam}.</div>
       ) : (
         <>
+        <div className="team-orders-panel">
+          <div className="sprint-train-header">
+            <span>Team orders</span>
+          </div>
+          <div className="team-orders-row" role="radiogroup" aria-label="Chase order">
+            <span className="team-orders-label">Chasing</span>
+            {(['auto', 'chase', 'nochase'] as ChaseOrder[]).map((order) => (
+              <button
+                key={order}
+                role="radio"
+                aria-checked={tc.chaseOrder === order}
+                className={tc.chaseOrder === order ? 'team-order selected' : 'team-order secondary'}
+                onClick={() => tc.handleChaseOrder(order)}
+                disabled={!tc.sessionId}
+              >
+                {CHASE_ORDER_LABELS[order]}
+              </button>
+            ))}
+          </div>
+          <div className="team-orders-help">{CHASE_ORDER_HELP[tc.chaseOrder]}</div>
+        </div>
         <div className="sprint-train-panel">
           <div className="sprint-train-header">
             <span>Sprint Train</span>

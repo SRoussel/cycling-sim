@@ -86,11 +86,12 @@ func FormGroups(riders []*RiderState, segment *model.Segment, isTT bool, remaini
 			hasLeader = needsHelp[rs.Rider.Team]
 		}
 		action := ActionHold
+		commanded := false // the player gave this rider a command
 		if state != nil && state.Overrides != nil {
 			if a, ok := state.Overrides.ConsumeOneShot(rs.Rider.ID); ok {
-				action = a
+				action, commanded = a, true
 			} else if a, ok := state.Overrides.ActionOverride(rs.Rider.ID); ok {
-				action = a
+				action, commanded = a, true
 			}
 		}
 		if state != nil && state.Overrides != nil {
@@ -107,6 +108,12 @@ func FormGroups(riders []*RiderState, segment *model.Segment, isTT bool, remaini
 		if plan.chasing(rs, helpers) && action != ActionAttack {
 			action, chaseAt = ActionChase, plan.intensity
 		}
+		// A team ordered not to chase: its domestiques sit in (a rider's own
+		// command still wins).
+		holdBack := rs.TeamRole == RoleDomestique && state.chaseOrder(rs.Rider.Team) == ChaseNo && !commanded
+		if holdBack && action == ActionChase {
+			action = ActionHold
+		}
 		if state != nil {
 			if state.LastActions == nil {
 				state.LastActions = make(map[int64]Action)
@@ -117,7 +124,7 @@ func FormGroups(riders []*RiderState, segment *model.Segment, isTT bool, remaini
 			}
 			state.LastActions[rs.Rider.ID] = action
 		}
-		power, action = riderEffort(rs, action, segment, remainingDistance, state, driving[rs.Rider.Team], leaderTeams[rs.Rider.Team], teamChase[rs.Rider.Team], chaseAt, *params)
+		power, action = riderEffort(rs, action, segment, remainingDistance, state, driving[rs.Rider.Team], leaderTeams[rs.Rider.Team], teamChase[rs.Rider.Team] && !holdBack, holdBack, chaseAt, *params)
 		if state != nil && state.Overrides != nil {
 			if effortMultiplier, ok := state.Overrides.EffortMultiplier(rs.Rider.ID); ok {
 				power *= effortMultiplier
@@ -382,7 +389,7 @@ const leadOutKm = 3.0
 // riderEffort decides how hard a rider rides this step. Each mode draws on W'
 // once, over one horizon: a burst spends it over this step, racing to the
 // line spreads it over the time left, and steady riding doesn't touch it.
-func riderEffort(rs *RiderState, action Action, segment *model.Segment, remainingKm float64, state *RaceState, driveFor *RiderState, protectedTeammate, teamChase bool, chaseAt float64, params TacticsParams) (float64, Action) {
+func riderEffort(rs *RiderState, action Action, segment *model.Segment, remainingKm float64, state *RaceState, driveFor *RiderState, protectedTeammate, teamChase, holdBack bool, chaseAt float64, params TacticsParams) (float64, Action) {
 	r := rs.Rider
 	threshold := EffectivePower(r, rs.CurrentFTP(), segment, false)
 	burstOver := func(km float64) float64 {
@@ -411,7 +418,7 @@ func riderEffort(rs *RiderState, action Action, segment *model.Segment, remainin
 	// A rival up the road is chased to the line: by the leader's domestiques
 	// when the team has them here (the leader sits in, see shelteredFor),
 	// otherwise by the rider themself.
-	if state.rivalAhead(rs) || (teamChase && rs.TeamRole == RoleDomestique) {
+	if !holdBack && (state.rivalAhead(rs) || (teamChase && rs.TeamRole == RoleDomestique)) {
 		return burstOver(remainingKm), ActionChase
 	}
 	// A leader clear of their rivals who can hold it commits to the line.

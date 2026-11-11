@@ -109,3 +109,17 @@ func TestSessionSpeedBounds(t *testing.T) {
 		t.Errorf("speed>16 -> %v, want 16", s.speed)
 	}
 }
+
+func TestChaseOrderAppliesToControlledTeamOnly(t *testing.T) {
+	s := newInteractiveSession("Team A")
+	if got := s.ChaseOrder("Team A"); got != simulation.ChaseAuto {
+		t.Fatalf("default order = %v, want auto", got)
+	}
+	s.SetChaseOrder(simulation.ChaseNo)
+	if got := s.ChaseOrder("Team A"); got != simulation.ChaseNo {
+		t.Errorf("controlled team order = %v, want no-chase", got)
+	}
+	if got := s.ChaseOrder("Team B"); got != simulation.ChaseAuto {
+		t.Errorf("other team order = %v, want auto", got)
+	}
+}

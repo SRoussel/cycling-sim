@@ -40,6 +40,33 @@ type ActionOverrideProvider interface {
 	SprintTrainState(kmRemaining float64) *TeamState
 }
 
+// ChaseOrder is a player's standing order on whether their team helps chase
+// breaks and moves up the road.
+type ChaseOrder int
+
+const (
+	ChaseAuto ChaseOrder = iota // the team decides (race control, chase.go)
+	ChaseYes                    // the domestiques bring the groups ahead back before the line
+	ChaseNo                     // the domestiques don't chase: they sit in and leave it to others
+)
+
+// TeamOrderProvider is optionally implemented by an ActionOverrideProvider
+// (the interactive session): team-level orders for one team.
+type TeamOrderProvider interface {
+	ChaseOrder(team string) ChaseOrder
+}
+
+// chaseOrder returns a team's chase order (ChaseAuto without one).
+func (s *RaceState) chaseOrder(team string) ChaseOrder {
+	if s == nil || s.Overrides == nil {
+		return ChaseAuto
+	}
+	if tp, ok := s.Overrides.(TeamOrderProvider); ok {
+		return tp.ChaseOrder(team)
+	}
+	return ChaseAuto
+}
+
 type TeamState struct {
 	SprintTrainOrder []int64          `json:"sprintTrainOrder"`
 	FollowMap        map[int64]*int64 `json:"followMap"`

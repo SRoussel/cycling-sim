@@ -92,6 +92,8 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
   const [acceptedButtons, setAcceptedButtons] = useState<Record<string, boolean>>({})
   const [riderCommandLocked, setRiderCommandLocked] = useState<Record<number, boolean>>({})
   const [pauseOnRivalAttacks, setPauseOnRivalAttacks] = useState(true)
+  // Team chase order: whether the team helps chase breaks and moves.
+  const [chaseOrder, setChaseOrderState] = useState<ChaseOrder>('auto')
   const [attackAlert, setAttackAlert] = useState<AttackAlert | null>(null)
   const [followAttackRiderId, setFollowAttackRiderId] = useState<number | null>(null)
   const seenAttackEventsRef = useRef<Set<string>>(new Set())
@@ -210,6 +212,7 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
     setTelemetryByRider({})
     setAttackAlert(null)
     setFollowAttackRiderId(null)
+    setChaseOrderState('auto')
     seenAttackEventsRef.current = new Set()
     telemetryDisplayRef.current = {}
     telemetryPrevRef.current = {}
@@ -344,6 +347,17 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
     }
   }
 
+  const handleChaseOrder = async (order: ChaseOrder) => {
+    if (!active) return
+    try {
+      await App.SetTeamChaseOrder(sessionId!, order)
+      setChaseOrderState(order)
+      appendEvents([`📣 Team order: ${CHASE_ORDER_LABELS[order]}`])
+    } catch (err) {
+      console.error('Failed to set chase order', err)
+    }
+  }
+
   const handleLaunchSprint = async (riderID: number) => {
     if (!active) return
     try {
@@ -394,6 +408,7 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
     sprintPhaseLabel,
     pauseOnRivalAttacks,
     setPauseOnRivalAttacks,
+    chaseOrder,
     attackAlert,
     followAttackRiderId,
     setFollowAttackRiderId,
@@ -415,7 +430,23 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
     handleFollowChange,
     handleLaunchSprint,
     handleFollowAttack,
+    handleChaseOrder,
   }
+}
+
+// ChaseOrder is the team's standing order on chasing (see SetTeamChaseOrder).
+export type ChaseOrder = 'auto' | 'chase' | 'nochase'
+
+export const CHASE_ORDER_LABELS: Record<ChaseOrder, string> = {
+  auto: 'Team decides',
+  chase: 'Chase',
+  nochase: "Don't chase",
+}
+
+export const CHASE_ORDER_HELP: Record<ChaseOrder, string> = {
+  auto: 'Your domestiques chase when the team has a reason to: a sprint, a leader to protect, a stage to win.',
+  chase: 'Your domestiques ride to bring the groups ahead back before the finish.',
+  nochase: 'Your domestiques sit in and leave the chasing to other teams.',
 }
 
 export type TeamControl = ReturnType<typeof useTeamControl>

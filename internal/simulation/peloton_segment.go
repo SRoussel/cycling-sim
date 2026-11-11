@@ -306,6 +306,10 @@ func simulateStep(riders []*RiderState, segment *model.Segment, isTT bool, dista
 
 			rs.WPrime.UpdateWithHandling(actualPower, rs.thresholdIntOn(segment), segTime, rs.Rider.Handling, segment.SurfaceType == model.SurfaceCobbles)
 			rs.addWork(actualPower, segTime)
+			if !isTT {
+				accordionCost(rs, len(group.Riders), groupSpeed)
+			}
+			rs.LastSpeed = groupSpeed
 		}
 	}
 	if !isTT {
@@ -331,4 +335,27 @@ func breakawayComposition(riders []*RiderState, limit int) string {
 		parts = append(parts, fmt.Sprintf("+%d more", len(riders)-limit))
 	}
 	return "breakaway: " + strings.Join(parts, ", ")
+}
+
+// accordionGain: how much a group's speed-up is amplified per unit of depth
+// in the line (0 at the front, 1 at the back). Down a line each rider reacts
+// a moment late, so gaps open and close: the back brakes harder and must
+// accelerate harder to close up, taken as twice the front's speed change.
+const accordionGain = 1.0
+
+// accordionCost charges a rider in a group the extra kinetic energy of the
+// amplified acceleration at their position (a short burst: from W'). The
+// front's own acceleration is already in the speed the group rides at.
+func accordionCost(rs *RiderState, n int, v float64) {
+	v0 := rs.LastSpeed
+	if n < 2 || v0 <= 0 || v <= v0 || rs.WPrime == nil {
+		return
+	}
+	depth := float64(rs.GroupPosition-1) / float64(n-1)
+	if depth <= 0 {
+		return
+	}
+	peak := v0 + (v-v0)*(1+accordionGain*depth)
+	extra := 0.5 * rs.Rider.TotalMassKg() * (peak*peak - v*v)
+	rs.WPrime.WPrimeCurrent = math.Max(0, rs.WPrime.WPrimeCurrent-extra)
 }

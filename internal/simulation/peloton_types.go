@@ -22,6 +22,7 @@ type RiderState struct {
 	Dropped          bool     // can't stay with group
 	EffectiveFTP     int      // FTP after fatigue adjustment
 	LastSegmentPower float64  // power used for the current segment (after tactics)
+	LastSpeed        float64  // m/s over the last step (accordion costs)
 	DNF              bool     // did not finish (e.g., crash)
 	TotalPenalty     float64  // cumulative penalty time from incidents
 	TeamRole         TeamRole // role within team (leader, sprinter, domestique)

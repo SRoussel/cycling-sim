@@ -45,6 +45,7 @@ func FormGroups(riders []*RiderState, segment *model.Segment, isTT bool, remaini
 
 	driving := drivingTeams(riders, segment, state)
 	state.applyPaceOrders(driving, riders)
+	squad := driveSquads(riders, driving, segment, state)
 	sendToBreak := state.breakPicks(riders)
 	// Shelter needs teammates: a protected rider with no domestique in the
 	// group has to take turns like everyone else.
@@ -151,7 +152,11 @@ func FormGroups(riders []*RiderState, segment *model.Segment, isTT bool, remaini
 			}
 			state.LastActions[rs.Rider.ID] = action
 		}
-		power, action = riderEffort(rs, action, segment, remainingDistance, state, driving[rs.Rider.Team], leaderTeams[rs.Rider.Team], teamChase[rs.Rider.Team] && !holdBack, holdBack, chaseAt, *params)
+		driveFor := driving[rs.Rider.Team]
+		if squad != nil && rs.TeamRole == RoleDomestique && !squad[rs] {
+			driveFor = nil // sheltered in the bunch, saved for later
+		}
+		power, action = riderEffort(rs, action, segment, remainingDistance, state, driveFor, leaderTeams[rs.Rider.Team], teamChase[rs.Rider.Team] && !holdBack, holdBack, chaseAt, *params)
 		if protectBack[rs.Rider.Team] && !commanded && action != ActionAttack && action != ActionChase {
 			if l, _ := state.protectedLeader(rs.Rider.Team); l == rs {
 				// The dropped leader races back with the team (see leaderGoes).
@@ -372,9 +377,10 @@ func assignTeamPositions(rps []riderPower, crosswind bool) {
 // nobody drives; on climbs W/kg wins.
 func drivingTeams(riders []*RiderState, segment *model.Segment, state *RaceState) map[string]*RiderState {
 	out := map[string]*RiderState{}
-	// Stage races keep the early phase easy (a long day's tempo); in a
-	// one-day race favourites' teams wear the field down from far out.
-	if state == nil || (state.IsStageRace && state.Phase == PhaseEarly) || len(riders) < 3 {
+	// Early in a race nobody drives: the break goes and the bunch eases off;
+	// the race gets hard later (in classics, driving from km 0 split the
+	// field 150 km out).
+	if state == nil || state.Phase == PhaseEarly || len(riders) < 3 {
 		return out
 	}
 	var finisher *RiderState
@@ -459,7 +465,7 @@ func riderEffort(rs *RiderState, action Action, segment *model.Segment, remainin
 		// chaseAt). A group dropped behind the main field rides its tempo
 		// (not easy). In a one-day race the race is the result: the bunch
 		// keeps racing for placings.
-		if state != nil && state.IsStageRace && state.HasBreakaway && !state.BreakawayRiders[r.ID] && !state.behindMainField() {
+		if state != nil && (state.IsStageRace || state.calmBunch()) && state.HasBreakaway && !state.BreakawayRiders[r.ID] && !state.behindMainField() {
 			return threshold * easyIntensity
 		}
 		return threshold * IntensityForPhase(phase)
@@ -738,4 +744,54 @@ func burstPower(rs *RiderState, segment *model.Segment, remainingKm float64) flo
 	threshold := EffectivePower(r, rs.CurrentFTP(), segment, false)
 	v := segmentSpeed(threshold, r.TotalMassKg(), r.CdA, segment, r.Handling)
 	return threshold + rs.WPrime.AvailablePowerAboveFTP(SegmentTime(v, remainingKm))
+}
+
+// driveSquads picks, for each driving team, the domestiques who ride on the
+// front: the fewest whose pace line reaches the pace the team wants
+// (leaderTempoSpeed at the phase's intensity), freshest first, so the work
+// rotates through the team as riders tire and the rest stay sheltered for
+// later, as real teams spend one or two riders at a time.
+func driveSquads(riders []*RiderState, driving map[string]*RiderState, segment *model.Segment, state *RaceState) map[*RiderState]bool {
+	if len(driving) == 0 {
+		return nil
+	}
+	phase := PhaseEarly
+	if state != nil {
+		phase = state.Phase
+	}
+	out := map[*RiderState]bool{}
+	for team, leader := range driving {
+		var doms []*RiderState
+		for _, rs := range riders {
+			if rs.Rider.Team == team && rs.TeamRole == RoleDomestique && !rs.DNF {
+				doms = append(doms, rs)
+			}
+		}
+		fresh := func(rs *RiderState) float64 {
+			return rs.WPrime.FractionRemaining() * rs.CurrentFTP()
+		}
+		sort.SliceStable(doms, func(i, j int) bool { return fresh(doms[i]) > fresh(doms[j]) })
+		target := leaderTempoSpeed(leader, segment, IntensityForPhase(phase))
+		var p, m, cda float64
+		for k, rs := range doms {
+			out[rs] = true
+			r := rs.Rider
+			p += EffectivePower(r, rs.CurrentFTP(), segment, false)
+			m += r.TotalMassKg()
+			cda += r.CdA
+			n := float64(k + 1)
+			if segmentSpeed(p/n, m/n, cda/n*rotationFactor(k+1, segment.SurfaceType), segment, r.Handling) >= target {
+				break
+			}
+		}
+	}
+	return out
+}
+
+// calmBunch: early in a one-day race, once the early break is away and
+// threatens nobody, the bunch eases off and nobody drives; the race gets
+// hard later (stage races ride easy behind a break throughout, see steady).
+func (s *RaceState) calmBunch() bool {
+	return s != nil && !s.IsStageRace && s.Phase == PhaseEarly &&
+		s.HasBreakaway && !s.BreakawayHasDangerous
 }

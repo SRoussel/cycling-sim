@@ -40,8 +40,8 @@ func TestDomestiqueDrivesWhenTerrainFavoursLeader(t *testing.T) {
 	if earlyStage == ActionChase {
 		t.Errorf("stage races: teams should not drive in the early phase")
 	}
-	if earlyOneDay != ActionChase {
-		t.Errorf("one-day races: a favourite's team wears the field down from far out, got %v", earlyOneDay)
+	if earlyOneDay == ActionChase {
+		t.Errorf("one-day races: early on the bunch eases off, nobody drives")
 	}
 }
 

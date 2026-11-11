@@ -107,6 +107,33 @@ func (s *RaceState) attackPays(rs *RiderState, seg *model.Segment) bool {
 	return s.timeToLine([]*RiderState{rs}) < s.timeToLine(chase)
 }
 
+// pressPays reports whether a one-day favourite presses here once the race
+// is on (escapeEligible: after the early phase): on a hard
+// section (a cobbled sector or a real climb) a favourite who is faster over
+// the rest of the course than the group's fastest finisher surges over it,
+// spending W' so that rivals have to spend theirs to hold the wheel and
+// can't fully recover before the next one. Not an attack meant to stay away
+// (attackPays), so it doesn't depend on beating a fresh chase: attrition
+// over many sections is what decides hard classics.
+func (s *RaceState) pressPays(rs *RiderState, seg *model.Segment) bool {
+	if !s.escapeEligible(rs) || s.IsStageRace || !s.isDangerous(rs) {
+		return false
+	}
+	if seg.SurfaceType != model.SurfaceCobbles && climbOf(seg) < terrainClimb {
+		return false
+	}
+	var finisher *RiderState
+	for _, o := range s.Road {
+		if o != rs && !o.DNF && (finisher == nil || SprintPower(o.Rider) > SprintPower(finisher.Rider)) {
+			finisher = o
+		}
+	}
+	if finisher == nil {
+		return false
+	}
+	return s.timeToLine([]*RiderState{rs}) < s.timeToLine([]*RiderState{finisher})
+}
+
 // escapeHolds reports whether a leader ahead of their rivals commits to the
 // line with their road group.
 func (s *RaceState) escapeHolds(rs *RiderState) bool {

@@ -212,6 +212,11 @@ func DecideAction(rs *RiderState, state *RaceState, hasLeader bool, rng *rand.Ra
 	if state != nil && state.Segment != nil && state.attackPays(rs, state.Segment) {
 		return ActionAttack
 	}
+	// One-day races: a favourite who gains from a hard race presses on hard
+	// sections (escape.go), surging to drain rivals' W'.
+	if state != nil && state.Segment != nil && state.pressPays(rs, state.Segment) {
+		return ActionAttack
+	}
 
 	// ------------------------------------------------------------------
 	// Stage-race GC leader on flat/rolling terrain: conserve energy.

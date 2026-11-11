@@ -15,14 +15,14 @@ export function TeamControlPanel({ tc }: { tc: TeamControl }) {
           <div className="sprint-train-header">
             <span>Team orders</span>
           </div>
-          {TEAM_ORDER_KINDS.map((kind) => {
+          {TEAM_ORDER_KINDS.filter((kind) => tc.stageRace || !TEAM_ORDERS[kind].stageRaceOnly).map((kind) => {
             const spec = TEAM_ORDERS[kind]
             const current = tc.teamOrders[kind]
             return (
               <div key={kind} className="team-order-block">
                 <div className="team-orders-row" role="radiogroup" aria-label={spec.label}>
                   <span className="team-orders-label">{spec.label}</span>
-                  {(['auto', 'yes', 'no'] as TeamOrderValue[]).map((value) => (
+                  {(['auto', 'yes', 'no'] as TeamOrderValue[]).filter((value) => spec.options[value]).map((value) => (
                     <button
                       key={value}
                       role="radio"
@@ -31,11 +31,11 @@ export function TeamControlPanel({ tc }: { tc: TeamControl }) {
                       onClick={() => tc.handleTeamOrder(kind, value)}
                       disabled={!tc.sessionId}
                     >
-                      {spec.options[value].label}
+                      {spec.options[value]?.label}
                     </button>
                   ))}
                 </div>
-                <div className="team-orders-help">{spec.options[current].help}</div>
+                <div className="team-orders-help">{spec.options[current]?.help}</div>
               </div>
             )
           })}
@@ -45,6 +45,9 @@ export function TeamControlPanel({ tc }: { tc: TeamControl }) {
             <span>Sprint Train</span>
             <span className={`sprint-phase ${tc.sprintPhaseLabel}`}>{tc.sprintPhaseLabel.toUpperCase()}</span>
           </div>
+          {tc.teamOrders.leadout !== 'yes' && (
+            <div className="team-orders-help">Runs when Lead-out is set to Sprint train.</div>
+          )}
           <div className="attack-pause-toggle">
             <label>
               <input

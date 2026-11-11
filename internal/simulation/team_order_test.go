@@ -107,3 +107,53 @@ func TestTeamPaceOrder(t *testing.T) {
 		t.Error("team B was told to sit in")
 	}
 }
+
+// Protect orders: with the leader dropped behind the main field, the
+// domestiques with him chase, those up the road wait (break riders don't).
+func TestTeamProtectOrder(t *testing.T) {
+	leader := stateFor(1, "A", 420, 64, RoleLeader)
+	withHim := stateFor(2, "A", 380, 70, RoleDomestique)
+	ahead := stateFor(3, "A", 400, 70, RoleDomestique)
+	inBreak := stateFor(4, "A", 400, 70, RoleDomestique)
+	var main []*RiderState
+	main = append(main, ahead)
+	for i := int64(10); i < 30; i++ {
+		main = append(main, stateFor(i, "B", 400, 70, RoleDomestique))
+	}
+	brk := []*RiderState{inBreak, stateFor(40, "C", 400, 70, RoleDomestique)}
+	behind := []*RiderState{leader, withHim}
+	s := &RaceState{Overrides: orders{"A": {Protect: OrderYes}}, Clusters: [][]*RiderState{brk, main, behind},
+		BreakawayRiders: map[int64]bool{inBreak.Rider.ID: true, 40: true}}
+
+	s.Road = behind
+	if !s.protectChase(behind)["A"] {
+		t.Error("the domestique with the dropped leader should pace him back")
+	}
+	s.Road = main
+	if w := s.protectWaits(main); !w[ahead.Rider.ID] || len(w) != 1 {
+		t.Errorf("waits in the main field = %v, want rider 3", w)
+	}
+	s.Road = brk
+	if w := s.protectWaits(brk); len(w) != 0 {
+		t.Errorf("break riders stay up the road: %v", w)
+	}
+	s.Overrides = orders{}
+	s.Road = behind
+	if len(s.protectChase(behind)) != 0 || len(s.protectWaits(main)) != 0 {
+		t.Error("without the order nothing changes")
+	}
+}
+
+// Ambition orders: Ride for the stage makes the team hunt it; Ride for GC
+// stops a hunt the team decided on this morning.
+func TestTeamAmbitionOrder(t *testing.T) {
+	leader := stateFor(1, "A", 420, 64, RoleLeader)
+	s := &RaceState{Overrides: orders{"A": {Ambition: OrderYes}}}
+	if !s.hunting(leader) {
+		t.Error("ordered to ride for the stage, the team hunts it")
+	}
+	s = &RaceState{Overrides: orders{"A": {Ambition: OrderNo}}, Hunting: map[string]bool{"A": true}}
+	if s.hunting(leader) {
+		t.Error("ordered to ride for GC, the team doesn't hunt the stage")
+	}
+}

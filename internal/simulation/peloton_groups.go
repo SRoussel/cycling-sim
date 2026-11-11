@@ -62,6 +62,20 @@ func FormGroups(riders []*RiderState, segment *model.Segment, isTT bool, remaini
 			teamChase[rs.Rider.Team] = true
 		}
 	}
+	// Protect orders: a dropped leader is paced back by the domestiques with
+	// them; those up the road wait.
+	protectBack := state.protectChase(riders)
+	for t := range protectBack {
+		teamChase[t] = true
+	}
+	waiting := state.protectWaits(riders)
+	// Lead-out orders: a team told not to lead out races the finale rider
+	// by rider.
+	for t := range leaderTeams {
+		if state.teamOrders(t).Leadout == OrderNo {
+			leaderTeams[t] = false
+		}
+	}
 	// Stage races: a team keeps its domestiques for today only if it needs
 	// them: a sprinter who can contest the finish, or a leader who is a
 	// favourite or GC contender. Other teams' riders are free to go in the
@@ -138,6 +152,17 @@ func FormGroups(riders []*RiderState, segment *model.Segment, isTT bool, remaini
 			state.LastActions[rs.Rider.ID] = action
 		}
 		power, action = riderEffort(rs, action, segment, remainingDistance, state, driving[rs.Rider.Team], leaderTeams[rs.Rider.Team], teamChase[rs.Rider.Team] && !holdBack, holdBack, chaseAt, *params)
+		if protectBack[rs.Rider.Team] && !commanded && action != ActionAttack && action != ActionChase {
+			if l, _ := state.protectedLeader(rs.Rider.Team); l == rs {
+				// The dropped leader races back with the team (see leaderGoes).
+				power, action = burstPower(rs, segment, remainingDistance), ActionChase
+			}
+		}
+		if waiting[rs.Rider.ID] && !commanded {
+			// Sits up for the leader behind.
+			power = EffectivePower(rs.Rider, rs.CurrentFTP(), segment, false) * easyIntensity
+			action = ActionConserve
+		}
 		if state != nil && state.Overrides != nil {
 			if effortMultiplier, ok := state.Overrides.EffortMultiplier(rs.Rider.ID); ok {
 				power *= effortMultiplier
@@ -206,8 +231,12 @@ func FormGroups(riders []*RiderState, segment *model.Segment, isTT bool, remaini
 	threatening := func(rp riderPower) bool {
 		return finale || state.isDangerous(rp.state) || state.gcContender(rp.state)
 	}
-	var attackers, others []riderPower
+	var attackers, others, waiters []riderPower
 	for _, rp := range rps {
+		if waiting[rp.state.Rider.ID] && rp.action == ActionConserve {
+			waiters = append(waiters, rp) // ride on as their own group
+			continue
+		}
 		// Domestiques don't join a move that contains their own leader.
 		joins := rp.breakaway && !threatening(rp) && len(attackers) < maxBreakawaySize &&
 			!(rp.state.TeamRole == RoleDomestique && breakawayLeaderTeams[rp.state.Rider.Team])
@@ -263,10 +292,8 @@ func FormGroups(riders []*RiderState, segment *model.Segment, isTT bool, remaini
 			}
 		}
 	}
-	if len(others) == 0 {
-		return groups
-	}
-	return append(groups, followSplit(others, segment, len(groups), chasing, finale)...)
+	groups = append(groups, followSplit(others, segment, len(groups), chasing, finale)...)
+	return append(groups, followSplit(waiters, segment, len(groups), false, false)...)
 }
 
 func riderPowerOf(rs *RiderState, rps []riderPower) riderPower {
@@ -615,4 +642,90 @@ func (s *RaceState) applyPaceOrders(driving map[string]*RiderState, riders []*Ri
 			}
 		}
 	}
+}
+
+// protectedLeader is the rider a team protects: its best-climbing leader
+// still in the race, else its sprinter.
+func (s *RaceState) protectedLeader(team string) (*RiderState, int) {
+	var best *RiderState
+	bestAt := -1
+	for ci, c := range s.Clusters {
+		for _, rs := range c {
+			if rs.Rider.Team != team || rs.DNF {
+				continue
+			}
+			better := best == nil ||
+				(rs.TeamRole == RoleLeader && best.TeamRole != RoleLeader) ||
+				(rs.TeamRole == best.TeamRole && climbingWKg(rs.Rider) > climbingWKg(best.Rider))
+			if (rs.TeamRole == RoleLeader || rs.TeamRole == RoleSprinter) && better {
+				best, bestAt = rs, ci
+			}
+		}
+	}
+	return best, bestAt
+}
+
+// clusterOf is the index of the road cluster holding riders (front first).
+func (s *RaceState) clusterOf(riders []*RiderState) int {
+	if len(riders) == 0 {
+		return -1
+	}
+	for ci, c := range s.Clusters {
+		for _, rs := range c {
+			if rs == riders[0] {
+				return ci
+			}
+		}
+	}
+	return -1
+}
+
+// protectChase returns the teams ordered to protect their leader whose
+// leader is in this group, dropped behind the main field: their domestiques
+// here pace the leader back.
+func (s *RaceState) protectChase(riders []*RiderState) map[string]bool {
+	if s == nil || s.Overrides == nil || !s.behindMainField() {
+		return nil
+	}
+	out := map[string]bool{}
+	for _, rs := range riders {
+		t := rs.Rider.Team
+		if out[t] || s.teamOrders(t).Protect != OrderYes {
+			continue
+		}
+		if l, _ := s.protectedLeader(t); l == rs {
+			out[t] = true
+		}
+	}
+	return out
+}
+
+// protectWaits returns the domestiques in this group who wait for their
+// protected leader in a road group behind (not riders in a break: they are
+// up the road on purpose).
+func (s *RaceState) protectWaits(riders []*RiderState) map[int64]bool {
+	if s == nil || s.Overrides == nil {
+		return nil
+	}
+	here := s.clusterOf(riders)
+	out := map[int64]bool{}
+	for _, rs := range riders {
+		t := rs.Rider.Team
+		if rs.TeamRole != RoleDomestique || s.BreakawayRiders[rs.Rider.ID] || s.teamOrders(t).Protect != OrderYes {
+			continue
+		}
+		if l, at := s.protectedLeader(t); l != nil && at > here {
+			out[rs.Rider.ID] = true
+		}
+	}
+	return out
+}
+
+// burstPower is what a rider can sustain to the line: threshold plus their W'
+// spread over the time left at threshold pace.
+func burstPower(rs *RiderState, segment *model.Segment, remainingKm float64) float64 {
+	r := rs.Rider
+	threshold := EffectivePower(r, rs.CurrentFTP(), segment, false)
+	v := segmentSpeed(threshold, r.TotalMassKg(), r.CdA, segment, r.Handling)
+	return threshold + rs.WPrime.AvailablePowerAboveFTP(SegmentTime(v, remainingKm))
 }

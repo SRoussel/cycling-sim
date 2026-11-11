@@ -40,7 +40,7 @@ export interface AttackAlert {
   line: string
 }
 
-export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: string; initialEvents?: string[] }) {
+export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: string; initialEvents?: string[]; stageRace?: boolean }) {
   const { interactiveMode } = opts
 
   // ── Event log ─────────────────────────────────────────────
@@ -352,7 +352,7 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
     try {
       await App.SetTeamOrder(sessionId!, kind, value)
       setTeamOrders((prev) => ({ ...prev, [kind]: value }))
-      appendEvents([`📣 Team order: ${TEAM_ORDERS[kind].label}: ${TEAM_ORDERS[kind].options[value].label}`])
+      appendEvents([`📣 Team order: ${TEAM_ORDERS[kind].label}: ${TEAM_ORDERS[kind].options[value]?.label ?? value}`])
     } catch (err) {
       console.error('Failed to set team order', err)
     }
@@ -409,6 +409,7 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
     pauseOnRivalAttacks,
     setPauseOnRivalAttacks,
     teamOrders,
+    stageRace: opts.stageRace ?? false,
     attackAlert,
     followAttackRiderId,
     setFollowAttackRiderId,
@@ -437,15 +438,21 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
 export type TeamControl = ReturnType<typeof useTeamControl>
 
 // Team orders: standing orders for the player's team (see SetTeamOrder).
-export type TeamOrderKind = 'chase' | 'break' | 'pace'
+export type TeamOrderKind = 'chase' | 'break' | 'pace' | 'protect' | 'leadout' | 'ambition'
 export type TeamOrderValue = 'auto' | 'yes' | 'no'
 export type TeamOrders = Record<TeamOrderKind, TeamOrderValue>
 
-export const DEFAULT_TEAM_ORDERS: TeamOrders = { chase: 'auto', break: 'auto', pace: 'auto' }
+export const DEFAULT_TEAM_ORDERS: TeamOrders = { chase: 'auto', break: 'auto', pace: 'auto', protect: 'auto', leadout: 'auto', ambition: 'auto' }
 
-export const TEAM_ORDER_KINDS: TeamOrderKind[] = ['chase', 'break', 'pace']
+type OrderSpec = {
+  label: string
+  stageRaceOnly?: boolean
+  options: Partial<Record<TeamOrderValue, { label: string; help: string }>>
+}
 
-export const TEAM_ORDERS: Record<TeamOrderKind, { label: string; options: Record<TeamOrderValue, { label: string; help: string }> }> = {
+export const TEAM_ORDER_KINDS: TeamOrderKind[] = ['chase', 'break', 'pace', 'protect', 'leadout', 'ambition']
+
+export const TEAM_ORDERS: Record<TeamOrderKind, OrderSpec> = {
   chase: {
     label: 'Chasing',
     options: {
@@ -459,7 +466,7 @@ export const TEAM_ORDERS: Record<TeamOrderKind, { label: string; options: Record
     options: {
       auto: { label: 'Riders decide', help: 'Riders the team can spare today may go with moves.' },
       yes: { label: 'Get in the break', help: 'Your two strongest domestiques attack until one of them is up the road (not in the finale).' },
-      no: { label: 'Stay together', help: 'Your domestiques don\'t go in breaks; leaders still attack when it pays.' },
+      no: { label: 'Stay together', help: "Your domestiques don't go in breaks; leaders still attack when it pays." },
     },
   },
   pace: {
@@ -468,6 +475,30 @@ export const TEAM_ORDERS: Record<TeamOrderKind, { label: string; options: Record
       auto: { label: 'Team decides', help: 'Your domestiques set the pace when a hard tempo would drop the fast finishers.' },
       yes: { label: 'Set the pace', help: 'Your domestiques ride a tempo for your leader at the front of their group.' },
       no: { label: 'Sit in', help: 'Your domestiques never drive the group.' },
+    },
+  },
+  protect: {
+    label: 'Leader',
+    options: {
+      auto: { label: 'Team decides', help: "Domestiques shelter the leader in their group, but nobody waits if the leader is dropped." },
+      yes: { label: 'Protect', help: 'If your leader is dropped, domestiques up the road wait and those with them pace them back to the bunch.' },
+    },
+  },
+  leadout: {
+    label: 'Lead-out',
+    options: {
+      auto: { label: 'Team decides', help: 'Domestiques ride for your leader or sprinter and empty themselves in the last 3 km.' },
+      yes: { label: 'Sprint train', help: 'From 8 km out your riders follow the Sprint Train order below; the last one sprints.' },
+      no: { label: 'No lead-out', help: 'Every rider races the finale for their own result.' },
+    },
+  },
+  ambition: {
+    label: 'Goal',
+    stageRaceOnly: true,
+    options: {
+      auto: { label: 'Team decides', help: 'Each morning the team decides whether to hunt the stage, defending your GC place either way.' },
+      yes: { label: 'Stage win', help: "Your team brings the break back so your leader can race for the stage." },
+      no: { label: 'GC only', help: "No hunting the stage and no chasing for your sprinter: everything for the GC." },
     },
   },
 }

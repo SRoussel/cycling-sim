@@ -54,6 +54,13 @@ func TestSprintTrainDirectives(t *testing.T) {
 	if _, ok := s.SprintTrainDirective(3, "Team B", 5); ok {
 		t.Error("other teams must not be directed")
 	}
+	if _, ok := s.SprintTrainDirective(3, "Team A", 5); ok {
+		t.Error("the train runs only on the lead-out order")
+	}
+	if st := s.SprintTrainState(5); st.SprintTrainPhase != "idle" {
+		t.Errorf("phase without lead-out order = %s, want idle", st.SprintTrainPhase)
+	}
+	s.SetTeamOrder("leadout", simulation.OrderYes)
 	if a, _ := s.SprintTrainDirective(3, "Team A", 5); a != simulation.ActionChase {
 		t.Errorf("lead-out rider should chase, got %v", a)
 	}
@@ -116,13 +123,15 @@ func TestTeamOrdersApplyToControlledTeamOnly(t *testing.T) {
 		t.Fatalf("default orders = %+v, want auto", got)
 	}
 	if !s.SetTeamOrder("chase", simulation.OrderNo) || !s.SetTeamOrder("break", simulation.OrderYes) ||
-		!s.SetTeamOrder("pace", simulation.OrderYes) {
+		!s.SetTeamOrder("pace", simulation.OrderYes) || !s.SetTeamOrder("protect", simulation.OrderYes) ||
+		!s.SetTeamOrder("leadout", simulation.OrderNo) || !s.SetTeamOrder("ambition", simulation.OrderYes) {
 		t.Fatal("known order kinds rejected")
 	}
 	if s.SetTeamOrder("sprint", simulation.OrderYes) {
 		t.Error("unknown order kind accepted")
 	}
-	want := simulation.TeamOrders{Chase: simulation.OrderNo, Break: simulation.OrderYes, Pace: simulation.OrderYes}
+	want := simulation.TeamOrders{Chase: simulation.OrderNo, Break: simulation.OrderYes, Pace: simulation.OrderYes,
+		Protect: simulation.OrderYes, Leadout: simulation.OrderNo, Ambition: simulation.OrderYes}
 	if got := s.TeamOrders("Team A"); got != want {
 		t.Errorf("controlled team orders = %+v, want %+v", got, want)
 	}

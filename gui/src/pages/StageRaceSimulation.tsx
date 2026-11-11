@@ -40,7 +40,7 @@ function StageRaceSimulation() {
   const interactiveMode = location.state?.interactiveMode as boolean ?? false
   const initialTeam = location.state?.controlledTeam as string ?? ''
 
-  const tc = useTeamControl({ interactiveMode, initialTeam })
+  const tc = useTeamControl({ interactiveMode, initialTeam, stageRace: true })
   const { appendEvents, sessionId } = tc
 
   const [stageRace, setStageRace] = useState<main.StageRaceInfo | null>(null)

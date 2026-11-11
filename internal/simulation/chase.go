@@ -117,12 +117,17 @@ func (s *RaceState) planChase(group []*RiderState) chasePlan {
 					}
 				}
 			case RoleSprinter:
-				if s.sprinterCanFollow(p, group) {
+				if s.teamOrders(p.Rider.Team).Ambition != OrderNo && s.sprinterCanFollow(p, group) {
 					a = -catchMarginS
 				}
 			}
 			if teamIn(brk, p.Rider.Team) {
 				continue
+			}
+			// Ordered to ride for the stage: the leader's team has the
+			// break back before the line, as a one-day favourite's does.
+			if p.TeamRole == RoleLeader && s.IsStageRace && s.teamOrders(p.Rider.Team).Ambition == OrderYes {
+				a = math.Min(a, -catchMarginS)
 			}
 			switch s.teamOrders(p.Rider.Team).Chase {
 			case OrderNo:
@@ -134,7 +139,7 @@ func (s *RaceState) planChase(group []*RiderState) chasePlan {
 				if old, ok := allow[p.Rider.Team]; !ok || a < old {
 					allow[p.Rider.Team] = a
 				}
-			} else if p.TeamRole == RoleLeader && s.isDangerous(p) && s.Hunting[p.Rider.Team] {
+			} else if p.TeamRole == RoleLeader && s.hunting(p) {
 				hunters[p.Rider.Team] = true
 			}
 		}
@@ -670,4 +675,17 @@ func (s *RaceState) tempoDrops(leader, finisher *RiderState, segment *model.Segm
 		}
 	}
 	return false
+}
+
+// hunting reports whether a leader's team rides for today's stage: the
+// player's ambition order, else the team's morning decision for a
+// favourite (setHunting).
+func (s *RaceState) hunting(leader *RiderState) bool {
+	switch s.teamOrders(leader.Rider.Team).Ambition {
+	case OrderYes:
+		return true
+	case OrderNo:
+		return false
+	}
+	return s.isDangerous(leader) && s.Hunting[leader.Rider.Team]
 }

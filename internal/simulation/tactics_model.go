@@ -58,10 +58,19 @@ const (
 //   - Pace: Yes, the domestiques set the pace for the team leader in their
 //     group (as a team driving on its own judgement does, drivingTeams);
 //     No, they never drive.
+//   - Protect: Yes, domestiques ahead of a dropped leader wait for them and
+//     those with the leader pace them back to the main field (protectWaits,
+//     protectChase).
+//   - Leadout: Yes, the player's sprint train (the session's
+//     SprintTrainDirective) runs the last 8 km; No, nobody leads out: the
+//     domestiques race the finale for themselves.
+//   - Ambition (stage races): Yes, ride for the stage (the team hunts it, as
+//     setHunting decides for AI teams); No, ride for GC (no stage hunting, no
+//     chase for the team's sprinter).
 //
 // A command the player gives a rider directly always wins.
 type TeamOrders struct {
-	Chase, Break, Pace Order
+	Chase, Break, Pace, Protect, Leadout, Ambition Order
 }
 
 // TeamOrderProvider is optionally implemented by an ActionOverrideProvider

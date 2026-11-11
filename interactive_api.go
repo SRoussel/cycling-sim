@@ -267,8 +267,11 @@ func (a *App) LaunchSprint(sessionID string, riderID int64) {
 }
 
 // SetTeamOrder sets one of the player's team orders. kind: "chase" (help
-// chase breaks and moves), "break" (get riders in the break) or "pace" (set
-// the pace for the leader). value: "auto" (the team decides), "yes" or "no".
+// chase breaks and moves), "break" (get riders in the break), "pace" (set
+// the pace for the leader), "protect" (wait for and pace back a dropped
+// leader), "leadout" (the sprint train) or "ambition" (stage races: yes =
+// ride for the stage, no = ride for GC). value: "auto" (the team decides),
+// "yes" or "no".
 func (a *App) SetTeamOrder(sessionID string, kind string, value string) {
 	sess := a.getSession(sessionID)
 	if sess == nil {

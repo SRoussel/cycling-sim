@@ -94,6 +94,10 @@ func (s *interactiveSession) SprintTrainDirective(riderID int64, riderTeam strin
 	if _, ok := s.followMap[riderID]; ok {
 		return simulation.ActionChase, true
 	}
+	// The sprint train runs only on the player's lead-out order.
+	if s.teamOrders.Leadout != simulation.OrderYes {
+		return simulation.ActionHold, false
+	}
 
 	for idx, id := range s.sprintTrainOrder {
 		if id != riderID {
@@ -125,7 +129,7 @@ func (s *interactiveSession) SprintTrainState(kmRemaining float64) *simulation.T
 	phase := "idle"
 	if s.launchingRiderID != 0 {
 		phase = "launch"
-	} else if kmRemaining <= 8.0 && (len(order) > 0 || len(follow) > 0) {
+	} else if kmRemaining <= 8.0 && ((len(order) > 0 && s.teamOrders.Leadout == simulation.OrderYes) || len(follow) > 0) {
 		phase = "following"
 	}
 
@@ -309,6 +313,12 @@ func (s *interactiveSession) SetTeamOrder(kind string, order simulation.Order) b
 		s.teamOrders.Break = order
 	case "pace":
 		s.teamOrders.Pace = order
+	case "protect":
+		s.teamOrders.Protect = order
+	case "leadout":
+		s.teamOrders.Leadout = order
+	case "ambition":
+		s.teamOrders.Ambition = order
 	default:
 		return false
 	}

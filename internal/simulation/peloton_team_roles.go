@@ -168,19 +168,21 @@ func AssignCoLeaders(states []*RiderState, gcGaps map[int64]float64, plan map[in
 }
 
 // AssignCourseLeaders picks each team's leader for a one-day race: the
-// rider who would be fastest over this course riding at threshold (its real
-// profile, wind and surfaces), so climbers lead on hilly courses and big
-// engines on flatter ones. Sprinters keep their role; the previous leader
-// rides for the new one. (AssignTeamRoles goes by an average of ability
-// ratings, which made Kwiatkowski INEOS's Milan-San Remo leader over Ganna.)
+// rider who would be fastest over the course's hard sections (see
+// decisiveTime), so climbers lead on long climbs, puncheurs on short steep
+// ones and big engines on flatter courses. A sprinter who is his team's
+// best there leads too (a fast puncheur is no pure sprinter); other
+// sprinters keep their role. The previous leader rides for the new one.
+// (AssignTeamRoles goes by an average of ability ratings, which made
+// Kwiatkowski INEOS's Milan-San Remo leader over Ganna.)
 func AssignCourseLeaders(states []*RiderState, segments []model.Segment) {
 	best := map[string]*RiderState{}
 	bestTime := map[string]float64{}
 	for _, rs := range states {
-		if rs.DNF || rs.TeamRole == RoleSprinter {
+		if rs.DNF {
 			continue
 		}
-		t := courseTime(rs, segments)
+		t := decisiveTime(rs, segments)
 		if b := best[rs.Rider.Team]; b == nil || t < bestTime[rs.Rider.Team] {
 			best[rs.Rider.Team], bestTime[rs.Rider.Team] = rs, t
 		}
@@ -193,6 +195,33 @@ func AssignCourseLeaders(states []*RiderState, segments []model.Segment) {
 	for _, b := range best {
 		b.TeamRole = RoleLeader
 	}
+}
+
+// decisiveTime is a rider's time over a course's hard sections (climbs and
+// cobbles), where one-day races are decided: each ridden alone at
+// threshold plus their W' spread over it (a short steep climb is a
+// puncheur's, a long one a climber's). Flat roads are ridden in the bunch,
+// at everyone's speed, so they don't count. A course with no hard section
+// falls back to the whole course at threshold (courseTime).
+func decisiveTime(rs *RiderState, segments []model.Segment) float64 {
+	r := rs.Rider
+	t, hard := 0.0, false
+	for i := range segments {
+		seg := &segments[i]
+		if seg.SurfaceType != model.SurfaceCobbles && climbOf(seg) < terrainClimb {
+			continue
+		}
+		hard = true
+		thr := EffectivePower(r, rs.CurrentFTP(), seg, false)
+		v := segmentSpeed(thr, r.TotalMassKg(), r.CdA, seg, r.Handling)
+		p := thr + rs.WPrime.AvailablePowerAboveFTP(SegmentTime(v, seg.DistanceKm))
+		v = math.Min(SpeedCap(r, seg), segmentSpeed(p, r.TotalMassKg(), r.CdA, seg, r.Handling))
+		t += SegmentTime(v, seg.DistanceKm)
+	}
+	if !hard {
+		return courseTime(rs, segments)
+	}
+	return t
 }
 
 // courseTime is a rider's time over the segments alone at threshold.

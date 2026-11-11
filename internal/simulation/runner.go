@@ -5,6 +5,7 @@ import (
 	"math"
 	"math/rand"
 	"sort"
+	"time"
 
 	"cycling_sim/internal/model"
 )
@@ -206,6 +207,7 @@ func SimulateRoadRaceWithProgress(config RaceConfig, onProgress func(ProgressSna
 	rng := rngFromSeed(config.Seed)
 
 	states := initStates(config.Riders, rng)
+	applySeasonForm(states, config.FormDate)
 	segments := PrepareSegments(config.Course.Segments, config.Race, 0)
 	if len(segments) == 0 {
 		return nil
@@ -387,6 +389,12 @@ func SimulateStageRaceWithProgress(stageRace *model.StageRace, stages []StageCon
 		plan[r.ID] = planRNG.Float64()
 	}
 	stageWins := map[int64]int{}
+	// Seasonal form holds for the whole race: the form of its middle day.
+	var formDate time.Time
+	if n := len(stages); n > 0 && stages[0].SeasonalForm && stages[0].Race != nil && stages[n-1].Race != nil {
+		first, last := stages[0].Race.Date, stages[n-1].Race.Date
+		formDate = first.Add(last.Sub(first) / 2)
+	}
 
 	fatigueMap := make(map[int64]*StageFatigueState)
 	for i := range riders {
@@ -478,6 +486,7 @@ func SimulateStageRaceWithProgress(stageRace *model.StageRace, stages []StageCon
 			Shape:           stage.Shape,
 			Prestige:        stage.Prestige,
 			StageWins:       stageWins,
+			FormDate:        formDate,
 		}
 
 		var results []model.RaceResult

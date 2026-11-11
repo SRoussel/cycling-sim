@@ -29,6 +29,9 @@ type RaceConfig struct {
 	// has won so far (see setHunting).
 	Prestige  float64
 	StageWins map[int64]int
+	// FormDate, when set, gives riders their seasonal form for that date
+	// (see SeasonForm); zero: everyone at their best (one-off races).
+	FormDate time.Time
 }
 
 // SimulateRoadRace runs a complete road race simulation and returns results.
@@ -40,6 +43,7 @@ func SimulateRoadRace(config RaceConfig) []model.RaceResult {
 func SimulateTT(config RaceConfig) []model.RaceResult {
 	rng := rngFromSeed(config.Seed)
 	states := initStates(config.Riders, rng)
+	applySeasonForm(states, config.FormDate)
 
 	segments := PrepareSegments(config.Course.Segments, config.Race, 0)
 
@@ -131,4 +135,7 @@ type StageConfig struct {
 	Prestige      float64 // how coveted the stage is (0-1)
 	// Shape, when set, records how the stage unfolds (see RaceShape).
 	Shape *RaceShape
+	// SeasonalForm: riders race with their form on the stage race's middle
+	// day (read from the first stage; see SeasonForm).
+	SeasonalForm bool
 }

@@ -243,3 +243,30 @@ func (s *RaceState) timeToLine(line []*RiderState) float64 {
 
 // wkg is a rider's current threshold per kilogram.
 func wkg(rs *RiderState) float64 { return rs.CurrentFTP() / rs.Rider.TotalMassKg() }
+
+// sprintLoserAttacks: in a one-day race, once the race is on, a leader in a
+// group with rival leaders who would beat him in the sprint attacks on the
+// hard sections whenever he has at least as much of his reserve left as
+// they do: it is his only chance, and each attack costs everyone who answers
+// it. Riders who can't follow are dropped (FormGroups); repeated attacks
+// wear the sprinters down.
+func (s *RaceState) sprintLoserAttacks(rs *RiderState, seg *model.Segment) bool {
+	if !s.escapeEligible(rs) || s.IsStageRace {
+		return false
+	}
+	if seg.SurfaceType != model.SurfaceCobbles && climbOf(seg) < terrainClimb {
+		return false
+	}
+	mine := FatiguedSprintPower(rs)
+	faster := false
+	for _, o := range s.Road {
+		if !rivalLeaderOf(rs, o) || FatiguedSprintPower(o) <= mine {
+			continue
+		}
+		faster = true
+		if o.WPrime.FractionRemaining() > rs.WPrime.FractionRemaining() {
+			return false // he has more left: wait for a better moment
+		}
+	}
+	return faster
+}

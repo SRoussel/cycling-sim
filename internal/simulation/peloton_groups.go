@@ -474,7 +474,19 @@ func riderEffort(rs *RiderState, action Action, segment *model.Segment, remainin
 	// A rival up the road is chased to the line: by the leader's domestiques
 	// when the team has them here (the leader sits in, see shelteredFor),
 	// otherwise by the rider themself.
-	if !holdBack && (state.rivalAhead(rs) || (teamChase && rs.TeamRole == RoleDomestique)) {
+	if !holdBack && teamChase && rs.TeamRole == RoleDomestique {
+		return burstOver(remainingKm), ActionChase
+	}
+	if !holdBack && state.rivalAhead(rs) {
+		// One-day races: a chase of rivals is no pace line. A rider who would
+		// win the sprint of his chase group sits on (why tow the others?);
+		// the rest ride their threshold, each waiting for the others.
+		if state != nil && !state.IsStageRace {
+			if state.outsprintsChase(rs) {
+				return steady(), ActionHold
+			}
+			return threshold, ActionChase
+		}
 		return burstOver(remainingKm), ActionChase
 	}
 	// A leader clear of their rivals who can hold it commits to the line.
@@ -794,4 +806,21 @@ func driveSquads(riders []*RiderState, driving map[string]*RiderState, segment *
 func (s *RaceState) calmBunch() bool {
 	return s != nil && !s.IsStageRace && s.Phase == PhaseEarly &&
 		s.HasBreakaway && !s.BreakawayHasDangerous
+}
+
+// outsprintsChase reports whether rs is in the faster-finishing half of the
+// riders in his road group chasing a rival.
+func (s *RaceState) outsprintsChase(rs *RiderState) bool {
+	mine := FatiguedSprintPower(rs)
+	faster, chasers := 0, 0
+	for _, o := range s.Road {
+		if o.DNF || !s.rivalAhead(o) {
+			continue
+		}
+		chasers++
+		if o != rs && FatiguedSprintPower(o) > mine {
+			faster++
+		}
+	}
+	return chasers > 1 && faster < chasers/2
 }

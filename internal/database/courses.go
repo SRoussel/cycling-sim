@@ -65,9 +65,9 @@ func (db *DB) CreateSegment(s *model.Segment) error {
 		return fmt.Errorf("invalid segment: %w", err)
 	}
 	result, err := db.Exec(`
-		INSERT INTO segments (course_id, segment_order, name, distance_km, gradient_pct, surface_type, is_technical, heading_deg)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-		s.CourseID, s.SegmentOrder, s.Name, s.DistanceKm, s.GradientPct, string(s.SurfaceType), boolToInt(s.IsTechnical), s.HeadingDeg)
+		INSERT INTO segments (course_id, segment_order, name, distance_km, gradient_pct, surface_type, is_technical, heading_deg, cobble_stars)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		s.CourseID, s.SegmentOrder, s.Name, s.DistanceKm, s.GradientPct, string(s.SurfaceType), boolToInt(s.IsTechnical), s.HeadingDeg, s.CobbleStars)
 	if err != nil {
 		return fmt.Errorf("inserting segment: %w", err)
 	}
@@ -82,7 +82,7 @@ func (db *DB) CreateSegment(s *model.Segment) error {
 // GetSegments returns all segments for a course, ordered.
 func (db *DB) GetSegments(courseID int64) ([]model.Segment, error) {
 	rows, err := db.Query(`
-		SELECT id, course_id, segment_order, name, distance_km, gradient_pct, surface_type, is_technical, heading_deg
+		SELECT id, course_id, segment_order, name, distance_km, gradient_pct, surface_type, is_technical, heading_deg, cobble_stars
 		FROM segments WHERE course_id = ? ORDER BY segment_order`, courseID)
 	if err != nil {
 		return nil, fmt.Errorf("getting segments for course %d: %w", courseID, err)
@@ -94,7 +94,7 @@ func (db *DB) GetSegments(courseID int64) ([]model.Segment, error) {
 		var s model.Segment
 		var surface string
 		var tech int
-		if err := rows.Scan(&s.ID, &s.CourseID, &s.SegmentOrder, &s.Name, &s.DistanceKm, &s.GradientPct, &surface, &tech, &s.HeadingDeg); err != nil {
+		if err := rows.Scan(&s.ID, &s.CourseID, &s.SegmentOrder, &s.Name, &s.DistanceKm, &s.GradientPct, &surface, &tech, &s.HeadingDeg, &s.CobbleStars); err != nil {
 			return nil, fmt.Errorf("scanning segment: %w", err)
 		}
 		s.SurfaceType = model.SurfaceType(surface)
@@ -130,9 +130,9 @@ func (db *DB) ReplaceSegments(courseID int64, segs []model.Segment) error {
 			tx.Rollback()
 			return fmt.Errorf("segment %d: %w", i+1, err)
 		}
-		if _, err := tx.Exec(`INSERT INTO segments (course_id, segment_order, name, distance_km, gradient_pct, surface_type, is_technical, heading_deg)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, s.CourseID, s.SegmentOrder, s.Name, s.DistanceKm, s.GradientPct,
-			string(s.SurfaceType), boolToInt(s.IsTechnical), s.HeadingDeg); err != nil {
+		if _, err := tx.Exec(`INSERT INTO segments (course_id, segment_order, name, distance_km, gradient_pct, surface_type, is_technical, heading_deg, cobble_stars)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`, s.CourseID, s.SegmentOrder, s.Name, s.DistanceKm, s.GradientPct,
+			string(s.SurfaceType), boolToInt(s.IsTechnical), s.HeadingDeg, s.CobbleStars); err != nil {
 			tx.Rollback()
 			return err
 		}

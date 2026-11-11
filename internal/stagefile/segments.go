@@ -109,6 +109,7 @@ func Segments(st *Stage, totalKm float64) ([]model.Segment, error) {
 			s.SurfaceType = model.SurfaceCobbles
 			s.IsTechnical = true
 			s.Name = fmt.Sprintf("%s (%d★)", p.sector.Name, p.sector.Stars)
+			s.CobbleStars = p.sector.Stars
 		case grad >= 3:
 			s.Name = fmt.Sprintf("Climb at km %.0f", at)
 		case grad <= -3:

@@ -46,15 +46,39 @@ func ForceGravity(totalMassKg float64, gradientPct float64) float64 {
 
 // ForceRolling returns the rolling resistance force.
 func ForceRolling(totalMassKg float64, gradientPct float64, surface model.SurfaceType, handling int) float64 {
+	return forceRolling(totalMassKg, gradientPct, surface, handling, 1)
+}
+
+// forceRolling is ForceRolling with cobbles' resistance scaled by roughness
+// (see cobbleRoughness).
+func forceRolling(totalMassKg float64, gradientPct float64, surface model.SurfaceType, handling int, roughness float64) float64 {
 	angle := math.Atan(gradientPct / 100.0)
 	c := crr
 
 	if surface == model.SurfaceCobbles {
 		// Apply handling-based rolling resistance on cobbles
-		c = crrCobbles * HandlingFactor(handling)
+		c = crrCobbles * roughness * HandlingFactor(handling)
 	}
 
 	return c * totalMassKg * gravity * math.Cos(angle)
+}
+
+// cobbleRoughness scales cobbles' rolling resistance by a sector's star
+// rating (the race organisers' difficulty grading): crrCobbles is a 3-star
+// sector; 1-star pavé rolls at ~0.008, a 5-star sector like the Trouée
+// d'Arenberg at ~0.020 (vibration losses on rough pavé). Unknown: 1.
+func cobbleRoughness(stars int) float64 {
+	switch stars {
+	case 1:
+		return 0.67
+	case 2:
+		return 0.83
+	case 4:
+		return 1.33
+	case 5:
+		return 1.67
+	}
+	return 1
 }
 
 // HandlingFactor returns a multiplier to apply to cobbles rolling resistance
@@ -110,10 +134,15 @@ func SpeedFromPowerWind(powerWatts float64, totalMassKg float64, cda float64, gr
 }
 
 func speedFromPowerAir(powerWatts float64, totalMassKg float64, cda float64, gradientPct float64, surface model.SurfaceType, handling int, headwindMPS float64) float64 {
+	return speedFromPowerRough(powerWatts, totalMassKg, cda, gradientPct, surface, handling, headwindMPS, 1)
+}
+
+// speedFromPowerRough is speedFromPowerAir with cobble roughness.
+func speedFromPowerRough(powerWatts float64, totalMassKg float64, cda float64, gradientPct float64, surface model.SurfaceType, handling int, headwindMPS, roughness float64) float64 {
 	if headwindMPS == 0 {
-		return speedFromPowerCalm(powerWatts, totalMassKg, cda, gradientPct, surface, handling)
+		return speedFromPowerCalmRough(powerWatts, totalMassKg, cda, gradientPct, surface, handling, roughness)
 	}
-	fStatic := ForceGravity(totalMassKg, gradientPct) + ForceRolling(totalMassKg, gradientPct, surface, handling)
+	fStatic := ForceGravity(totalMassKg, gradientPct) + forceRolling(totalMassKg, gradientPct, surface, handling, roughness)
 	f := func(v float64) float64 {
 		air := v + headwindMPS
 		return (0.5*cda*airDensity*air*math.Abs(air)+fStatic)*v - powerWatts
@@ -134,8 +163,12 @@ func speedFromPowerAir(powerWatts float64, totalMassKg float64, cda float64, gra
 }
 
 func speedFromPowerCalm(powerWatts float64, totalMassKg float64, cda float64, gradientPct float64, surface model.SurfaceType, handling int) float64 {
+	return speedFromPowerCalmRough(powerWatts, totalMassKg, cda, gradientPct, surface, handling, 1)
+}
+
+func speedFromPowerCalmRough(powerWatts float64, totalMassKg float64, cda float64, gradientPct float64, surface model.SurfaceType, handling int, roughness float64) float64 {
 	fGrav := ForceGravity(totalMassKg, gradientPct)
-	fRoll := ForceRolling(totalMassKg, gradientPct, surface, handling)
+	fRoll := forceRolling(totalMassKg, gradientPct, surface, handling, roughness)
 
 	// f(v) = 0.5 * cda * rho * v³ + (fGrav + fRoll) * v - P = 0
 	// f'(v) = 1.5 * cda * rho * v² + (fGrav + fRoll)

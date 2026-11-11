@@ -40,6 +40,7 @@ type Segment struct {
 	SurfaceType  SurfaceType
 	IsTechnical  bool
 	HeadingDeg   float64 // direction of travel, 0=N, 90=E (compass degrees)
+	CobbleStars  int     // a cobbled/gravel sector's difficulty, 1-5 stars (0: unknown)
 
 	// Wind relative to this segment, set by the simulation for a given race
 	// (not stored). Headwind is negative for a tailwind.

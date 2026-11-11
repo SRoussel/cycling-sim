@@ -64,6 +64,7 @@ type SegmentJSON struct {
 	DistanceKm  float64 `json:"km"`
 	GradientPct float64 `json:"gradient"`
 	Cobbles     bool    `json:"cobbles,omitempty"`
+	Stars       int     `json:"stars,omitempty"` // sector difficulty, 1-5
 }
 
 // ModelSegments returns the profile's segments as model segments.
@@ -75,7 +76,7 @@ func (p Profile) ModelSegments() []model.Segment {
 			surface = model.SurfaceCobbles
 		}
 		out[i] = model.Segment{SegmentOrder: i + 1, Name: s.Name, DistanceKm: s.DistanceKm,
-			GradientPct: s.GradientPct, SurfaceType: surface, IsTechnical: s.Cobbles}
+			GradientPct: s.GradientPct, SurfaceType: surface, IsTechnical: s.Cobbles, CobbleStars: s.Stars}
 	}
 	return out
 }
@@ -104,7 +105,7 @@ func Build(dir string, sources []Source, distanceKm map[string]float64) ([]Profi
 		p := Profile{Course: s.Course, Stage: st.Name, File: s.File}
 		for _, sg := range segs {
 			p.Segments = append(p.Segments, SegmentJSON{Name: sg.Name, DistanceKm: sg.DistanceKm,
-				GradientPct: sg.GradientPct, Cobbles: sg.SurfaceType == model.SurfaceCobbles})
+				GradientPct: sg.GradientPct, Cobbles: sg.SurfaceType == model.SurfaceCobbles, Stars: sg.CobbleStars})
 		}
 		out = append(out, p)
 	}

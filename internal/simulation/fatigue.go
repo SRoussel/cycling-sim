@@ -9,6 +9,7 @@ import (
 // WPrimeState tracks the W' (anaerobic work capacity) balance within a stage.
 type WPrimeState struct {
 	WPrimeMax     float64 // Maximum W' in joules (15000-25000)
+	WPrimeBase    float64 // fresh W' max (WPrimeMax fades with durability)
 	WPrimeCurrent float64 // Current W' balance
 	ReconRate     float64 // Reconstitution rate constant (from Recovery attribute)
 }
@@ -239,5 +240,16 @@ func (rs *RiderState) thresholdIntOn(seg *model.Segment) int {
 func (rs *RiderState) addWork(powerWatts, seconds float64) {
 	if powerWatts > 0 && seconds > 0 {
 		rs.WorkKJ += powerWatts * seconds / 1000
+	}
+	// The anaerobic reserve fades with the day's work like threshold does
+	// (W' falls after prolonged exercise as CP does; Clark et al. 2019).
+	if rs.WPrime != nil {
+		if rs.WPrime.WPrimeBase == 0 {
+			rs.WPrime.WPrimeBase = rs.WPrime.WPrimeMax
+		}
+		rs.WPrime.WPrimeMax = rs.WPrime.WPrimeBase * DurabilityFactor(rs.WorkKJ, rs.Rider.Endurance)
+		if rs.WPrime.WPrimeCurrent > rs.WPrime.WPrimeMax {
+			rs.WPrime.WPrimeCurrent = rs.WPrime.WPrimeMax
+		}
 	}
 }

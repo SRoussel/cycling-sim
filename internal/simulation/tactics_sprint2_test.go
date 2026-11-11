@@ -26,9 +26,10 @@ func TestDomestiqueDrivesWhenTerrainFavoursLeader(t *testing.T) {
 	// Climb: the climber's W/kg wins, so the team drives to drop the sprinter.
 	climbSeg := &model.Segment{GradientPct: 6.0, DistanceKm: 8, SurfaceType: model.SurfaceRoad}
 
-	flatAction := domestiqueAction(&dom, &leader, flatSeg, 40)
-	climbAction := domestiqueAction(&dom, &leader, climbSeg, 40)
-	earlyAction := domestiqueAction(&dom, &leader, climbSeg, 150)
+	flatAction := domestiqueAction(&dom, &leader, flatSeg, 40, false)
+	climbAction := domestiqueAction(&dom, &leader, climbSeg, 40, false)
+	earlyStage := domestiqueAction(&dom, &leader, climbSeg, 150, true)
+	earlyOneDay := domestiqueAction(&dom, &leader, climbSeg, 150, false)
 
 	if climbAction != ActionChase {
 		t.Errorf("domestique should drive (chase) on a climb favouring the leader, got %v", climbAction)
@@ -36,14 +37,17 @@ func TestDomestiqueDrivesWhenTerrainFavoursLeader(t *testing.T) {
 	if flatAction == ActionChase {
 		t.Errorf("domestique should not drive on the flat")
 	}
-	if earlyAction == ActionChase {
-		t.Errorf("teams should not drive in the early phase")
+	if earlyStage == ActionChase {
+		t.Errorf("stage races: teams should not drive in the early phase")
+	}
+	if earlyOneDay != ActionChase {
+		t.Errorf("one-day races: a favourite's team wears the field down from far out, got %v", earlyOneDay)
 	}
 }
 
 // domestiqueAction runs FormGroups with a domestique, its climbing leader and
 // a rival sprinter, returning the domestique's chosen action.
-func domestiqueAction(dom, leader *model.Rider, seg *model.Segment, remaining float64) Action {
+func domestiqueAction(dom, leader *model.Rider, seg *model.Segment, remaining float64, stageRace bool) Action {
 	sprinter := makeSprinter("Rival")
 	sprinter.ID = 3
 	sprinter.Team = "Team B"
@@ -52,7 +56,7 @@ func domestiqueAction(dom, leader *model.Rider, seg *model.Segment, remaining fl
 	leaderRS := &RiderState{Rider: leader, WPrime: NewWPrimeState(leader), FormFactor: 1.0, EffectiveFTP: leader.FTPWatts, TeamRole: RoleLeader}
 	sprRS := &RiderState{Rider: &sprinter, WPrime: NewWPrimeState(&sprinter), FormFactor: 1.0, EffectiveFTP: sprinter.FTPWatts, TeamRole: RoleSprinter}
 	riders := []*RiderState{domRS, leaderRS, sprRS}
-	state := NewRaceState(riders, rng, false)
+	state := NewRaceState(riders, rng, stageRace)
 	state.Segment = seg
 	state.KmRemaining = remaining
 	state.Phase = PhaseFromKm(remaining)

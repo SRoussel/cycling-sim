@@ -372,7 +372,9 @@ func assignTeamPositions(rps []riderPower, crosswind bool) {
 // nobody drives; on climbs W/kg wins.
 func drivingTeams(riders []*RiderState, segment *model.Segment, state *RaceState) map[string]*RiderState {
 	out := map[string]*RiderState{}
-	if state == nil || state.Phase == PhaseEarly || len(riders) < 3 {
+	// Stage races keep the early phase easy (a long day's tempo); in a
+	// one-day race favourites' teams wear the field down from far out.
+	if state == nil || (state.IsStageRace && state.Phase == PhaseEarly) || len(riders) < 3 {
 		return out
 	}
 	var finisher *RiderState

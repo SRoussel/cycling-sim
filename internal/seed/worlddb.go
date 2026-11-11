@@ -297,9 +297,25 @@ func withWorldDB(riders, train []model.Rider, wdb []wdbRider) []model.Rider {
 		return riders
 	}
 	fit := fitRatings(pairs)
+	// CdA for added riders comes from their body (frontal area) at the
+	// field's median CdA per m², not from a fit to template values.
+	var perArea []float64
+	for _, r := range train {
+		if a := frontalArea(r.HeightCm, r.WeightKg); r.CdA > 0 && a > 0 {
+			perArea = append(perArea, r.CdA/a)
+		}
+	}
+	sort.Float64s(perArea)
+	cdaPerArea := 0.0
+	if len(perArea) > 0 {
+		cdaPerArea = perArea[len(perArea)/2]
+	}
 	sort.Slice(missing, func(i, j int) bool { return missing[i].Name < missing[j].Name })
 	for _, x := range missing {
 		r := fit.rider(x)
+		if cdaPerArea > 0 && r.HeightCm > 0 && r.WeightKg > 0 {
+			r.CdA = math.Round(cdaPerArea*frontalArea(r.HeightCm, r.WeightKg)*1000) / 1000
+		}
 		r.Team = x.Team
 		best := 0
 		for t, n := range teamVotes[x.Team] {

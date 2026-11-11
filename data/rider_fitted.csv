@@ -3,23 +3,22 @@
 # threshold from riders.csv / rider_derived.csv / rider_overrides.csv.
 # Regenerated on each fit; the 2023 hold-out in `cycling-sim validate` checks it.
 Name,FTP_scale,Source
-Adam Yates,1.0099,fitted: Tour de France 2024 (GC) +0.0%
-Antonio Tiberi,1.0672,fitted: Giro d'Italia 2024 (GC) +0.0%
-Ben O'Connor,0.9944,fitted: Giro d'Italia 2024 (GC) -0.2%
-Carlos Rodríguez,0.9563,fitted: Tour de France 2024 (GC) -0.0%
-Damiano Caruso,0.9978,fitted: Giro d'Italia 2024 (GC) intruder -0.3%
-Daniel Martínez,1.0800,fitted: Giro d'Italia 2024 (GC) +1.5%
-Einer Rubio,1.0690,fitted: Giro d'Italia 2024 (GC) +0.1%
-Giulio Pellizzari,0.9943,fitted: Giro d'Italia 2024 (GC) intruder -0.2%
-Isaac del Toro,0.9959,fitted: Tour de France 2024 (GC) intruder -0.3%
+Adam Yates,1.0105,fitted: Tour de France 2024 (GC) +0.1%
+Antonio Tiberi,1.0639,fitted: Giro d'Italia 2024 (GC) -0.1%
+Ben O'Connor,0.9972,fitted: Giro d'Italia 2024 (GC) -0.1%
+Carlos Rodríguez,0.9619,fitted: Tour de France 2024 (GC) -0.2%
+Daniel Martínez,1.0800,fitted: Giro d'Italia 2024 (GC) +0.8%
+Einer Rubio,1.0730,fitted: Giro d'Italia 2024 (GC) -0.1%
+Florian Lipowitz,0.9937,fitted: Giro d'Italia 2024 (GC) intruder -0.2%
+Isaac del Toro,0.9961,fitted: Tour de France 2024 (GC) intruder -0.3%
 Jan Hirt,1.0800,fitted: Giro d'Italia 2024 (GC) +1.5%
-Jonas Vingegaard,1.0064,fitted: Tour de France 2024 (GC) -0.1%
-João Almeida,1.0051,fitted: Tour de France 2024 (GC) +0.1%
-Juan Ayuso,0.9651,fitted: Tour de France 2024 (GC) intruder -0.4%
-Matteo Jorgenson,0.9540,fitted: Tour de France 2024 (GC) -0.7%
-Mikel Landa,1.0095,fitted: Tour de France 2024 (GC) +0.1%
-Paul Seixas,0.9823,fitted: Tour de France 2024 (GC) intruder -0.3%
-Remco Evenepoel,0.9865,fitted: Tour de France 2024 (GC) +0.1%
-Richard Carapaz,0.9695,fitted: Tour de France 2024 (GC) intruder -0.4%
-Santiago Buitrago,0.9559,fitted: Tour de France 2024 (GC) -0.3%
-Thymen Arensman,1.0421,fitted: Giro d'Italia 2024 (GC) -0.1%
+Jonas Vingegaard,1.0071,fitted: Tour de France 2024 (GC) +0.0%
+João Almeida,1.0040,fitted: Tour de France 2024 (GC) +0.0%
+Juan Ayuso,0.9648,fitted: Tour de France 2024 (GC) intruder -0.4%
+Matteo Jorgenson,0.9552,fitted: Tour de France 2024 (GC) -0.1%
+Mikel Landa,1.0092,fitted: Tour de France 2024 (GC) +0.1%
+Paul Seixas,0.9803,fitted: Tour de France 2024 (GC) intruder -0.3%
+Remco Evenepoel,0.9869,fitted: Tour de France 2024 (GC) +0.1%
+Richard Carapaz,0.9735,fitted: Tour de France 2024 (GC) intruder -0.3%
+Santiago Buitrago,0.9615,fitted: Tour de France 2024 (GC) -0.2%
+Thymen Arensman,1.0438,fitted: Giro d'Italia 2024 (GC) -0.2%

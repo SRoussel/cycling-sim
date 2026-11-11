@@ -239,12 +239,19 @@ func readRidersCSV(path string, layers ...map[string]RiderOverride) ([]model.Rid
 			TacticalAwareness: acceleration,
 			Handling:          handling,
 		}
+		baseKg, baseCm, baseCdA := rider.WeightKg, rider.HeightCm, rider.CdA
 		for _, overrides := range layers {
 			if o, ok := overrides[normalizeName(rider.Name)]; ok {
 				if err := o.Apply(&rider); err != nil {
 					return nil, err
 				}
 			}
+		}
+		// A layer that corrects a rider's body (weight, height) without
+		// setting CdA leaves the template body's aerodynamics: scale CdA by
+		// the change in frontal area.
+		if rider.CdA == baseCdA && (rider.WeightKg != baseKg || rider.HeightCm != baseCm) {
+			rider.CdA = math.Round(baseCdA*frontalArea(rider.HeightCm, rider.WeightKg)/frontalArea(baseCm, baseKg)*1000) / 1000
 		}
 		out = append(out, rider)
 	}
@@ -888,4 +895,13 @@ func ApplyStagePrestige(db *database.DB) int {
 		}
 	}
 	return warnings
+}
+
+// frontalArea is a cyclist's frontal area in m² (Heil 2001, road position):
+// 0.0293·h^0.725·m^0.425 + 0.0604, h in metres, m in kg.
+func frontalArea(heightCm, massKg float64) float64 {
+	if heightCm <= 0 || massKg <= 0 {
+		return 1
+	}
+	return 0.0293*math.Pow(heightCm/100, 0.725)*math.Pow(massKg, 0.425) + 0.0604
 }

@@ -122,9 +122,7 @@ func KnownRealRaces() []RealRaceEntry {
 			// 1 Pogačar  2 Bardet* +1:39  3 van der Poel +2:02  4 Van Gils  5 A.Paret-Peintre  6 Vansevenant  8 Lutsenko  9 Bilbao
 			Top10RiderIDs: []int64{452, 0, 28, 312, 79, 344, 0, 274, 33, 0},
 			Top10GapSecs:  []float64{0, 99, 122, 122, 122, 122, 122, 122, 122, 122},
-			// Vingegaard, Evenepoel and Roglič were injured at Itzulia (4 April);
-			// the rest weren't on the start list (CyclingStage).
-			DidNotStart: []int64{431, 294, 306, 370, 245, 251, 416, 161, 259},
+			StartList:     liege2024Field,
 		},
 		{
 			DisplayName:  "Il Lombardia 2024",

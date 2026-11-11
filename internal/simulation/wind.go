@@ -47,7 +47,12 @@ const meanderMaxDeg = 60.0
 
 // stepHeading is a stable meander around the segment heading for step i.
 func stepHeading(seg *model.Segment, i int) float64 {
-	return seg.HeadingDeg + meanderMaxDeg*math.Sin(1.7*float64(i)+0.9*float64(seg.SegmentOrder))
+	return stepHeadingAt(seg, float64(i))
+}
+
+// stepHeadingAt is stepHeading at a fractional coarse-step position.
+func stepHeadingAt(seg *model.Segment, i float64) float64 {
+	return seg.HeadingDeg + meanderMaxDeg*math.Sin(1.7*i+0.9*float64(seg.SegmentOrder))
 }
 
 // segmentSpeed is SpeedFromPower on a segment, including its headwind.

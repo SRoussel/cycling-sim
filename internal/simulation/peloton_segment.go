@@ -13,7 +13,7 @@ import (
 // partitionByTimeGap splits riders into road clusters: riders within
 // contactSeconds of the rider ahead are in contact and ride as one road group.
 // Returns clusters sorted by leader time (fastest cluster first).
-func partitionByTimeGap(riders []*RiderState) [][]*RiderState {
+func partitionByTimeGap(riders []*RiderState, contact float64) [][]*RiderState {
 	if len(riders) <= 1 {
 		return [][]*RiderState{riders}
 	}
@@ -24,7 +24,7 @@ func partitionByTimeGap(riders []*RiderState) [][]*RiderState {
 	var clusters [][]*RiderState
 	cluster := []*RiderState{sorted[0]}
 	for i := 1; i < len(sorted); i++ {
-		if sorted[i].TotalTime-sorted[i-1].TotalTime <= contactSeconds {
+		if sorted[i].TotalTime-sorted[i-1].TotalTime <= contact {
 			cluster = append(cluster, sorted[i])
 		} else {
 			clusters = append(clusters, cluster)
@@ -116,6 +116,24 @@ func resolveCatches(groups []*Group, startTimes map[*RiderState]float64) {
 // instead of once per course segment, which can be tens of km.
 const maxStepKm = 2.0
 
+// fineStepKm is the step in the decisive part of a one-day race (after the
+// early phase): attacks, responses and counter-attacks play out over tens of
+// seconds, which a 2 km step averages away.
+const fineStepKm = 0.25
+
+// fineContactSeconds is the contact range with fine steps. Riders in contact
+// close up to the front of their group for free; with 2 km steps a 10 s
+// range stood in for the effort of closing ~150 m, but with fine steps it
+// would hand a dropped rider that gap back every 20 s (a synthetic mountain
+// race lost its climbing order: Spearman 0.98 -> 0.40). Short steps simulate
+// the closing effort, so only riders on each other's wheels merge.
+const fineContactSeconds = 3.0
+
+// fineSteps reports whether a one-day race is in its decisive part here.
+func fineSteps(state *RaceState, isTT bool, remainingKm float64) bool {
+	return state != nil && !isTT && !state.IsStageRace && PhaseFromKm(remainingKm) != PhaseEarly
+}
+
 // SimulateSegment advances all riders through a segment in short steps.
 func SimulateSegment(riders []*RiderState, segment *model.Segment, isTT bool, distanceRemaining float64, rng *rand.Rand, state *RaceState, params *TacticsParams, incidentsEnabled ...bool) {
 	n := int(math.Ceil(segment.DistanceKm / maxStepKm))
@@ -124,6 +142,10 @@ func SimulateSegment(riders []*RiderState, segment *model.Segment, isTT bool, di
 	}
 	step := *segment
 	step.DistanceKm = segment.DistanceKm / float64(n)
+	if fineSteps(state, isTT, distanceRemaining-segment.DistanceKm) {
+		simulateFine(riders, segment, step.DistanceKm, isTT, distanceRemaining, rng, state, params, incidentsEnabled...)
+		return
+	}
 	for i := 0; i < n; i++ {
 		if state != nil {
 			state.SegmentKmLeft = segment.DistanceKm - float64(i)*step.DistanceKm
@@ -132,6 +154,31 @@ func SimulateSegment(riders []*RiderState, segment *model.Segment, isTT bool, di
 			setWindComponents(&step, stepHeading(segment, i))
 		}
 		simulateStep(riders, &step, isTT, distanceRemaining-float64(i)*step.DistanceKm, rng, state, params, incidentsEnabled...)
+	}
+}
+
+// simulateFine is SimulateSegment with fineStepKm steps once the race is in
+// its decisive part. The road's meander (wind) keeps its coarse-step scale.
+func simulateFine(riders []*RiderState, segment *model.Segment, coarseKm float64, isTT bool, distanceRemaining float64, rng *rand.Rand, state *RaceState, params *TacticsParams, incidentsEnabled ...bool) {
+	step := *segment
+	done := 0.0
+	for done < segment.DistanceKm-1e-9 {
+		size := maxStepKm
+		if fineSteps(state, isTT, distanceRemaining-done) {
+			size = fineStepKm
+		}
+		left := segment.DistanceKm - done
+		k := math.Ceil(left/size - 1e-9)
+		if k < 1 {
+			k = 1
+		}
+		step.DistanceKm = left / k
+		state.SegmentKmLeft = left
+		if step.WindMPS > 0 {
+			setWindComponents(&step, stepHeadingAt(segment, (done+step.DistanceKm/2)/coarseKm-0.5))
+		}
+		simulateStep(riders, &step, isTT, distanceRemaining-done, rng, state, params, incidentsEnabled...)
+		done += step.DistanceKm
 	}
 }
 
@@ -172,7 +219,11 @@ func simulateStep(riders []*RiderState, segment *model.Segment, isTT bool, dista
 	}
 
 	// Partition riders into road clusters: dropped riders can't teleport back.
-	clusters := partitionByTimeGap(activeRiders)
+	contact := contactSeconds
+	if fineSteps(state, isTT, distanceRemaining) {
+		contact = fineContactSeconds
+	}
+	clusters := partitionByTimeGap(activeRiders, contact)
 	updateBreakawayState(state, clusters)
 	if state != nil {
 		state.Clusters = clusters

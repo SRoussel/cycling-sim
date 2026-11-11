@@ -86,7 +86,7 @@ func KnownRealRaces() []RealRaceEntry {
 			Top10GapSecs:  []float64{0, 164, 167, u, u, u, u, 288, 289, 317},
 			// Not on the start list (CyclingStage rider list; Cycling Weekly for
 			// van der Poel and van Aert).
-			DidNotStart: []int64{28, 429, 416, 190, 274, 239},
+			StartList: strade2024Field, // the real start list (validation_fields.go)
 		},
 		{
 			DisplayName:  "Milan-San Remo 2024",
@@ -94,7 +94,7 @@ func KnownRealRaces() []RealRaceEntry {
 			// Bunch sprint: 1 Philipsen  2 Matthews  3 Pogačar  4 Pedersen  7 Van Gils  8 Stuyven  10 van der Poel
 			Top10RiderIDs: []int64{17, 366, 452, 190, 0, 0, 312, 336, 0, 28},
 			Top10GapSecs:  []float64{0, 0, 0, 0, u, u, 0, 0, u, 0},
-			DidNotStart:   []int64{429}, // van Aert not on the start list
+			StartList:     msr2024Field, // the real start list (validation_fields.go)
 		},
 		{
 			DisplayName:  "Tour of Flanders 2024",
@@ -104,7 +104,7 @@ func KnownRealRaces() []RealRaceEntry {
 			Top10GapSecs:  []float64{0, 62, 62, 62, 62, 62, 62, 62, 62, 62},
 			// Pogačar didn't ride; van Aert crashed out at Dwars door Vlaanderen;
 			// the GC riders below weren't on the start list (CyclingStage).
-			DidNotStart: []int64{452, 429, 294, 431, 103, 36, 93, 67, 251},
+			StartList: flanders2024Field, // the real start list (validation_fields.go)
 		},
 		{
 			DisplayName:  "Paris-Roubaix 2024",
@@ -114,7 +114,7 @@ func KnownRealRaces() []RealRaceEntry {
 			Top10GapSecs:  []float64{0, 180, 180, 180, u, 227, u, u, u, u},
 			// Pogačar didn't ride; van Aert injured; the rest weren't on the
 			// Cyclingnews start list.
-			DidNotStart: []int64{452, 429, 67, 416, 458, 82},
+			StartList: roubaix2024Field, // the real start list (validation_fields.go)
 		},
 		{
 			DisplayName:  "Liege-Bastogne-Liege 2024",
@@ -130,7 +130,7 @@ func KnownRealRaces() []RealRaceEntry {
 			// 1 Pogačar  2 Evenepoel +3:16  3 Ciccone +4:31  8 Powless +4:58  9 Gaudu +4:58
 			Top10RiderIDs: []int64{452, 294, 177, 0, 0, 0, 0, 103, 125, 0},
 			Top10GapSecs:  []float64{0, 196, 271, u, u, u, u, 298, 298, 298},
-			DidNotStart:   []int64{500, 370, 433, 429}, // not on the Cyclingnews start list
+			StartList:     lombardia2024Field, // the real start list (validation_fields.go)
 		},
 	}
 }

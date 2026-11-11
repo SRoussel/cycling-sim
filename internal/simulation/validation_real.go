@@ -313,6 +313,8 @@ func RunRealRaceValidationFor(db *database.DB, allRiders []model.Rider, entries 
 				Riders: riders,
 				Seed:   ValidationSeedBase + int64(run+1),
 			}
+			// A real edition: riders had their form of the day.
+			cfg.FormDate = race.Date
 			if race.RaceType == model.RaceTypeTT {
 				return SimulateTT(cfg)
 			}
@@ -542,7 +544,7 @@ func RunRealStageRaceValidationFor(db *database.DB, allRiders []model.Rider, ent
 			if err2 != nil {
 				continue
 			}
-			stages = append(stages, StageConfig{Race: race, Course: course, StageNumber: st.StageNumber, RestDayBefore: st.RestDayBefore, Prestige: st.Prestige})
+			stages = append(stages, StageConfig{Race: race, Course: course, StageNumber: st.StageNumber, RestDayBefore: st.RestDayBefore, Prestige: st.Prestige, SeasonalForm: true})
 			infos = append(infos, selection.StageInfo{Course: course, RaceType: race.RaceType})
 		}
 		pool := entry.pool(allRiders)

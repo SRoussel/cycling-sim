@@ -1,7 +1,6 @@
 package simulation
 
 import (
-	"hash/fnv"
 	"math"
 	"time"
 
@@ -65,8 +64,10 @@ func specialtyOf(r *model.Rider) specialty {
 // peaksOf returns the days of the year a rider peaks on. Grand Tour
 // climbers peak broadly over the summer (both the Giro and the Tour: an
 // off-form climber wouldn't start either) and again in the autumn; classics
-// riders in their spring block and at the Tour; all-rounders, mostly
-// domestiques, around one block of the calendar chosen per rider.
+// riders in their spring block and at the Tour. All-rounders, mostly
+// domestiques, have no form swing: a team selects them for a race in form
+// (giving them one random block left three-quarters of a Grand Tour's
+// domestiques off form, so sprint teams lost control of the race).
 func peaksOf(r *model.Rider) []float64 {
 	switch specialtyOf(r) {
 	case specClimber:
@@ -78,10 +79,7 @@ func peaksOf(r *model.Rider) []float64 {
 	case specSprinter:
 		return []float64{peakSprintSpring, peakTour}
 	}
-	blocks := []float64{peakCobbles, peakGiro, peakTour, peakVuelta}
-	h := fnv.New32a()
-	h.Write([]byte(r.Name))
-	return []float64{blocks[int(h.Sum32()%uint32(len(blocks)))]}
+	return nil // all-rounders, mostly domestiques: in form wherever they're selected
 }
 
 // SeasonForm is a rider's threshold multiplier on a date: 1 at a target,
@@ -90,9 +88,13 @@ func SeasonForm(r *model.Rider, date time.Time) float64 {
 	if date.IsZero() {
 		return 1
 	}
+	peaks := peaksOf(r)
+	if len(peaks) == 0 {
+		return 1
+	}
 	day := float64(date.YearDay())
 	best := 0.0
-	for _, p := range peaksOf(r) {
+	for _, p := range peaks {
 		d := math.Abs(day - p)
 		d = math.Min(d, 365-d) // the season wraps
 		best = math.Max(best, math.Exp(-(d/peakWidthDays)*(d/peakWidthDays)))

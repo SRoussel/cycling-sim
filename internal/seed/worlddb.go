@@ -283,7 +283,17 @@ func withWorldDB(riders, train []model.Rider, wdb []wdbRider) []model.Rider {
 		}
 		teamVotes[x.Team][riders[i].Team]++
 	}
-	if len(pairs) < 50 || len(missing) == 0 {
+	if len(pairs) < 50 {
+		return riders
+	}
+	matched := map[int]wdbRider{}
+	for _, x := range wdb {
+		if i := match(x); i >= 0 {
+			matched[i] = x
+		}
+	}
+	defer func() { rankRatings(riders, matched) }()
+	if len(missing) == 0 {
 		return riders
 	}
 	fit := fitRatings(pairs)
@@ -299,9 +309,59 @@ func withWorldDB(riders, train []model.Rider, wdb []wdbRider) []model.Rider {
 		}
 		if r.Validate() == nil {
 			riders = append(riders, r)
+			matched[len(riders)-1] = x
 		}
 	}
 	return riders
+}
+
+// rankedRatings are the ratings that come from templates for many of our
+// riders (dozens share the same endurance/recovery/handling bundle), each
+// with the WorldDB attribute that orders the field on the same quality.
+var rankedRatings = []struct {
+	charac int // index into wdbRider.Charac (see ImportWorldDB's attribute list)
+	get    func(*model.Rider) *int
+}{
+	{10, func(r *model.Rider) *int { return &r.Endurance }},         // endurance: fading over a long race
+	{12, func(r *model.Rider) *int { return &r.Recovery }},          // recuperation
+	{5, func(r *model.Rider) *int { return &r.Handling }},           // cobble: rough surfaces
+	{4, func(r *model.Rider) *int { return &r.DescendingAbility }},  // downhilling
+	{13, func(r *model.Rider) *int { return &r.TacticalAwareness }}, // baroudeur: going in breaks
+}
+
+// rankRatings re-deals each ranked rating among the riders WorldDB covers:
+// the rating keeps exactly its current values (our scale, mean and spread),
+// handed out in the order WorldDB ranks the riders on that quality. PCM's
+// numbers themselves are never used, only the order of the field (the
+// user's caveat: they blend several things).
+func rankRatings(riders []model.Rider, matched map[int]wdbRider) {
+	idx := make([]int, 0, len(matched))
+	for i := range matched {
+		if i < len(riders) {
+			idx = append(idx, i)
+		}
+	}
+	if len(idx) < 50 {
+		return
+	}
+	for _, rr := range rankedRatings {
+		vals := make([]int, len(idx))
+		for k, i := range idx {
+			vals[k] = *rr.get(&riders[i])
+		}
+		sort.Ints(vals)
+		order := append([]int(nil), idx...)
+		sort.SliceStable(order, func(a, b int) bool {
+			ca, cb := matched[order[a]].Charac[rr.charac], matched[order[b]].Charac[rr.charac]
+			if ca != cb {
+				return ca < cb
+			}
+			return riders[order[a]].Name < riders[order[b]].Name
+		})
+		for k, i := range order {
+			*rr.get(&riders[i]) = vals[k]
+		}
+	}
 }
 
 // ambiguous: a WorldDB name that fits more than one of our riders.

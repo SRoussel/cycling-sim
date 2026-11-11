@@ -97,7 +97,7 @@ func oneDayWinnerSpeed(db *database.DB, riders []model.Rider, races []model.Race
 	var sum float64
 	for _, res := range parallelRuns(speedRuns, func(run int) []model.RaceResult {
 		start := selection.SelectStartList(riders, course, race, selection.DefaultConfig(race.RaceType, false, 0))
-		return SimulateRoadRace(RaceConfig{Race: race, Course: course, Riders: start, Seed: ValidationSeedBase + int64(run+1)})
+		return SimulateRoadRace(RaceConfig{Race: race, Course: course, Riders: start, Seed: ValidationSeedBase + int64(run+1), FormDate: race.Date})
 	}) {
 		if len(res) == 0 || res[0].FinishTimeSeconds <= 0 {
 			return 0, fmt.Errorf("no finishers")
@@ -134,7 +134,7 @@ func stageRaceWinnerSpeed(db *database.DB, riders []model.Rider, name string) (f
 			continue
 		}
 		km += course.TotalDistanceKm
-		stages = append(stages, StageConfig{Race: race, Course: course, StageNumber: st.StageNumber, RestDayBefore: st.RestDayBefore, Prestige: st.Prestige})
+		stages = append(stages, StageConfig{Race: race, Course: course, StageNumber: st.StageNumber, RestDayBefore: st.RestDayBefore, Prestige: st.Prestige, SeasonalForm: true})
 		infos = append(infos, selection.StageInfo{Course: course, RaceType: race.RaceType})
 	}
 	start := selection.SelectStageRaceStartList(stageRaceField(sr.Name, riders), infos, selection.DefaultConfig(model.RaceTypeRoad, true, len(stages)))

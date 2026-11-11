@@ -1,6 +1,7 @@
 package simulation
 
 import (
+	"math"
 	"sort"
 
 	"cycling_sim/internal/model"
@@ -145,23 +146,33 @@ func (s *RaceState) escapeHolds(rs *RiderState) bool {
 			return false
 		}
 	}
+	// The chase that matters is the nearest group behind with a rival leader
+	// in it (the next group on the road may be a few dropped domestiques).
+	chasers, gap := s.rivalChase(rs)
 	// Only a threat is worth racing for: a rival leader behind who is at
-	// least as strong as the weakest leader in this group (a dropped weaker
-	// leader is no reason for a bunch to race flat out).
-	weakest := wkg(rs)
+	// least as strong as the weakest other leader in this group (a dropped
+	// weaker leader is no reason for a bunch of leaders to race flat out). A
+	// leader with no other leader here is ahead of all their rivals: any
+	// rival behind threatens their win.
+	weakest := math.Inf(1)
 	for _, o := range s.Road {
-		if o.TeamRole == RoleLeader && !o.DNF && wkg(o) < weakest {
+		if o != rs && o.TeamRole == RoleLeader && !o.DNF && wkg(o) < weakest {
 			weakest = wkg(o)
 		}
 	}
+	if math.IsInf(weakest, 1) {
+		weakest = 0
+	} else {
+		weakest = math.Min(weakest, wkg(rs))
+	}
 	threat := false
-	for _, c := range s.Chasers {
+	for _, c := range chasers {
 		threat = threat || (rivalLeaderOf(rs, c) && wkg(c) >= weakest)
 	}
 	if !threat {
 		return false
 	}
-	chase := chaseOf(rs, s.Chasers)
+	chase := chaseOf(rs, chasers)
 	if len(chase) == 0 {
 		return false
 	}
@@ -172,7 +183,24 @@ func (s *RaceState) escapeHolds(rs *RiderState) bool {
 			own = append(own, o)
 		}
 	}
-	return s.timeToLine(own) < s.timeToLine(chase)+s.ChaseGap
+	return s.timeToLine(own) < s.timeToLine(chase)+gap
+}
+
+// rivalChase returns the nearest road group behind rs's that holds a rival
+// leader, and its gap in seconds (none: nil).
+func (s *RaceState) rivalChase(rs *RiderState) ([]*RiderState, float64) {
+	here := s.clusterOf(s.Road)
+	if here < 0 {
+		return s.Chasers, s.ChaseGap
+	}
+	for ci := here + 1; ci < len(s.Clusters); ci++ {
+		for _, c := range s.Clusters[ci] {
+			if rivalLeaderOf(rs, c) {
+				return s.Clusters[ci], s.Clusters[ci][0].TotalTime - s.Road[0].TotalTime
+			}
+		}
+	}
+	return nil, 0
 }
 
 type lineKey struct {

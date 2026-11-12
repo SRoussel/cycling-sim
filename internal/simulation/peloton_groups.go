@@ -368,6 +368,12 @@ func assignTeamPositions(rps []riderPower, crosswind bool) {
 	// protected riders (sheltered deep in the bunch). In a crosswind the deep
 	// bunch is the gutter, so each team rides as a unit with its protected
 	// riders right behind a couple of domestiques (see crosswindTeamOrder).
+	// The domestiques share the front in turns: their order rotates every
+	// tempoTurnSeconds. Ranked by power alone, the same strongest domestiques
+	// sat at positions 1-8, in the wind, all race, every race (Nov 2026:
+	// Politt at 490-510 W, 108-113% of threshold, for 27 km at a time in
+	// Flanders, then out of fuel; real 3rd).
+	frontDomestiques = rotateTurns(frontDomestiques)
 	order := [][]riderPower{frontDomestiques, others, protectedRiders}
 	if crosswind {
 		order = crosswindTeamOrder(frontDomestiques, protectedRiders, others)
@@ -379,6 +385,30 @@ func assignTeamPositions(rps []riderPower, crosswind bool) {
 			pos++
 		}
 	}
+}
+
+// tempoTurnSeconds: how long one set of domestiques holds the front of a
+// bunch before others take over.
+const tempoTurnSeconds = 600.0
+
+// rotateTurns rotates the stronger half of a power-ranked line of riders
+// (the ones who do the work at the front) so a different set leads every
+// tempoTurnSeconds of race time (shift by maxRotation per turn); the weaker
+// half stays behind them.
+func rotateTurns(line []riderPower) []riderPower {
+	n := len(line) / 2
+	if n <= maxRotation {
+		return line
+	}
+	clock := 0.0
+	for _, rp := range line {
+		clock = math.Max(clock, rp.state.TotalTime)
+	}
+	shift := (int(clock/tempoTurnSeconds) * maxRotation) % n
+	out := make([]riderPower, 0, len(line))
+	out = append(out, line[shift:n]...)
+	out = append(out, line[:shift]...)
+	return append(out, line[n:]...)
 }
 
 // drivingTeams returns the teams that want to make this segment hard, each

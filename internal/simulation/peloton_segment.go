@@ -306,6 +306,10 @@ func simulateStep(riders []*RiderState, segment *model.Segment, isTT bool, dista
 			if !isTT {
 				actualPower += bunchSurgePower(rs, group, segment, groupSpeed)
 			}
+			// What the rider actually rode (his draft at the group's speed, plus
+			// the bunch's surges): telemetry reports this, not the effort he
+			// intended before the group's speed was known.
+			rs.LastSegmentPower = actualPower
 
 			rs.WPrime.UpdateWithHandling(actualPower, rs.thresholdIntOn(segment), segTime, rs.Rider.Handling, segment.SurfaceType.Unpaved())
 			rs.addWork(actualPower, segTime)

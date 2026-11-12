@@ -254,7 +254,6 @@ func HardTime(r model.Rider, segments []model.Segment) (float64, bool) {
 	return decisiveTime(rs, segments), true
 }
 
-
 // CourseTime is a fresh rider's time over a whole course alone at threshold
 // (a time trial's measure).
 func CourseTime(r model.Rider, segments []model.Segment) float64 {

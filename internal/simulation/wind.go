@@ -58,7 +58,7 @@ func stepHeadingAt(seg *model.Segment, i float64) float64 {
 // segmentSpeed is SpeedFromPower on a segment, including its headwind.
 // It includes headwind and the air density at the segment's altitude.
 func segmentSpeed(power, massKg, cda float64, seg *model.Segment, handling int) float64 {
-	return speedFromPowerRough(power, massKg, cda*densityRatio(seg), seg.GradientPct, seg.SurfaceType, handling, seg.HeadwindMPS, cobbleRoughness(seg.CobbleStars))
+	return speedFromPowerRough(power, massKg, cda*densityRatio(seg), seg.GradientPct, seg.SurfaceType, handling, seg.HeadwindMPS, sectorRoughness(seg))
 }
 
 // densityRatio scales drag for altitude: thinner air acts like a smaller CdA.
@@ -73,7 +73,7 @@ func densityRatio(seg *model.Segment) float64 {
 func segmentPower(speed, massKg, cda float64, seg *model.Segment, handling int) float64 {
 	air := speed + seg.HeadwindMPS
 	fAero := 0.5 * cda * densityRatio(seg) * airDensity * air * math.Abs(air)
-	return speed * (ForceGravity(massKg, seg.GradientPct) + forceRolling(massKg, seg.GradientPct, seg.SurfaceType, handling, cobbleRoughness(seg.CobbleStars)) + fAero)
+	return speed * (ForceGravity(massKg, seg.GradientPct) + forceRolling(massKg, seg.GradientPct, seg.SurfaceType, handling, sectorRoughness(seg)) + fAero)
 }
 
 // gutterExposure is the fraction of shelter lost by riders beyond the

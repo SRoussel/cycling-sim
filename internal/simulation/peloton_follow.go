@@ -22,6 +22,11 @@ const (
 	// cobbles, where riders can't hold a wheel smoothly.
 	cobbleDraftRetention = 0.4
 
+	// gravelDraftRetention: on gravel a wheel can be held (compacted, a line
+	// to follow) but the road is narrow and dusty: riders leave more room and
+	// the group strings out, so no deep bunch shelter (see draftFor).
+	gravelDraftRetention = 0.7
+
 	// linedOutIntensity: when the workers ride at this fraction of threshold
 	// or more, the group strings out single file and nobody gets the deep
 	// shelter of a packed bunch.
@@ -71,11 +76,16 @@ func riderCdAFactor(rs *RiderState, g *Group, seg *model.Segment) float64 {
 
 // draftFor returns the CdA multiplier for a rider at a position in a group.
 func draftFor(position int, surface model.SurfaceType) float64 {
-	d := DraftFactor(position)
-	if surface.Unpaved() {
-		d = 1 - (1-d)*cobbleDraftRetention
+	switch surface {
+	case model.SurfaceCobbles:
+		return 1 - (1-DraftFactor(position))*cobbleDraftRetention
+	case model.SurfaceGravel:
+		if position > lineShelterPosition {
+			position = lineShelterPosition // single file on a narrow road
+		}
+		return 1 - (1-DraftFactor(position))*gravelDraftRetention
 	}
-	return d
+	return DraftFactor(position)
 }
 
 // rotationFactor is the average CdA multiplier of a rider sharing the front

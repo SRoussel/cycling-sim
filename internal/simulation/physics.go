@@ -7,12 +7,16 @@ import (
 )
 
 const (
-	gravity     = 9.8067 // m/s²
-	airDensity  = 1.225  // kg/m³ at sea level, 15°C
-	crr         = 0.004  // rolling resistance coefficient (road)
-	crrCobbles  = 0.012  // rolling resistance coefficient (cobbles) — 3x road
-	bikeWeight  = 8.0    // kg
-	minSpeedMPS = 1.0    // minimum speed 1 m/s (~3.6 km/h) to avoid stalling
+	gravity    = 9.8067 // m/s²
+	airDensity = 1.225  // kg/m³ at sea level, 15°C
+	crr        = 0.004  // rolling resistance coefficient (road)
+	crrCobbles = 0.012  // rolling resistance coefficient (cobbles) — 3x road
+	// crrGravel: compacted white gravel (strade bianche), a 2-star sector;
+	// tyre tests put good gravel at ~0.007-0.011, a little under pavé of the
+	// same grade (see gravelRoughness).
+	crrGravel   = 0.009
+	bikeWeight  = 8.0 // kg
+	minSpeedMPS = 1.0 // minimum speed 1 m/s (~3.6 km/h) to avoid stalling
 	// HandlingEffectPerPoint controls how much each handling point (1-100)
 	// changes the effective rolling resistance on cobbles.
 	// At 0.022: H=70 → 1.0x, H=93 → 0.494x, H=55 → 1.33x
@@ -55,9 +59,12 @@ func forceRolling(totalMassKg float64, gradientPct float64, surface model.Surfac
 	angle := math.Atan(gradientPct / 100.0)
 	c := crr
 
-	if surface.Unpaved() {
+	switch surface {
+	case model.SurfaceCobbles:
 		// Apply handling-based rolling resistance on cobbles
 		c = crrCobbles * roughness * HandlingFactor(handling)
+	case model.SurfaceGravel:
+		c = crrGravel * roughness * HandlingFactor(handling)
 	}
 
 	return c * totalMassKg * gravity * math.Cos(angle)
@@ -79,6 +86,30 @@ func cobbleRoughness(stars int) float64 {
 		return 1.67
 	}
 	return 1
+}
+
+// gravelRoughness scales gravel's rolling resistance by a sector's stars
+// (the mod grades gravel 1-3): ~0.007 for 1 star, 0.009 for 2, 0.011 for 3.
+func gravelRoughness(stars int) float64 {
+	switch stars {
+	case 1:
+		return 0.78
+	case 3:
+		return 1.22
+	case 4:
+		return 1.44
+	case 5:
+		return 1.67
+	}
+	return 1
+}
+
+// sectorRoughness is the roughness of a segment's surface by its stars.
+func sectorRoughness(seg *model.Segment) float64 {
+	if seg.SurfaceType == model.SurfaceGravel {
+		return gravelRoughness(seg.CobbleStars)
+	}
+	return cobbleRoughness(seg.CobbleStars)
 }
 
 // HandlingFactor returns a multiplier to apply to cobbles rolling resistance

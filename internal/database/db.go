@@ -209,6 +209,9 @@ func (db *DB) migrate() error {
 	if _, err := db.Exec(schema); err != nil {
 		return err
 	}
+	if _, err := db.Exec(seasonSchema); err != nil {
+		return err
+	}
 
 	// Lightweight migrations for older DB files (ignored if already applied).
 	for _, stmt := range []string{

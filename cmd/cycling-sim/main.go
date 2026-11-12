@@ -111,6 +111,8 @@ func main() {
 	case "results":
 		raceID := idArg(args, 0, "Usage: cycling-sim results <race-id>")
 		cmdShowResults(db, raceID)
+	case "season":
+		cmdSeason(db, args, seedVal)
 	case "gc":
 		usage := "Usage: cycling-sim gc <stage-race-id> <after-stage>"
 		srID := idArg(args, 0, usage)

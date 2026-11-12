@@ -339,6 +339,9 @@ func scoreTeams(teams []teamGroup, profile CourseProfile) []teamScore {
 	return scored
 }
 
+// AverageProfile is the mean demand of several courses (a stage race's).
+func AverageProfile(profiles []CourseProfile) CourseProfile { return averageProfile(profiles) }
+
 func averageProfile(profiles []CourseProfile) CourseProfile {
 	if len(profiles) == 0 {
 		return CourseProfile{}

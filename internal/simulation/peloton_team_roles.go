@@ -235,3 +235,29 @@ func courseTime(rs *RiderState, segments []model.Segment) float64 {
 	}
 	return t
 }
+
+// HardTime is a fresh rider's time over a course's hard sections (climbs and
+// cobbles) ridden alone at threshold plus W' (decisiveTime, as one-day
+// leaders are picked), and whether the course has any.
+func HardTime(r model.Rider, segments []model.Segment) (float64, bool) {
+	rs := &RiderState{Rider: &r, WPrime: NewWPrimeState(&r), FormFactor: 1, EffectiveFTP: r.FTPWatts}
+	hard := false
+	for i := range segments {
+		if segments[i].SurfaceType.Unpaved() || climbOf(&segments[i]) >= terrainClimb {
+			hard = true
+			break
+		}
+	}
+	if !hard {
+		return 0, false
+	}
+	return decisiveTime(rs, segments), true
+}
+
+
+// CourseTime is a fresh rider's time over a whole course alone at threshold
+// (a time trial's measure).
+func CourseTime(r model.Rider, segments []model.Segment) float64 {
+	rs := &RiderState{Rider: &r, WPrime: NewWPrimeState(&r), FormFactor: 1, EffectiveFTP: r.FTPWatts}
+	return courseTime(rs, segments)
+}

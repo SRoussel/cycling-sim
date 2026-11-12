@@ -149,7 +149,7 @@ func setObjectives(db *database.DB, s *model.Season) error {
 		if err != nil {
 			return err
 		}
-		place := rankIn(field, fits(profiles[:1], field))
+		place := rankIn(field, gcFits(profiles, field))
 		var r model.Rider
 		for _, x := range field {
 			if x.Team == s.Team && (r.ID == 0 || place[x.ID] < place[r.ID]) {
@@ -173,7 +173,7 @@ func setObjectives(db *database.DB, s *model.Season) error {
 			}
 			cands = append(cands, cand{model.Objective{Kind: model.ObjectivePlace, EventID: e.ID, RiderID: r.ID, Target: target, Weight: Prestige(e) / 60, Text: text}, Prestige(e) / float64(p)})
 		}
-		if e.Category == model.CategoryGrandTour && len(profiles) > 1 {
+		if e.Category == model.CategoryGrandTour && profiles.stageRace {
 			stage := rankIn(field, fits(profiles, field))
 			for _, sr := range field {
 				if sr.Team == s.Team && stage[sr.ID] <= 4 && place[sr.ID] > 3 {

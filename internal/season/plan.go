@@ -1,6 +1,7 @@
 package season
 
 import (
+	"fmt"
 	"math"
 	"sort"
 
@@ -98,95 +99,22 @@ const (
 	// not the Ardennes); between targets he trains. A share, not a band:
 	// an outlier like Pogačar stands out on many kinds of race.
 	targetShare = 0.65
+	// leadersPerEvent: a team takes at most this many leaders to one race
+	// and spreads the others over its other targets (an Almeida rides the
+	// Giro or the Vuelta for himself, not the Tour for Pogačar).
+	leadersPerEvent = 2
 	// secondGrandTour: a rider's second Grand Tour is worth this share of
-	// its prestige to him (most leaders target one).
+	// its prestige to him (most leaders target one); the Vuelta after the
+	// Tour (the usual double, a second chance at the end of the summer)
+	// keeps vueltaDouble of it.
 	secondGrandTour = 0.5
+	vueltaDouble    = 0.6
 )
 
 // riderBudget is a rider's race days for the year: fewer for the best riders,
 // who race their targets and rest between them.
 func riderBudget(value float64) int {
 	return RaceDayBudget - int(leaderDays*math.Max(0, math.Min(1, value/3)))
-}
-
-// eventProfiles: the course profiles of an event (one-day: its course;
-// stage race: its GC (mountain and time-trial stages), then each stage).
-func eventProfiles(db *database.DB, e model.SeasonEvent) ([]selection.CourseProfile, error) {
-	if e.Kind == model.EventOneDay {
-		race, err := db.GetRace(e.RefID)
-		if err != nil {
-			return nil, err
-		}
-		course, err := db.GetCourse(race.CourseID)
-		if err != nil {
-			return nil, err
-		}
-		return []selection.CourseProfile{selection.AnalyzeCourse(course, race.RaceType)}, nil
-	}
-	sr, err := db.GetStageRace(e.RefID)
-	if err != nil {
-		return nil, err
-	}
-	_, infos, err := service.BuildStageConfigs(db, sr, false)
-	if err != nil {
-		return nil, err
-	}
-	// The GC is decided in the mountains and the time trials: its profile
-	// averages those stages (all stages if there are none).
-	var each, hard []selection.CourseProfile
-	for _, in := range infos {
-		p := selection.AnalyzeCourse(in.Course, in.RaceType)
-		each = append(each, p)
-		if in.RaceType == model.RaceTypeTT || p.ClimbingDemand > 0.3 {
-			hard = append(hard, p)
-		}
-	}
-	if len(hard) == 0 {
-		hard = each
-	}
-	return append([]selection.CourseProfile{selection.AverageProfile(hard)}, each...), nil
-}
-
-// fits rates how well each rider suits an event, in standard deviations above
-// the field: a one-day race on its course; a stage race on the whole race
-// (GC) or on its third-best stage (a sprinter or stage hunter with several
-// chances).
-func fits(profiles []selection.CourseProfile, riders []model.Rider) map[int64]float64 {
-	z := func(p selection.CourseProfile) map[int64]float64 {
-		var sum, sq float64
-		vals := make(map[int64]float64, len(riders))
-		for i := range riders {
-			v := selection.RiderScore(&riders[i], p)
-			vals[riders[i].ID] = v
-			sum += v
-			sq += v * v
-		}
-		n := float64(len(riders))
-		mean := sum / n
-		sd := math.Sqrt(math.Max(sq/n-mean*mean, 1e-9))
-		for id, v := range vals {
-			vals[id] = (v - mean) / sd
-		}
-		return vals
-	}
-	out := z(profiles[0])
-	if len(profiles) == 1 {
-		return out
-	}
-	stages := make([]map[int64]float64, 0, len(profiles)-1)
-	for _, p := range profiles[1:] {
-		stages = append(stages, z(p))
-	}
-	for id, gc := range out {
-		var zs []float64
-		for _, st := range stages {
-			zs = append(zs, st[id])
-		}
-		sort.Sort(sort.Reverse(sort.Float64Slice(zs)))
-		k := min(2, len(zs)-1)
-		out[id] = math.Max(gc, zs[k])
-	}
-	return out
 }
 
 // planYear plans every rider's programme for the year's events not yet
@@ -278,6 +206,7 @@ func planYear(db *database.DB, s *model.Season) error {
 	// A rider's second Grand Tour is worth less to him: those pairs go back
 	// in the queue at their reduced want once he has one.
 	gts := map[int64]int{}
+	leaders := map[string]int{} // team + event -> leaders in it
 	for len(pairs) > 0 {
 		sort.SliceStable(pairs, func(i, j int) bool {
 			if pairs[i].want != pairs[j].want {
@@ -294,6 +223,13 @@ func planYear(db *database.DB, s *model.Season) error {
 		if in == 0 && p.r.Team != s.Team && aiTeams(p.e) <= 0 {
 			continue
 		}
+		if values[p.r.ID] >= leaderValue {
+			key := p.r.Team + "\x00" + fmt.Sprint(p.e.ID)
+			if leaders[key] >= leadersPerEvent {
+				continue
+			}
+			leaders[key]++
+		}
 		add(p.r, p.e)
 		if p.e.Category != model.CategoryGrandTour {
 			continue
@@ -301,7 +237,11 @@ func planYear(db *database.DB, s *model.Season) error {
 		if gts[p.r.ID]++; gts[p.r.ID] == 1 {
 			for i := range pairs {
 				if pairs[i].r.ID == p.r.ID && pairs[i].e.Category == model.CategoryGrandTour {
-					pairs[i].want *= secondGrandTour
+					if pairs[i].e.Name == "Vuelta a Espana" || p.e.Name == "Vuelta a Espana" {
+						pairs[i].want *= vueltaDouble
+					} else {
+						pairs[i].want *= secondGrandTour
+					}
 				}
 			}
 		}

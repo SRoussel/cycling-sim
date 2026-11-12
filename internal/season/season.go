@@ -16,7 +16,6 @@ import (
 
 	"cycling_sim/internal/database"
 	"cycling_sim/internal/model"
-	"cycling_sim/internal/selection"
 	"cycling_sim/internal/service"
 )
 
@@ -250,7 +249,7 @@ func Values(db *database.DB, riders []model.Rider) map[int64]float64 {
 
 type eventProfile struct {
 	event    model.SeasonEvent
-	profiles []selection.CourseProfile
+	profiles *eventCourses
 }
 
 var (

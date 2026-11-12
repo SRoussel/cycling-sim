@@ -3,13 +3,12 @@ import { TeamControl } from '../../sim/useTeamControl'
 import { GroupMark } from './ProfileView'
 import { teamColor } from '../../sim/teamColors'
 
-/** One colour per group position on the road, shared with the team cards. */
-export const GROUP_COLORS = ['#f59e0b', '#ef4444', '#a855f7', '#3b82f6', '#14b8a6', '#84cc16', '#ec4899', '#94a3b8']
-
-export function groupColor(groups: RaceGroup[], name: string | undefined): string {
-  const idx = groups.findIndex((g) => g.name === name)
-  return idx >= 0 ? GROUP_COLORS[idx % GROUP_COLORS.length] : '#64748b'
+/** A group's dot: the front of the race white, the rest grey (groups with
+ * the player's riders get an orange ring where drawn). */
+export function groupTone(index: number): string {
+  return index === 0 ? '#f2f4f8' : '#7c8794'
 }
+
 
 /**
  * The road: every group from the front, with its gap and size, and which of
@@ -39,7 +38,6 @@ export function RoadView({ groups, tc, emptyText }: { groups: RaceGroup[]; tc?: 
               const rest = size - mine.length - shown.length
               return (
                 <li key={i} className={mine.length > 0 ? 'mine' : ''}>
-                  <span className="g-dot" style={{ background: GROUP_COLORS[i % GROUP_COLORS.length] }} />
                   <span className="g-name">{g.name}</span>
                   <span className="g-size">{size}</span>
                   <span className="g-gap">{(g.gapS ?? 0) > 0 ? g.gap : ''}</span>
@@ -83,7 +81,7 @@ export function groupMarks(groups: RaceGroup[], tc: TeamControl): GroupMark[] {
     const size = g.size ?? g.riders.length
     return {
       km: Math.max(0, front - (gap * kph) / 3600),
-      color: GROUP_COLORS[i % GROUP_COLORS.length],
+      color: groupTone(i),
       size,
       label: `${g.name}: ${size} ${size === 1 ? 'rider' : 'riders'}${gap > 0 ? `, ${g.gap}` : ''}`,
       mine: mineIn.has(g.name),
@@ -116,7 +114,7 @@ function GapGraphic({ groups, tc }: { groups: RaceGroup[]; tc?: TeamControl }) {
             key={i}
             className={`gap-dot${mineIn.has(g.name) ? ' mine' : ''}`}
             title={`${g.name}: ${size} ${size === 1 ? 'rider' : 'riders'}${(g.gapS ?? 0) > 0 ? `, ${g.gap}` : ''}`}
-            style={{ right: `${(((g.gapS ?? 0) / maxGap) * 94 + 3)}%`, width: d, height: d, background: GROUP_COLORS[i % GROUP_COLORS.length] }}
+            style={{ right: `${(((g.gapS ?? 0) / maxGap) * 94 + 3)}%`, width: d, height: d, background: groupTone(i) }}
           >
             {d >= 16 ? size : ''}
           </span>

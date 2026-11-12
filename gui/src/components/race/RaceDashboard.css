@@ -547,7 +547,7 @@
 
 .groups > li {
   display: grid;
-  grid-template-columns: 9px minmax(0, 1fr) auto 4.2rem;
+  grid-template-columns: minmax(0, 1fr) auto 4.2rem;
   column-gap: 10px;
   row-gap: 2px;
   align-items: center;
@@ -576,7 +576,7 @@
 }
 
 .g-riders {
-  grid-column: 2 / -1;
+  grid-column: 1 / -1;
   font-size: 0.75rem;
   color: var(--muted);
   line-height: 1.5;
@@ -945,7 +945,7 @@
 
 .crew-row {
   display: grid;
-  grid-template-columns: 9px minmax(0, 1fr) 7.5rem 2.6rem 1.8rem 2rem 1.6rem;
+  grid-template-columns: minmax(0, 1fr) 7.5rem 2.6rem 1.8rem 2rem 1.6rem;
   align-items: center;
   column-gap: 10px;
   padding: 8px 0;
@@ -980,6 +980,10 @@
 
 .crew-row.commanded .crew-status {
   color: var(--accent);
+}
+
+.crew-where {
+  color: var(--soft);
 }
 
 .crew-bars {
@@ -1061,7 +1065,7 @@
 }
 
 .crew-manual {
-  grid-column: 2 / -1;
+  grid-column: 1 / -1;
   display: flex;
   flex-direction: column;
   gap: 8px;

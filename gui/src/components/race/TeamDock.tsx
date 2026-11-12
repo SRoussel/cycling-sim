@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { EFFORT_MAX_PCT, EFFORT_MIN_PCT, RaceGroup, RiderTelemetryPoint, formatGap } from '../../sim/shared'
 import { LiveOrder, LiveRider, TEAM_ORDER_KINDS, TEAM_ORDERS, TeamControl, TeamOrderValue } from '../../sim/useTeamControl'
-import { groupColor } from './RoadView'
 import { teamColor } from '../../sim/teamColors'
 
 const ACTION_WORDS: Record<string, string> = {
@@ -25,6 +24,13 @@ function provenance(x: LiveOrder | LiveRider | undefined): string {
   if (x.note) parts.push(x.note)
   if (x.kmLeft && x.kmLeft > 0) parts.push(`${x.kmLeft.toFixed(1)} km`)
   return parts.join(' · ')
+}
+
+/** Where a rider is: his group's name and its gap ("Peloton +24s"). */
+function whereIs(groups: RaceGroup[], name: string | undefined): string {
+  if (!name) return '—'
+  const g = groups.find((x) => x.name === name)
+  return g && (g.gapS ?? 0) > 0 ? `${name} ${g.gap}` : name
 }
 
 const level = (pct: number, low: number, empty: number) => (pct < empty ? 'empty' : pct < low ? 'low' : 'ok')
@@ -154,10 +160,11 @@ export function TeamDock({ tc, groups }: { tc: TeamControl; kmRemaining: number;
           const open = manual === r.id
           return (
             <li key={r.id} className={`crew-row${liveCmd ? ' commanded' : ''}${open ? ' open' : ''}`}>
-              <span className="g-dot" style={{ background: groupColor(groups, tc.riderGroups[r.id]) }} title={tc.riderGroups[r.id] || ''} />
               <div className="crew-who">
                 <span className="crew-name" title={tel ? `${r.name}: ${Math.round(tel.speedKph)} km/h, ${Math.round(tel.powerWatts)} W` : r.name}>{r.name}</span>
                 <span className={`crew-status ${mode}`}>
+                  <span className="crew-where">{whereIs(groups, tc.riderGroups[r.id])}</span>
+                  {' · '}
                   {ACTION_WORDS[mode] ?? mode}
                   {why && <> · {why}</>}
                 </span>

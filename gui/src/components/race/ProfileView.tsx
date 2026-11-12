@@ -28,6 +28,8 @@ export interface Climb {
   lengthKm: number
   gainM: number
   avgPct: number
+  name?: string
+  stars?: number
 }
 
 /**
@@ -62,7 +64,23 @@ export function findClimbs(profile: RouteProfile | null): Climb[] {
     }
   }
   close()
+  // A cobbled sector on a climb names it (the Flemish bergs).
+  for (const c of climbs) {
+    let best = 0
+    for (const sec of profile?.sectors || []) {
+      const o = Math.max(0, Math.min(c.startKm + c.lengthKm, sec.startKm + sec.lengthKm) - Math.max(c.startKm, sec.startKm))
+      if (o > best && o >= 0.3 * sec.lengthKm) {
+        best = o
+        c.name = sec.name
+        c.stars = sec.stars
+      }
+    }
+  }
   return climbs
+}
+
+export function stars(n: number): string {
+  return n > 0 ? '★'.repeat(n) : ''
 }
 
 const W = 1000
@@ -81,6 +99,7 @@ export function ProfileView({
   minElevRange = 150,
   labels = 'toGo',
   className,
+  showSectorNames = false,
 }: {
   profile: RouteProfile
   km: number
@@ -90,6 +109,7 @@ export function ProfileView({
   minElevRange?: number
   labels?: 'toGo' | 'km'
   className?: string
+  showSectorNames?: boolean
 }) {
   const total = profile.totalKm
   const span = Math.max(0.1, toKm - fromKm)
@@ -131,6 +151,17 @@ export function ProfileView({
     }
   }
   const markerPct = Math.max(0, Math.min(100, ((km - fromKm) / span) * 100))
+  const sectors = (profile.sectors || []).filter((sec) => sec.startKm + sec.lengthKm > fromKm && sec.startKm < toKm)
+  // Name sectors left to right, skipping a name that would run into the
+  // previous one (~0.55% of the width per character at this size).
+  const labelled: Array<{ sec: (typeof sectors)[number]; left: number }> = []
+  let freeFrom = -Infinity
+  for (const sec of sectors) {
+    const left = ((Math.max(fromKm, sec.startKm) - fromKm) / span) * 100
+    if (left < freeFrom) continue
+    labelled.push({ sec, left })
+    freeFrom = left + (sec.name.length + sec.stars + 2) * 0.55
+  }
 
   return (
     <div className={`pv ${className || ''}`}>
@@ -140,6 +171,16 @@ export function ProfileView({
         {ticks.map((t) => (
           <line key={t.k} x1={x(t.k)} x2={x(t.k)} y1={0} y2={H} className="pv-tick" />
         ))}
+        {sectors.map((sec) => (
+          <rect
+            key={`s${sec.startKm}`}
+            x={x(Math.max(fromKm, sec.startKm))}
+            y={H - 7}
+            width={Math.max(2, x(Math.min(toKm, sec.startKm + sec.lengthKm)) - x(Math.max(fromKm, sec.startKm)))}
+            height={7}
+            className={`pv-cobbles s${Math.min(5, Math.max(1, sec.stars || 3))}`}
+          />
+        ))}
         <rect x={0} y={0} width={x(Math.max(fromKm, Math.min(km, toKm)))} height={H} className="pv-done" />
       </svg>
       <div className="pv-marker" style={{ left: `${markerPct}%` }} />
@@ -148,6 +189,15 @@ export function ProfileView({
           <span key={t.k} style={{ left: `${((t.k - fromKm) / span) * 100}%` }}>{t.label}</span>
         ))}
       </div>
+      {showSectorNames && (
+        <div className="pv-sector-names">
+          {labelled.map(({ sec, left }) => (
+            <span key={sec.startKm} style={{ left: `${left}%` }} title={`${sec.name}: ${sec.lengthKm.toFixed(1)} km, ${sec.stars}★`}>
+              {sec.name} {stars(sec.stars)}
+            </span>
+          ))}
+        </div>
+      )}
       <div className="pv-elev">{Math.round(hi - lo)} m</div>
     </div>
   )

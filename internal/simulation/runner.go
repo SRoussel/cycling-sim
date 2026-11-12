@@ -5,6 +5,7 @@ import (
 	"math"
 	"math/rand"
 	"sort"
+	"strings"
 	"time"
 
 	"cycling_sim/internal/model"
@@ -38,6 +39,7 @@ type ProfilePoint struct {
 type RouteProfile struct {
 	TotalKm float64        `json:"totalKm"`
 	Points  []ProfilePoint `json:"points"`
+	Sectors []RouteSector  `json:"sectors,omitempty"`
 }
 
 type ProgressSnapshot struct {
@@ -84,6 +86,47 @@ func clampPercent(v float64) float64 {
 	return v
 }
 
+// RouteSector is a cobbled sector: consecutive cobbled segments of one name.
+type RouteSector struct {
+	Name     string  `json:"name"`
+	StartKm  float64 `json:"startKm"`
+	LengthKm float64 `json:"lengthKm"`
+	Stars    int     `json:"stars"` // 1-5 (0: unknown)
+}
+
+// routeSectors merges a course's cobbled segments into sectors.
+func routeSectors(course *model.Course) []RouteSector {
+	var out []RouteSector
+	km := 0.0
+	prevCobbled := false
+	for _, seg := range course.Segments {
+		cobbled := seg.SurfaceType == model.SurfaceCobbles
+		if cobbled {
+			n := len(out)
+			name := sectorName(seg.Name)
+			if prevCobbled && n > 0 && out[n-1].Name == name {
+				out[n-1].LengthKm += seg.DistanceKm
+				if seg.CobbleStars > out[n-1].Stars {
+					out[n-1].Stars = seg.CobbleStars
+				}
+			} else {
+				out = append(out, RouteSector{Name: name, StartKm: km, LengthKm: seg.DistanceKm, Stars: seg.CobbleStars})
+			}
+		}
+		prevCobbled = cobbled
+		km += seg.DistanceKm
+	}
+	return out
+}
+
+// sectorName drops the " (3★)" the stage files append to sector names.
+func sectorName(name string) string {
+	if i := strings.LastIndex(name, " ("); i > 0 && strings.HasSuffix(name, "★)") {
+		return name[:i]
+	}
+	return name
+}
+
 func buildRouteProfile(course *model.Course) *RouteProfile {
 	if course == nil || len(course.Segments) == 0 {
 		return nil
@@ -97,7 +140,7 @@ func buildRouteProfile(course *model.Course) *RouteProfile {
 		elev += seg.DistanceKm * 1000.0 * (seg.GradientPct / 100.0)
 		points = append(points, ProfilePoint{Km: km, Elev: elev})
 	}
-	return &RouteProfile{TotalKm: course.TotalDistanceKm, Points: points}
+	return &RouteProfile{TotalKm: course.TotalDistanceKm, Points: points, Sectors: routeSectors(course)}
 }
 
 func segmentStartTimes(states []*RiderState) map[int64]float64 {

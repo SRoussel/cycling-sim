@@ -750,3 +750,56 @@ button.decision-option:hover {
   color: var(--color-text-muted);
   margin: 0;
 }
+
+/* ---------- cobbles ---------- */
+
+.pv-cobbles { fill: #a16207; }
+.pv-cobbles.s1 { fill: #a1620766; }
+.pv-cobbles.s2 { fill: #a1620799; }
+.pv-cobbles.s3 { fill: #b45309; }
+.pv-cobbles.s4 { fill: #c2410c; }
+.pv-cobbles.s5 { fill: #dc2626; }
+
+.pv-sector-names {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 22px;
+  height: 0;
+  pointer-events: none;
+}
+
+.pv-sector-names span {
+  position: absolute;
+  bottom: 0;
+  font-size: 0.62rem;
+  color: #fbbf24;
+  white-space: nowrap;
+  text-shadow: 0 1px 2px #000;
+  pointer-events: auto;
+}
+
+.route-next {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.route-cobbles {
+  color: #fbbf24;
+}
+
+.route-cobbles.on {
+  font-weight: 600;
+  color: #f59e0b;
+}
+
+.route-climbs td.stars {
+  color: #fbbf24;
+  letter-spacing: 0.05em;
+}
+
+.decision-card.kind-cobbles {
+  border-color: rgba(245, 158, 11, 0.8);
+}

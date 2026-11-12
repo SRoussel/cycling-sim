@@ -13,9 +13,17 @@ export interface RiderTelemetryPoint {
   routePct: number
 }
 
+export interface RouteSector {
+  name: string
+  startKm: number
+  lengthKm: number
+  stars: number
+}
+
 export interface RouteProfile {
   totalKm: number
   points: Array<{ km: number; elev: number }>
+  sectors?: RouteSector[]
 }
 
 export interface TeamState {

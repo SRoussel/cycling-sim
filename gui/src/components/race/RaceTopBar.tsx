@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { RouteProfile, clamp01, formatRaceClock } from '../../sim/shared'
-import { ProfileView, findClimbs } from './ProfileView'
+import { ProfileView, findClimbs, stars } from './ProfileView'
 import { PlaybackControls } from './RacePanels'
 
 /**
@@ -97,25 +97,39 @@ function RouteStrip({ profile, km, kmTotal }: { profile: RouteProfile | null; km
   const from = Math.max(0, Math.min(km - ZOOM_BEHIND_KM, total - span))
   const current = climbs.find((c) => km >= c.startKm && km < c.startKm + c.lengthKm)
   const next = climbs.find((c) => c.startKm > km)
+  const sectors = profile.sectors || []
+  const onSector = sectors.find((sec) => km >= sec.startKm && km < sec.startKm + sec.lengthKm)
+  const nextSector = sectors.find((sec) => sec.startKm > km)
+  const climbName = (c: { name?: string }) => c.name || 'climb'
   return (
     <div className="route-strip">
       <div className="route-zoom">
         <div className="route-zoom-head">
           <span className="route-zoom-title">Road ahead · km to go</span>
-          {current ? (
-            <span className="route-climb on">
-              ⛰ On a climb: {(current.startKm + current.lengthKm - km).toFixed(1)} km to the top at {current.avgPct.toFixed(1)}%
-            </span>
-          ) : next ? (
-            <span className="route-climb">
-              Next climb in {(next.startKm - km).toFixed(1)} km: {next.lengthKm.toFixed(1)} km at {next.avgPct.toFixed(1)}%
-              {' '}({(total - next.startKm).toFixed(0)} km to go)
-            </span>
-          ) : (
-            <span className="route-climb">No climbs left</span>
-          )}
+          <span className="route-next">
+            {onSector ? (
+              <span className="route-cobbles on">
+                🪨 {onSector.name} {stars(onSector.stars)}: {(onSector.startKm + onSector.lengthKm - km).toFixed(1)} km of cobbles left
+              </span>
+            ) : nextSector && nextSector.startKm - km <= 30 ? (
+              <span className="route-cobbles">
+                🪨 {nextSector.name} {stars(nextSector.stars)} in {(nextSector.startKm - km).toFixed(1)} km ({nextSector.lengthKm.toFixed(1)} km)
+              </span>
+            ) : null}
+            {current ? (
+              <span className="route-climb on">
+                ⛰ On {current.name || 'a climb'}: {(current.startKm + current.lengthKm - km).toFixed(1)} km to the top at {current.avgPct.toFixed(1)}%
+              </span>
+            ) : next ? (
+              <span className="route-climb">
+                ⛰ Next {climbName(next)} in {(next.startKm - km).toFixed(1)} km: {next.lengthKm.toFixed(1)} km at {next.avgPct.toFixed(1)}%
+              </span>
+            ) : climbs.length > 0 ? (
+              <span className="route-climb">No climbs left</span>
+            ) : null}
+          </span>
         </div>
-        <ProfileView profile={profile} km={km} fromKm={from} toKm={from + span} tickEvery={span > 15 ? 5 : 2} className="zoom" />
+        <ProfileView profile={profile} km={km} fromKm={from} toKm={from + span} tickEvery={span > 15 ? 5 : 2} className="zoom" showSectorNames />
       </div>
       <button className="route-mini" onClick={() => setOpen(true)} title="Show the whole course">
         <ProfileView profile={profile} km={km} fromKm={0} toKm={total} tickEvery={total > 150 ? 50 : 25} minElevRange={600} labels="km" className="mini" />
@@ -132,16 +146,33 @@ function RouteStrip({ profile, km, kmTotal }: { profile: RouteProfile | null; km
             {climbs.length > 0 && (
               <table className="route-climbs">
                 <thead>
-                  <tr><th>Climb starts</th><th>km to go</th><th>Length</th><th>Avg</th><th>Gain</th></tr>
+                  <tr><th>Climb</th><th>km to go</th><th>Length</th><th>Avg</th><th>Gain</th></tr>
                 </thead>
                 <tbody>
                   {climbs.map((c) => (
                     <tr key={c.startKm} className={c.startKm + c.lengthKm < km ? 'done' : ''}>
-                      <td>km {c.startKm.toFixed(1)}</td>
+                      <td>{c.name ? `${c.name} ${stars(c.stars || 0)}` : `km ${c.startKm.toFixed(1)}`}</td>
                       <td>{(total - c.startKm).toFixed(1)}</td>
                       <td>{c.lengthKm.toFixed(1)} km</td>
                       <td>{c.avgPct.toFixed(1)}%</td>
                       <td>{Math.round(c.gainM)} m</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+            {sectors.length > 0 && (
+              <table className="route-climbs">
+                <thead>
+                  <tr><th>Cobbled sector</th><th>km to go</th><th>Length</th><th>Difficulty</th></tr>
+                </thead>
+                <tbody>
+                  {sectors.map((sec) => (
+                    <tr key={sec.startKm} className={sec.startKm + sec.lengthKm < km ? 'done' : ''}>
+                      <td>{sec.name}</td>
+                      <td>{(total - sec.startKm).toFixed(1)}</td>
+                      <td>{sec.lengthKm.toFixed(1)} km</td>
+                      <td className="stars">{stars(sec.stars)}</td>
                     </tr>
                   ))}
                 </tbody>

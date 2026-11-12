@@ -69,11 +69,21 @@ type Climb struct {
 	LengthKm float64
 	GainM    float64
 	AvgPct   float64
+	Name     string // from a cobbled sector on it (the Flemish bergs), else ""
+	Stars    int    // cobbled: the sector's stars
+}
+
+// label names the climb for the player.
+func (c Climb) label() string {
+	if c.Name != "" {
+		return c.Name
+	}
+	return "the climb"
 }
 
 const (
 	minMomentSpacingKm = 2    // between two moments
-	attackCooldownKm   = 8    // per attacking rider
+	attackCooldownKm   = 15   // per attacking rider
 	droppedCooldownKm  = 15   // between two "leader dropped" moments
 	finaleKm           = 12   // the finale moment
 	climbLeadKm        = 3    // warn this far before a decisive climb
@@ -85,8 +95,10 @@ const (
 	followGapS         = 45   // an attack this far up the road is still answerable
 	climbMinScore      = 300  // gain (m) × average gradient (%): Paterberg ~600, Poggio ~870, Capi Mele ~240
 	decisiveClimbs     = 3    // the hardest climbs of the finale (plus the last) are moments
-	attackSpacingKm    = 3    // between attack moments (1 km in the last 10 km)
+	attackSpacingKm    = 5    // between attack moments (1 km in the last 10 km)
 	lowReservePct      = 20   // below this a rider isn't offered an attack
+	sectorMinScore     = 20   // length (km) × stars²
+	decisiveSectors    = 4    // the hardest flat cobbled sectors of the finale (plus the last 4-5★)
 	decisiveClimbShare = 0.35 // climbs in the last 35% of the race (or last 80 km)
 )
 
@@ -94,15 +106,18 @@ const (
 type Director struct {
 	Team string
 
-	totalKm      float64
-	climbs       []Climb
-	decisive     map[float64]bool // decisive climbs by start km
-	lastMomentKm float64
-	fired        map[string]bool
-	attackAt     map[int64]float64 // km remaining at the rider's last attack moment
-	lastAttackKm float64           // km remaining at the last attack moment
-	droppedAt    float64
-	seq          int
+	totalKm         float64
+	climbs          []Climb
+	decisive        map[float64]bool // decisive climbs by start km
+	sectors         []simulation.RouteSector
+	decisiveSectors map[float64]bool // decisive cobbled sectors by start km
+	lastMomentKm    float64
+	fired           map[string]bool
+	attackAt        map[int64]float64 // km remaining at the rider's last attack moment
+	lastAttackKm    float64           // km remaining at the last attack moment
+	droppedAt       float64
+	droppedAsked    map[int64]bool // cards asked about since they were last in front
+	seq             int
 }
 
 // New returns a director for the team.
@@ -118,6 +133,7 @@ func (d *Director) reset() {
 	d.attackAt = map[int64]float64{}
 	d.lastAttackKm = math.Inf(1)
 	d.droppedAt = math.Inf(1)
+	d.droppedAsked = map[int64]bool{}
 }
 
 // SetRoute starts a new race (or stage) on this route profile.
@@ -129,7 +145,63 @@ func (d *Director) SetRoute(profile *simulation.RouteProfile) {
 	}
 	d.totalKm = profile.TotalKm
 	d.climbs = FindClimbs(profile.Points)
+	d.sectors = profile.Sectors
+	nameClimbs(d.climbs, d.sectors)
 	d.decisive = decisiveSet(d.climbs, d.totalKm)
+	d.decisiveSectors = decisiveSectorSet(d.sectors, d.climbs, d.totalKm)
+}
+
+// overlap is the length two stretches of road share.
+func overlap(a0, al, b0, bl float64) float64 {
+	return math.Max(0, math.Min(a0+al, b0+bl)-math.Max(a0, b0))
+}
+
+// nameClimbs gives climbs the name of a cobbled sector on them.
+func nameClimbs(climbs []Climb, sectors []simulation.RouteSector) {
+	for i := range climbs {
+		c := &climbs[i]
+		best := 0.0
+		for _, sec := range sectors {
+			if o := overlap(c.StartKm, c.LengthKm, sec.StartKm, sec.LengthKm); o > best && o >= 0.3*sec.LengthKm {
+				best, c.Name, c.Stars = o, sec.Name, sec.Stars
+			}
+		}
+	}
+}
+
+func sectorScore(s simulation.RouteSector) float64 {
+	return s.LengthKm * float64(s.Stars*s.Stars)
+}
+
+// decisiveSectorSet picks the flat cobbled sectors worth a decision: in the
+// last 40% (or 100 km), hard enough (length x stars²: Arenberg ~52,
+// Mons-en-Pévèle ~72, a 2 km 3★ sector 18), the hardest few plus the last
+// 4-5★ one. Cobbled climbs are the climb moment's.
+func decisiveSectorSet(sectors []simulation.RouteSector, climbs []Climb, totalKm float64) map[float64]bool {
+	var cands []simulation.RouteSector
+	for _, sec := range sectors {
+		onClimb := false
+		for _, c := range climbs {
+			if overlap(c.StartKm, c.LengthKm, sec.StartKm, sec.LengthKm) > 0 {
+				onClimb = true
+			}
+		}
+		if !onClimb && totalKm-sec.StartKm <= math.Max(100, 0.4*totalKm) && sectorScore(sec) >= sectorMinScore {
+			cands = append(cands, sec)
+		}
+	}
+	out := map[float64]bool{}
+	for i := len(cands) - 1; i >= 0; i-- {
+		if cands[i].Stars >= 4 {
+			out[cands[i].StartKm] = true
+			break
+		}
+	}
+	sort.SliceStable(cands, func(i, j int) bool { return sectorScore(cands[i]) > sectorScore(cands[j]) })
+	for i := 0; i < len(cands) && i < decisiveSectors; i++ {
+		out[cands[i].StartKm] = true
+	}
+	return out
 }
 
 func climbScore(c Climb) float64 { return c.GainM * c.AvgPct }
@@ -371,7 +443,7 @@ func (d *Director) Next(v *simulation.RaceView) *Moment {
 	// (rules mark themselves fired, so only run those that may fire).
 	rules := []func(*view) *Moment{d.rivalAttack}
 	if spaced {
-		rules = append(rules, d.leaderDropped, d.keyClimb, d.finale, d.breakaway)
+		rules = append(rules, d.leaderDropped, d.keyClimb, d.cobbles, d.finale, d.breakaway)
 	}
 	var m *Moment
 	for _, rule := range rules {
@@ -495,11 +567,23 @@ func (d *Director) climbContext(km float64) string {
 		if climbScore(c) < climbMinScore {
 			continue
 		}
+		name := "a climb"
+		if c.Name != "" {
+			name = c.Name
+		}
 		switch {
 		case pos >= c.StartKm && pos < c.StartKm+c.LengthKm:
-			return fmt.Sprintf(", %.1f km from the top of a climb at %.1f%%", c.StartKm+c.LengthKm-pos, c.AvgPct)
+			return fmt.Sprintf(", %.1f km from the top of %s (%.1f%%)", c.StartKm+c.LengthKm-pos, name, c.AvgPct)
 		case c.StartKm-pos > 0 && c.StartKm-pos <= 1.5:
-			return fmt.Sprintf(", at the foot of a %.1f km climb at %.1f%%", c.LengthKm, c.AvgPct)
+			return fmt.Sprintf(", at the foot of %s (%.1f km at %.1f%%)", name, c.LengthKm, c.AvgPct)
+		}
+	}
+	for _, sec := range d.sectors {
+		switch {
+		case pos >= sec.StartKm && pos < sec.StartKm+sec.LengthKm:
+			return fmt.Sprintf(", on the cobbles of %s (%d★)", sec.Name, sec.Stars)
+		case sec.StartKm-pos > 0 && sec.StartKm-pos <= 1:
+			return fmt.Sprintf(", just before %s (%d★ cobbles)", sec.Name, sec.Stars)
 		}
 	}
 	return ""
@@ -533,7 +617,9 @@ func (d *Director) leaderDropped(w *view) *Moment {
 		g := w.groupOf[c]
 		if g <= ref {
 			front = append(front, c)
-		} else if p == 0 && w.gap(g)-w.gap(ref) >= droppedGapS {
+			delete(d.droppedAsked, c) // back in front: may be asked again
+		} else if gap := w.gap(g) - w.gap(ref); p == 0 && !d.droppedAsked[c] && gap >= droppedGapS && gap <= math.Max(60, 6*km) {
+			// (further back than a chase could close: no decision left)
 			p = c
 		}
 	}
@@ -543,6 +629,7 @@ func (d *Director) leaderDropped(w *view) *Moment {
 	pg := w.groupOf[p]
 	behind := w.gap(pg) - w.gap(ref)
 	d.droppedAt = km
+	d.droppedAsked[p] = true
 	pr := w.Riders[p]
 	with := w.helpers(pg, p)
 	var ahead []int64
@@ -716,14 +803,24 @@ func (d *Director) keyClimb(w *view) *Moment {
 		top := d.totalKm - c.StartKm - c.LengthKm
 		nearTop := d.totalKm - c.StartKm - 0.75*c.LengthKm
 		title := fmt.Sprintf("⛰ Climb in %.1f km", toFoot)
+		if c.Name != "" {
+			title = fmt.Sprintf("⛰ %s in %.1f km", c.Name, toFoot)
+		}
+		if toFoot < 0.3 && toFoot > 0 {
+			title = fmt.Sprintf("⛰ Onto %s now", c.label())
+		}
 		if toFoot <= 0 {
-			title = fmt.Sprintf("⛰ On the climb: %.1f km to the top", km-top)
+			title = fmt.Sprintf("⛰ On %s: %.1f km to the top", c.label(), km-top)
+		}
+		cobbled := ""
+		if c.Stars > 0 {
+			cobbled = fmt.Sprintf(", cobbled (%d★)", c.Stars)
 		}
 		m := &Moment{
 			Kind:  "climb",
 			Title: title,
-			Text: fmt.Sprintf("%.1f km at %.1f%% (%.0f m), the top %.1f km from the finish. Ours in %s: %s; %d teammates to help.",
-				c.LengthKm, c.AvgPct, c.GainM, top, w.groupLabel(pg), joinAnd(climbWhere(w, inRace, pg)), len(w.helpers(pg, 0))),
+			Text: fmt.Sprintf("%.1f km at %.1f%% (%.0f m)%s, the top %.1f km from the finish. Ours in %s: %s; %d teammates to help.",
+				c.LengthKm, c.AvgPct, c.GainM, cobbled, top, w.groupLabel(pg), joinAnd(climbWhere(w, inRace, pg)), len(w.helpers(pg, 0))),
 		}
 		attackers := 0
 		for _, id := range inRace {
@@ -740,10 +837,76 @@ func (d *Director) keyClimb(w *view) *Moment {
 				Help:     "A long attack: the whole climb to make the difference.",
 				Commands: []Command{{RiderID: p, Action: "attack", Mode: "oneshot", AtKmRemaining: toGoAtFoot}}})
 		}
-		m.Options = append(m.Options,
-			Option{ID: "tempo", Label: "Team sets a hard tempo", Help: "Teammates drive the climb to thin the group for him.",
-				Orders: []OrderChange{{Kind: "pace", Value: "yes", ForKm: km - top}}},
-			Option{ID: "sit", Label: "Sit in and follow", Help: "Save the reserve; react to the others."})
+		if len(w.helpers(pg, 0)) > 0 {
+			m.Options = append(m.Options, Option{ID: "tempo", Label: "Team sets a hard tempo", Help: "Teammates drive the climb to thin the group for him.",
+				Orders: []OrderChange{{Kind: "pace", Value: "yes", ForKm: km - top}}})
+		}
+		m.Options = append(m.Options, Option{ID: "sit", Label: "Sit in and follow", Help: "Save the reserve; react to the others."})
+		return m
+	}
+	return nil
+}
+
+// cobbles: a decisive cobbled sector starts within a few km.
+func (d *Director) cobbles(w *view) *Moment {
+	km := w.KmRemaining
+	pos := d.totalKm - km
+	if d.totalKm == 0 || len(d.decisiveSectors) == 0 {
+		return nil
+	}
+	var inRace []int64
+	for _, c := range w.cards() {
+		if w.groupOf[c] <= w.main {
+			inRace = append(inRace, c)
+		}
+	}
+	if len(inRace) == 0 {
+		return nil
+	}
+	pg := w.groupOf[inRace[0]]
+	for _, sec := range d.sectors {
+		toStart := sec.StartKm - pos
+		if toStart <= -sec.LengthKm/3 || toStart > climbLeadKm || !d.decisiveSectors[sec.StartKm] {
+			continue
+		}
+		key := fmt.Sprintf("sector-%.1f", sec.StartKm)
+		if d.fired[key] {
+			continue
+		}
+		d.fired[key] = true
+		end := d.totalKm - sec.StartKm - sec.LengthKm
+		title := fmt.Sprintf("🪨 %s in %.1f km", sec.Name, toStart)
+		if toStart < 0.3 && toStart > 0 {
+			title = fmt.Sprintf("🪨 Into %s now", sec.Name)
+		}
+		if toStart <= 0 {
+			title = fmt.Sprintf("🪨 On %s: %.1f km of cobbles left", sec.Name, km-end)
+		}
+		m := &Moment{
+			Kind:  "cobbles",
+			Title: title,
+			Text: fmt.Sprintf("%.1f km of %d★ cobbles, ending %.1f km from the finish. Ours in %s: %s; %d teammates to help.",
+				sec.LengthKm, sec.Stars, end, w.groupLabel(pg), joinAnd(climbWhere(w, inRace, pg)), len(w.helpers(pg, 0))),
+		}
+		into := math.Max(0, toStart) + sec.LengthKm
+		if len(w.helpers(pg, 0)) > 0 {
+			m.Options = append(m.Options, Option{ID: "front", Label: "Team leads into the sector",
+				Help:   "Teammates ride the front onto the cobbles and through them: our leaders sit in the front and the group thins behind.",
+				Orders: []OrderChange{{Kind: "pace", Value: "yes", ForKm: into}}})
+		}
+		// Attack a third of the way in: past the fight for the entrance.
+		at := d.totalKm - sec.StartKm - sec.LengthKm/3
+		attackers := 0
+		for _, id := range inRace {
+			if attackers == 2 || w.Riders[id].WPrimePct < lowReservePct {
+				continue
+			}
+			attackers++
+			m.Options = append(m.Options, Option{ID: fmt.Sprintf("attack-%d", id), Label: fmt.Sprintf("%s attacks on the cobbles", w.name(id)),
+				Help:     fmt.Sprintf("Go hard a third of the way into %s: the cobbles hurt those on the wheel too.", sec.Name),
+				Commands: []Command{{RiderID: id, Action: "attack", Mode: "oneshot", AtKmRemaining: math.Min(km, at)}}})
+		}
+		m.Options = append(m.Options, Option{ID: "sit", Label: "Sit in and follow", Help: "Save the reserve; follow the wheels over the cobbles."})
 		return m
 	}
 	return nil

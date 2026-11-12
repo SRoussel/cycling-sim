@@ -209,3 +209,60 @@ func TestSelectionWithRivalFavouritesIsNotABreak(t *testing.T) {
 		t.Fatalf("a front group with a rival favourite is the race, not a break: %+v", m)
 	}
 }
+
+func roubaixLike() *simulation.RouteProfile {
+	return &simulation.RouteProfile{TotalKm: 250,
+		Points: []simulation.ProfilePoint{{Km: 0}, {Km: 250}},
+		Sectors: []simulation.RouteSector{
+			{Name: "Early", StartKm: 60, LengthKm: 3, Stars: 4},                 // too far out
+			{Name: "Arenberg", StartKm: 160, LengthKm: 2.1, Stars: 5},           // 52
+			{Name: "Small", StartKm: 180, LengthKm: 1, Stars: 2},                // 4: too easy
+			{Name: "Bersee", StartKm: 200, LengthKm: 2.6, Stars: 4},             // 42
+			{Name: "Mons", StartKm: 205, LengthKm: 2.9, Stars: 5},               // 72
+			{Name: "Hornaing", StartKm: 170, LengthKm: 3.5, Stars: 3},           // 31
+			{Name: "Camphin", StartKm: 228, LengthKm: 1.7, Stars: 4},            // 27
+			{Name: "Carrefour de l'Arbre", StartKm: 231, LengthKm: 2, Stars: 5}, // 50, last 4-5★
+			{Name: "Roubaix", StartKm: 243, LengthKm: 0.4, Stars: 1},
+		}}
+}
+
+func TestDecisiveSectors(t *testing.T) {
+	d := New("Us")
+	d.SetRoute(roubaixLike())
+	want := map[float64]bool{160: true, 200: true, 205: true, 231: true}
+	if len(d.decisiveSectors) != len(want) {
+		t.Fatalf("decisive sectors %v, want Arenberg, Bersee, Mons, Carrefour", d.decisiveSectors)
+	}
+	for k := range want {
+		if !d.decisiveSectors[k] {
+			t.Errorf("missing sector at km %.0f", k)
+		}
+	}
+}
+
+func TestCobblesMoment(t *testing.T) {
+	d := New("Us")
+	d.SetRoute(roubaixLike())
+	m := d.Next(race(48, [][]int64{append([]int64{1, 2, 3, 10}, bunch(11, 40)...)}, []float64{0}))
+	if m == nil || m.Kind != "cobbles" || m.Title != "🪨 Mons in 3.0 km" {
+		t.Fatalf("want the Mons moment, got %+v", m)
+	}
+	o, ok := m.Option("attack-1")
+	if !ok || o.Commands[0].AtKmRemaining > 45 || o.Commands[0].AtKmRemaining < 44 {
+		t.Fatalf("attack a third of the way into the sector (~44 km to go): %+v", o)
+	}
+}
+
+func TestCobbledClimbIsNamed(t *testing.T) {
+	d := New("Us")
+	d.SetRoute(&simulation.RouteProfile{TotalKm: 250,
+		Points:  []simulation.ProfilePoint{{Km: 0}, {Km: 230}, {Km: 230.4, Elev: 55}, {Km: 250, Elev: 0}},
+		Sectors: []simulation.RouteSector{{Name: "Paterberg", StartKm: 230, LengthKm: 0.5, Stars: 3}}})
+	m := d.Next(race(21, [][]int64{append([]int64{1, 2, 3, 10}, bunch(11, 40)...)}, []float64{0}))
+	if m == nil || m.Title != "⛰ Paterberg in 1.0 km" {
+		t.Fatalf("want the named Paterberg moment, got %+v", m)
+	}
+	if len(d.decisiveSectors) != 0 {
+		t.Errorf("a cobbled climb is the climb's moment, not a sector's")
+	}
+}

@@ -110,7 +110,7 @@ func riderBudget(value float64) int {
 }
 
 // eventProfiles: the course profiles of an event (one-day: its course;
-// stage race: the whole race, then each stage).
+// stage race: its GC (mountain and time-trial stages), then each stage).
 func eventProfiles(db *database.DB, e model.SeasonEvent) ([]selection.CourseProfile, error) {
 	if e.Kind == model.EventOneDay {
 		race, err := db.GetRace(e.RefID)
@@ -131,11 +131,20 @@ func eventProfiles(db *database.DB, e model.SeasonEvent) ([]selection.CourseProf
 	if err != nil {
 		return nil, err
 	}
-	var each []selection.CourseProfile
+	// The GC is decided in the mountains and the time trials: its profile
+	// averages those stages (all stages if there are none).
+	var each, hard []selection.CourseProfile
 	for _, in := range infos {
-		each = append(each, selection.AnalyzeCourse(in.Course, in.RaceType))
+		p := selection.AnalyzeCourse(in.Course, in.RaceType)
+		each = append(each, p)
+		if in.RaceType == model.RaceTypeTT || p.ClimbingDemand > 0.3 {
+			hard = append(hard, p)
+		}
 	}
-	return append([]selection.CourseProfile{selection.AverageProfile(each)}, each...), nil
+	if len(hard) == 0 {
+		hard = each
+	}
+	return append([]selection.CourseProfile{selection.AverageProfile(hard)}, each...), nil
 }
 
 // fits rates how well each rider suits an event, in standard deviations above
@@ -199,12 +208,12 @@ func planYear(db *database.DB, s *model.Season) error {
 	var riders []model.Rider
 	raced := map[int64]int{}
 	for _, sr := range srs {
-		if !sr.Retired {
+		if !sr.Retired && sr.Team != "" {
 			riders = append(riders, sr.Rider)
 			raced[sr.ID] = sr.RaceDays
 		}
 	}
-	values := Values(riders)
+	values := Values(db, riders)
 	var todo []model.SeasonEvent
 	for _, e := range events {
 		if !e.Done {

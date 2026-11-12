@@ -113,7 +113,7 @@ func Prepare(db *database.DB, s *model.Season, eventID int64, picks []int64) (*P
 	days := e.Start.Sub(s.Date).Hours() / 24
 	var field, mine, spare []model.Rider
 	for _, sr := range srs {
-		if sr.Retired || busy[sr.ID] {
+		if sr.Retired || sr.Team == "" || busy[sr.ID] {
 			continue
 		}
 		r := raceRider(sr, days)

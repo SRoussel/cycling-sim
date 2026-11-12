@@ -11,10 +11,12 @@ import (
 	"math"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"cycling_sim/internal/database"
 	"cycling_sim/internal/model"
+	"cycling_sim/internal/selection"
 	"cycling_sim/internal/service"
 )
 
@@ -38,11 +40,13 @@ func New(db *database.DB, team, name string) (*model.Season, error) {
 	if strings.TrimSpace(name) == "" {
 		name = fmt.Sprintf("%s %d", team, FirstYear)
 	}
-	s := &model.Season{Name: name, Team: team, Year: FirstYear, StartYear: FirstYear, Date: time.Date(FirstYear, 1, 1, 0, 0, 0, 0, time.UTC)}
+	s := &model.Season{Name: name, Team: team, Year: FirstYear, StartYear: FirstYear, Phase: model.PhaseRacing,
+		Date: time.Date(FirstYear, 1, 1, 0, 0, 0, 0, time.UTC)}
 	if err := db.CreateSeason(s); err != nil {
 		return nil, err
 	}
-	values := Values(riders)
+	rng := rngFor(s, 0)
+	values := Values(db, riders)
 	srs := make([]model.SeasonRider, 0, len(riders))
 	for _, r := range riders {
 		srs = append(srs, model.SeasonRider{
@@ -50,15 +54,28 @@ func New(db *database.DB, team, name string) (*model.Season, error) {
 			ContractEnd: FirstYear + contractYears(r, values[r.ID]) - 1,
 			Salary:      SalaryFor(values[r.ID], r.Age),
 			Morale:      MoraleNeutral,
+			Potential:   potential(rng),
 		})
 	}
 	if err := db.SaveSeasonRiders(s.ID, srs); err != nil {
+		return nil, err
+	}
+	// The budget: this year's wage bill with a little room to sign riders.
+	s.Budget = int(math.Round(float64(WageBill(srs, team))*1.08/10) * 10)
+	if err := db.UpdateSeason(s); err != nil {
 		return nil, err
 	}
 	if err := buildCalendar(db, s); err != nil {
 		return nil, err
 	}
 	if err := planYear(db, s); err != nil {
+		return nil, err
+	}
+	if err := setObjectives(db, s); err != nil {
+		return nil, err
+	}
+	if err := db.AddNews([]model.NewsItem{{SeasonID: s.ID, Year: s.Year, Date: s.Date, Mine: true,
+		Text: fmt.Sprintf("You take charge of %s for the %d season. Budget: %s.", team, s.Year, Money(s.Budget))}}); err != nil {
 		return nil, err
 	}
 	return s, nil
@@ -105,13 +122,22 @@ func inYear(t time.Time, year int) time.Time {
 	return time.Date(year, t.Month(), t.Day(), 0, 0, 0, 0, time.UTC)
 }
 
-// buildCalendar lists the seeded one-day road races and stage races (not the
-// reference editions or stand-alone time trials) for the season's year.
+// buildCalendar saves the season's calendar for its year.
 func buildCalendar(db *database.DB, s *model.Season) error {
+	events, err := calendarEvents(db, s)
+	if err != nil {
+		return err
+	}
+	return db.SaveSeasonEvents(events)
+}
+
+// calendarEvents lists the seeded one-day road races and stage races (not the
+// reference editions or stand-alone time trials) in the season's year.
+func calendarEvents(db *database.DB, s *model.Season) ([]model.SeasonEvent, error) {
 	var events []model.SeasonEvent
 	oneDay, err := service.OneDayRaces(db)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	for _, r := range oneDay {
 		if referenceEdition(r.Name) || r.RaceType != model.RaceTypeRoad {
@@ -126,7 +152,7 @@ func buildCalendar(db *database.DB, s *model.Season) error {
 	}
 	srs, err := db.ListStageRaces()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	for _, sr := range srs {
 		if referenceEdition(sr.Name) {
@@ -156,7 +182,7 @@ func buildCalendar(db *database.DB, s *model.Season) error {
 		events = append(events, model.SeasonEvent{SeasonID: s.ID, Year: s.Year, Kind: model.EventStageRace, RefID: sr.ID, Name: sr.Name, Category: cat, Start: inYear(first, s.Year), End: inYear(last, s.Year)})
 	}
 	sort.SliceStable(events, func(i, j int) bool { return events[i].Start.Before(events[j].Start) })
-	return db.SaveSeasonEvents(events)
+	return events, nil
 }
 
 // NextEvent is the first event of the year not yet raced (nil: the year is over).
@@ -190,44 +216,71 @@ func Event(db *database.DB, s *model.Season, eventID int64) (*model.SeasonEvent,
 // MoraleNeutral is a rider's morale with nothing to be happy or sad about.
 const MoraleNeutral = 60.0
 
-// Values rates every rider: his best specialty (climbing W/kg, flat power
-// against drag, sprint power) as a z-score in the field, so a rider is worth
-// what he is best at relative to his peers.
-func Values(riders []model.Rider) map[int64]float64 {
-	type metric func(r model.Rider) float64
-	metrics := []metric{
-		func(r model.Rider) float64 { // climbing: W/kg with the climbing ability
-			return float64(r.FTPWatts) / r.WeightKg * (1 + float64(r.ClimbingAbility-70)*0.002)
-		},
-		func(r model.Rider) float64 { // flat/TT: watts per drag area
-			return float64(r.FTPWatts) / r.CdA * (1 + float64(r.TTAbility-70)*0.002)
-		},
-		func(r model.Rider) float64 { // sprint: peak watts with the sprint ability
-			return float64(r.MaxSprintWatts) * (1 + float64(r.SprintAbility-70)*0.002)
-		},
-		func(r model.Rider) float64 { // classics: threshold watts with handling (cobbles)
-			return float64(r.FTPWatts) * (1 + float64(r.Handling-70)*0.002) * (1 + float64(r.Endurance-70)*0.002)
-		},
-	}
+// Values rates every rider by how well he suits the races on the calendar:
+// the mean of his three best fits (standard deviations above the field, see
+// fits), the bigger races counting a little more. A Grand Tour contender, a
+// cobbles star and a top sprinter all rate high; a domestique near zero.
+func Values(db *database.DB, riders []model.Rider) map[int64]float64 {
 	out := make(map[int64]float64, len(riders))
-	for i, m := range metrics {
-		var sum, sq float64
-		for _, r := range riders {
-			v := m(r)
-			sum += v
-			sq += v * v
+	if len(riders) == 0 {
+		return out
+	}
+	profs, err := calendarProfiles(db)
+	if err != nil || len(profs) == 0 {
+		return out
+	}
+	best := make(map[int64][]float64, len(riders))
+	for _, ep := range profs {
+		weight := 0.7 + 0.3*Prestige(ep.event)/100
+		for id, f := range fits(ep.profiles, riders) {
+			best[id] = append(best[id], f*weight)
 		}
-		n := float64(len(riders))
-		mean := sum / n
-		sd := math.Sqrt(math.Max(sq/n-mean*mean, 1e-9))
-		for _, r := range riders {
-			z := (m(r) - mean) / sd
-			if i == 0 || z > out[r.ID] {
-				out[r.ID] = z
-			}
+	}
+	for id, fs := range best {
+		sort.Sort(sort.Reverse(sort.Float64Slice(fs)))
+		n := min(3, len(fs))
+		sum := 0.0
+		for _, f := range fs[:n] {
+			sum += f
 		}
+		out[id] = sum / float64(n)
 	}
 	return out
+}
+
+type eventProfile struct {
+	event    model.SeasonEvent
+	profiles []selection.CourseProfile
+}
+
+var (
+	profileMu    sync.Mutex
+	profileCache = map[*database.DB][]eventProfile{}
+)
+
+// calendarProfiles: the course profiles of every race a season's calendar
+// holds (read once per database).
+func calendarProfiles(db *database.DB) ([]eventProfile, error) {
+	profileMu.Lock()
+	defer profileMu.Unlock()
+	if p, ok := profileCache[db]; ok {
+		return p, nil
+	}
+	tmp := &model.Season{Year: FirstYear}
+	events, err := calendarEvents(db, tmp)
+	if err != nil {
+		return nil, err
+	}
+	var out []eventProfile
+	for _, e := range events {
+		ps, err := eventProfiles(db, e)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, eventProfile{e, ps})
+	}
+	profileCache[db] = out
+	return out, nil
 }
 
 // SalaryFor is a rider's yearly salary (thousand euro) for his value: ~250k

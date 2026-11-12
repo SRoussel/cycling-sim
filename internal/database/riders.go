@@ -118,13 +118,14 @@ func (db *DB) UpdateRiderRatings(riders []model.Rider) error {
 			tx.Rollback()
 			return fmt.Errorf("invalid rider %s: %w", r.Name, err)
 		}
+		// Age is a rating layer's too (WorldDB gives real ages); 0 keeps it.
 		_, err := tx.Exec(`UPDATE riders SET weight_kg = ?, height_cm = ?, ftp_watts = ?,
 			max_sprint_watts = ?, vo2max_watts = ?, cda = ?, climbing_ability = ?, sprint_ability = ?,
 			tt_ability = ?, descending_ability = ?, handling = ?, endurance = ?, recovery = ?,
-			consistency = ?, tactical_awareness = ? WHERE id = ?`,
+			consistency = ?, tactical_awareness = ?, age = CASE WHEN ? > 0 THEN ? ELSE age END WHERE id = ?`,
 			r.WeightKg, r.HeightCm, r.FTPWatts, r.MaxSprintWatts, r.VO2MaxWatts, r.CdA,
 			r.ClimbingAbility, r.SprintAbility, r.TTAbility, r.DescendingAbility, r.Handling,
-			r.Endurance, r.Recovery, r.Consistency, r.TacticalAwareness, r.ID)
+			r.Endurance, r.Recovery, r.Consistency, r.TacticalAwareness, r.Age, r.Age, r.ID)
 		if err != nil {
 			tx.Rollback()
 			return fmt.Errorf("updating rider %d: %w", r.ID, err)

@@ -151,3 +151,80 @@ func TestLoadFactor(t *testing.T) {
 		t.Errorf("straight after a Grand Tour: %.3f", f)
 	}
 }
+
+func TestYearEndAndStart(t *testing.T) {
+	db := seededDB(t)
+	team := someTeam(t, db)
+	s, _ := New(db, team, "")
+	events, _ := db.ListSeasonEvents(s.ID, s.Year)
+	if _, err := EndYear(db, s); err == nil {
+		t.Fatal("ended a year with races left")
+	}
+	for i := range events {
+		events[i].Done = true
+	}
+	if err := db.SaveSeasonEvents(events); err != nil {
+		t.Fatal(err)
+	}
+	before, _ := db.ListSeasonRiders(s.ID)
+	if _, err := AutoRenew(db, s, 26); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := EndYear(db, s); err != nil {
+		t.Fatal(err)
+	}
+	if s.Phase != model.PhaseOffseason || s.Year != FirstYear+1 {
+		t.Fatalf("after the year's end: %s %d", s.Phase, s.Year)
+	}
+	after, _ := db.ListSeasonRiders(s.ID)
+	age := map[int64]int{}
+	for _, sr := range before {
+		age[sr.ID] = sr.Age
+	}
+	retired, free, neo := 0, 0, 0
+	for _, sr := range after {
+		switch {
+		case sr.Retired:
+			retired++
+		case age[sr.ID] == 0:
+			neo++
+			if sr.Age < 19 || sr.Age > 21 || sr.Team != "" {
+				t.Errorf("new pro %s: %d, team %q", sr.Name, sr.Age, sr.Team)
+			}
+		default:
+			if sr.Age != age[sr.ID]+1 {
+				t.Errorf("%s aged %d -> %d", sr.Name, age[sr.ID], sr.Age)
+			}
+		}
+		if sr.FreeAgent() {
+			free++
+		}
+		if !sr.Retired && sr.Team != "" && sr.ContractEnd < s.Year {
+			t.Errorf("%s on %s with a contract to %d", sr.Name, sr.Team, sr.ContractEnd)
+		}
+	}
+	if retired == 0 || neo != retired || free == 0 {
+		t.Fatalf("retired %d, new pros %d, free agents %d", retired, neo, free)
+	}
+	if _, err := StartYear(db, s); err != nil {
+		t.Fatal(err)
+	}
+	final, _ := db.ListSeasonRiders(s.ID)
+	roster := map[string]int{}
+	for _, sr := range final {
+		if !sr.Retired && sr.Team != "" {
+			roster[sr.Team]++
+		}
+	}
+	if roster[team] < 22 {
+		t.Errorf("our roster: %d riders", roster[team])
+	}
+	next, _ := db.ListSeasonEvents(s.ID, s.Year)
+	if len(next) != len(events) || next[0].Start.Year() != s.Year {
+		t.Fatalf("next year's calendar: %d events", len(next))
+	}
+	objs, _ := db.ListObjectives(s.ID, s.Year)
+	if len(objs) < 2 {
+		t.Errorf("%d objectives", len(objs))
+	}
+}

@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -18,6 +19,14 @@ const seasonUsage = `Usage:
   cycling-sim season next <id> [--seed N]   simulate the next race
   cycling-sim season sim <id> [n] [--seed N]  simulate the next n races (default: the rest of the year)
   cycling-sim season results <id> <event>   an event's results
+  cycling-sim season board <id>             objectives, board confidence, budget
+  cycling-sim season roster <id>            your riders
+  cycling-sim season market <id>            riders you can sign (contracts ending, free agents)
+  cycling-sim season offer <id> <rider> <salary-k> <years>   offer a contract
+  cycling-sim season end-year <id>          close the year, open the transfer window
+  cycling-sim season start-year <id>        close the window, start the next year
+  cycling-sim season years <id> <n> [--seed N]  simulate n whole years (races, year end, window)
+  cycling-sim season news <id>              latest news
   cycling-sim season delete <id>            delete a season`
 
 func cmdSeason(db *database.DB, args []string, seedVal int64) {
@@ -104,6 +113,91 @@ func cmdSeason(db *database.DB, args []string, seedVal int64) {
 			fmt.Printf("%-9s %2d. %-26s %-28s +%4.0fs %4d pts\n", label, r.Position, names[r.RiderID], r.Team, r.GapS, r.Points)
 		}
 		_ = e
+	case "board":
+		s := get(1)
+		printBoard(db, s)
+	case "roster":
+		s := get(1)
+		printRoster(db, s)
+	case "market":
+		s := get(1)
+		printMarket(db, s)
+	case "offer":
+		s := get(1)
+		rid := idArg(args, 2, seasonUsage)
+		salary := idArg(args, 3, seasonUsage)
+		years := idArg(args, 4, seasonUsage)
+		ok, reply, err := season.Offer(db, s, rid, int(salary), int(years))
+		if err != nil {
+			fatalf("%v\n", err)
+		}
+		fmt.Println(reply)
+		if !ok {
+			os.Exit(2)
+		}
+	case "end-year":
+		s := get(1)
+		news, err := season.EndYear(db, s)
+		if err != nil {
+			fatalf("%v\n", err)
+		}
+		printNews(news)
+	case "start-year":
+		s := get(1)
+		news, err := season.StartYear(db, s)
+		if err != nil {
+			fatalf("%v\n", err)
+		}
+		printNews(news)
+	case "years":
+		s := get(1)
+		n := int(idArg(args, 2, seasonUsage))
+		for y := 0; y < n; y++ {
+			if s.Phase == model.PhaseOffseason {
+				if _, err := season.StartYear(db, s); err != nil {
+					fatalf("%v\n", err)
+				}
+			}
+			for i := 0; ; i++ {
+				e, err := season.NextEvent(db, s)
+				if err != nil {
+					fatalf("%v\n", err)
+				}
+				if e == nil {
+					break
+				}
+				p, err := season.Prepare(db, s, e.ID, nil)
+				if err != nil {
+					fatalf("%v\n", err)
+				}
+				seed := seedVal
+				if seed != 0 {
+					seed += int64(y*100 + i)
+				}
+				if err := season.Simulate(db, p, seed); err != nil {
+					fatalf("%v\n", err)
+				}
+			}
+			year := s.Year
+			if _, err := season.AutoRenew(db, s, 26); err != nil {
+				fatalf("%v\n", err)
+			}
+			printStandingsTop(db, s, year)
+			printBoard(db, s)
+			news, err := season.EndYear(db, s)
+			if err != nil {
+				fatalf("%v\n", err)
+			}
+			for _, item := range news {
+				if item.Mine {
+					fmt.Println("  " + item.Text)
+				}
+			}
+		}
+	case "news":
+		s := get(1)
+		items, _ := db.ListNews(s.ID, 40)
+		printNews(items)
 	case "delete":
 		s := get(1)
 		if err := db.DeleteSeason(s.ID); err != nil {
@@ -171,5 +265,111 @@ func printSeason(db *database.DB, s *model.Season) {
 			mark = "  <- you"
 		}
 		fmt.Printf("%3d. %-28s %5d pts %2d wins%s\n", i+1, t.Team, t.Points, t.Wins, mark)
+	}
+}
+
+func printNews(items []model.NewsItem) {
+	for _, n := range items {
+		mark := "  "
+		if n.Mine {
+			mark = "* "
+		}
+		fmt.Printf("%s%s  %s\n", mark, n.Date.Format("2 Jan 2006"), n.Text)
+	}
+}
+
+func printStandingsTop(db *database.DB, s *model.Season, year int) {
+	names := riderNames(db, s)
+	riders, teams, _ := season.Standings(db, s, year)
+	fmt.Printf("== %d ==\n", year)
+	for i := 0; i < 5 && i < len(riders); i++ {
+		fmt.Printf("  %d. %-26s %-28s %5d pts %2d wins\n", i+1, names[riders[i].RiderID], riders[i].Team, riders[i].Points, riders[i].Wins)
+	}
+	for i, t := range teams {
+		if t.Team == s.Team {
+			fmt.Printf("  %s: %d. in the team ranking, %d pts, %d wins\n", s.Team, i+1, t.Points, t.Wins)
+		}
+	}
+}
+
+func printBoard(db *database.DB, s *model.Season) {
+	ps, err := season.ObjectivesProgress(db, s)
+	if err != nil {
+		fatalf("%v\n", err)
+	}
+	srs, _ := db.ListSeasonRiders(s.ID)
+	next, n := season.NextWageBill(srs, s.Team, s.Year)
+	fmt.Printf("%s %d (%s): budget %s, wages %s; next year %s committed for %d riders\n", s.Team, s.Year, s.Phase,
+		season.Money(s.Budget), season.Money(season.WageBill(srs, s.Team)), season.Money(next), n)
+	for _, p := range ps {
+		state := "   "
+		switch {
+		case p.Met:
+			state = "✓  "
+		case p.Decided:
+			state = "✗  "
+		}
+		fmt.Printf("  %s%-60s now %d\n", state, p.Text, p.Current)
+	}
+	fmt.Printf("  Board confidence %.0f%%\n", season.BoardConfidence(ps))
+}
+
+func printRoster(db *database.DB, s *model.Season) {
+	srs, _ := db.ListSeasonRiders(s.ID)
+	riders, _, _ := season.Standings(db, s, s.Year)
+	pts := map[int64]int{}
+	for _, r := range riders {
+		pts[r.RiderID] = r.Points
+	}
+	fmt.Printf("%-5s %-26s %3s %5s %5s %8s %4s %6s %5s %4s %5s\n", "id", "rider", "age", "W", "W/kg", "salary", "to", "morale", "load", "days", "pts")
+	for _, sr := range srs {
+		if sr.Team != s.Team || sr.Retired {
+			continue
+		}
+		fmt.Printf("%-5d %-26s %3d %5d %5.2f %8s %4d %6.0f %5.1f %4d %5d\n", sr.ID, sr.Name, sr.Age, sr.FTPWatts,
+			float64(sr.FTPWatts)/sr.WeightKg, season.Money(sr.Salary), sr.ContractEnd, sr.Morale, sr.Load, sr.RaceDays, pts[sr.ID])
+	}
+}
+
+func printMarket(db *database.DB, s *model.Season) {
+	srs, _ := db.ListSeasonRiders(s.ID)
+	var active []model.Rider
+	for _, sr := range srs {
+		if !sr.Retired && sr.Team != "" {
+			active = append(active, sr.Rider)
+		}
+	}
+	values := season.Values(db, active)
+	type row struct {
+		sr  model.SeasonRider
+		v   float64
+		ask int
+	}
+	var rows []row
+	for _, sr := range srs {
+		if sr.Retired || sr.NextTeam != "" || sr.Team == s.Team {
+			continue
+		}
+		free := sr.Team == "" && s.Phase == model.PhaseOffseason
+		if !free && !(sr.Team != "" && sr.ContractEnd <= s.Year && s.Phase == model.PhaseRacing) {
+			continue
+		}
+		v, ok := values[sr.ID]
+		if !ok {
+			v = season.Values(db, append(append([]model.Rider{}, active...), sr.Rider))[sr.ID]
+		}
+		rows = append(rows, row{sr, v, season.AskingSalary(sr, v, sr.Team != "")})
+	}
+	sort.Slice(rows, func(i, j int) bool { return rows[i].v > rows[j].v })
+	for i, r := range rows {
+		if i >= 30 {
+			break
+		}
+		team := r.sr.Team
+		if team == "" {
+			team = "free agent"
+		}
+		fmt.Printf("%-5d %-26s %3d %-28s %5.2f W/kg  value %5.2f  asks %s\n", r.sr.ID, r.sr.Name, r.sr.Age, team,
+			float64(r.sr.FTPWatts)/r.sr.WeightKg, r.v, season.Money(r.ask))
 	}
 }

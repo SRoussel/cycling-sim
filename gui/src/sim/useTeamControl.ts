@@ -50,6 +50,9 @@ export interface Moment {
   options: MomentOption[]
 }
 
+/** How often the race stops: never, at the moments that decide it, or all. */
+export type DecisionLevel = 'off' | 'key' | 'all'
+
 // Fast-forward speed for "skip to the next decision".
 const SKIP_SPEED = 16
 const DECISIONS_KEY = 'cyclingSim.decisions'
@@ -91,11 +94,12 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
   }
   // ── Decision moments ──────────────────────────────────────
   const [moment, setMoment] = useState<Moment | null>(null)
-  const [decisionsOn, setDecisionsOnState] = useState<boolean>(() => {
+  const [decisionLevel, setDecisionLevelState] = useState<DecisionLevel>(() => {
     try {
-      return window.localStorage.getItem(DECISIONS_KEY) !== 'off'
+      const v = window.localStorage.getItem(DECISIONS_KEY)
+      return v === 'off' || v === 'key' ? v : 'all'
     } catch {
-      return true
+      return 'all'
     }
   })
   // Speed to return to after "skip to the next decision" (null: not skipping).
@@ -120,14 +124,14 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
     if (active) await App.SetInteractiveSpeed(sessionId!, SKIP_SPEED)
     if (paused) await setBackendPaused(false)
   }
-  const setDecisionsOn = (on: boolean) => {
-    setDecisionsOnState(on)
+  const setDecisionLevel = (level: DecisionLevel) => {
+    setDecisionLevelState(level)
     try {
-      window.localStorage.setItem(DECISIONS_KEY, on ? 'on' : 'off')
+      window.localStorage.setItem(DECISIONS_KEY, level)
     } catch {
       /* per-viewer convenience only */
     }
-    if (active) void App.SetDecisions(sessionId!, on)
+    if (active) void App.SetDecisionLevel(sessionId!, level)
   }
   const resolveMoment = async (optionId: string) => {
     if (!active || !moment) return
@@ -286,7 +290,7 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
     telemetryTargetRef.current = {}
     telemetryHistoryRef.current = {}
     await App.SetInteractiveSpeed(sess.sessionId, speed)
-    await App.SetDecisions(sess.sessionId, decisionsOn)
+    await App.SetDecisionLevel(sess.sessionId, decisionLevel)
     appendEvents([`🎮 Controlling: ${sess.controlledTeam}`])
   }
 
@@ -450,8 +454,8 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
     togglePause,
     moment,
     resolveMoment,
-    decisionsOn,
-    setDecisionsOn,
+    decisionLevel,
+    setDecisionLevel,
     skipping: skipFrom !== null,
     skipToDecision,
     changeSpeed,

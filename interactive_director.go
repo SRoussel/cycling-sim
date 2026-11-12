@@ -26,6 +26,7 @@ type timedOrder struct {
 type directorState struct {
 	dir       *director.Director
 	enabled   bool
+	keyOnly   bool
 	pending   *director.Moment
 	stage     int
 	km        float64 // km remaining in the race (stage), last seen
@@ -34,11 +35,16 @@ type directorState struct {
 	orders    []timedOrder
 }
 
-// SetDecisions turns decision moments on or off.
-func (s *interactiveSession) SetDecisions(on bool) {
+// SetDecisionLevel sets how often the race stops for a decision: "off",
+// "key" (the moments that decide a race) or "all".
+func (s *interactiveSession) SetDecisionLevel(level string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.director.enabled = on
+	s.director.enabled = level != "off"
+	s.director.keyOnly = level == "key"
+	if s.director.dir != nil {
+		s.director.dir.KeyOnly = s.director.keyOnly
+	}
 }
 
 // Observe is called with every progress frame (before it is emitted): it
@@ -51,6 +57,7 @@ func (s *interactiveSession) Observe(view *simulation.RaceView, profile *simulat
 	d := &s.director
 	if d.dir == nil {
 		d.dir = director.New(s.controlledTeam)
+		d.dir.KeyOnly = d.keyOnly
 	}
 	if stage != d.stage || profile != nil {
 		if stage != d.stage {

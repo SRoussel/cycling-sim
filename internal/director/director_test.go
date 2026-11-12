@@ -285,3 +285,28 @@ func TestLongGravelSectorWithARiseInIt(t *testing.T) {
 		t.Fatalf("want the gravel moment, got %+v", m)
 	}
 }
+
+func TestKeyOnlySkipsEarlyAttacksAndLateBreakChecks(t *testing.T) {
+	field := append([]int64{1, 2, 3}, bunch(11, 40)...)
+	attack := func(km float64) *simulation.RaceView {
+		return race(km, [][]int64{{10}, field}, []float64{0, 5}, simulation.TacticsEvent{Type: "attack", RiderID: 10, Key: true})
+	}
+	d := New("Us")
+	d.KeyOnly = true
+	if m := d.Next(attack(45)); m != nil {
+		t.Fatalf("key moments: no attack 45 km out, got %+v", m)
+	}
+	if m := d.Next(attack(28)); m == nil || m.Kind != "attack" {
+		t.Fatalf("key moments: a favourite's attack at 28 km is one, got %+v", m)
+	}
+	b := New("Us")
+	b.KeyOnly = true
+	v := race(150, [][]int64{{70, 71, 72}, field}, []float64{0, 180})
+	if m := b.Next(v); m == nil || m.Kind != "break" {
+		t.Fatalf("the first break is a key moment, got %+v", m)
+	}
+	v.KmRemaining = 65
+	if m := b.Next(v); m != nil {
+		t.Fatalf("key moments: no second look at the break, got %+v", m)
+	}
+}

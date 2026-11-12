@@ -98,6 +98,8 @@ const (
 	decisiveClimbs     = 3    // the hardest climbs of the finale (plus the last) are moments
 	attackSpacingKm    = 5    // between attack moments (1 km in the last 10 km)
 	lowReservePct      = 20   // below this a rider isn't offered an attack
+	keyAttackKm        = 30   // KeyOnly: attacks only this close to the finish
+	keyAttackSpacingKm = 10   // KeyOnly: between attack moments
 	sectorMinScore     = 20   // length (km) × stars²
 	decisiveSectors    = 4    // the hardest flat cobbled sectors of the finale (plus the last 4-5★)
 	decisiveClimbShare = 0.35 // climbs in the last 35% of the race (or last 80 km)
@@ -106,6 +108,10 @@ const (
 // Director finds decision moments for one team.
 type Director struct {
 	Team string
+	// KeyOnly asks only about the moments that decide a race: favourites'
+	// attacks in the last 30 km (10 km apart), the team leader dropped,
+	// decisive climbs and sectors, the finale and the first break.
+	KeyOnly bool
 
 	totalKm         float64
 	climbs          []Climb
@@ -508,14 +514,20 @@ func (d *Director) rivalAttack(w *view) *Moment {
 			continue
 		}
 		spacing := attackSpacingKm
+		if d.KeyOnly {
+			spacing = keyAttackSpacingKm
+		}
 		if km <= 10 {
 			spacing = 1
 		}
 		if d.lastAttackKm-km < float64(spacing) {
 			continue
 		}
-		if !att.Favourite && km > finalPhaseKm {
+		if !att.Favourite && (km > finalPhaseKm || d.KeyOnly) {
 			continue // other teams' leaders matter only in the finale
+		}
+		if d.KeyOnly && km > keyAttackKm {
+			continue
 		}
 		ag := w.groupOf[ev.RiderID]
 		// Who can answer: our cards in the attacker's group or close
@@ -652,7 +664,8 @@ func (d *Director) leaderDropped(w *view) *Moment {
 		if g <= ref {
 			front = append(front, c)
 			delete(d.droppedAsked, c) // back in front: may be asked again
-		} else if gap := w.gap(g) - w.gap(ref); p == 0 && !d.droppedAsked[c] && gap >= droppedGapS && gap <= math.Max(60, 6*km) {
+		} else if gap := w.gap(g) - w.gap(ref); p == 0 && !d.droppedAsked[c] && gap >= droppedGapS && gap <= math.Max(60, 6*km) &&
+			(!d.KeyOnly || w.Riders[c].Role == simulation.RoleLeader) {
 			// (further back than a chase could close: no decision left)
 			p = c
 		}
@@ -1023,7 +1036,7 @@ func (d *Director) breakaway(w *view) *Moment {
 	}
 	key := "break"
 	if d.fired["break"] {
-		if km > breakLateKm || gap < 1.5*minBreakGapS || d.fired["break-late"] {
+		if d.KeyOnly || km > breakLateKm || gap < 1.5*minBreakGapS || d.fired["break-late"] {
 			return nil
 		}
 		key = "break-late"

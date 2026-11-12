@@ -90,8 +90,8 @@ export function SeedDatabase() {
   return window['go']['main']['App']['SeedDatabase']();
 }
 
-export function SetDecisions(arg1, arg2) {
-  return window['go']['main']['App']['SetDecisions'](arg1, arg2);
+export function SetDecisionLevel(arg1, arg2) {
+  return window['go']['main']['App']['SetDecisionLevel'](arg1, arg2);
 }
 
 export function SetInteractivePaused(arg1, arg2) {

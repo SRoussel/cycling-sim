@@ -1,5 +1,5 @@
 import { EFFORT_MAX_PCT, EFFORT_MIN_PCT } from '../../sim/shared'
-import { TEAM_ORDER_KINDS, TEAM_ORDERS, TeamControl, TeamOrderValue } from '../../sim/useTeamControl'
+import { DecisionLevel, TEAM_ORDER_KINDS, TEAM_ORDERS, TeamControl, TeamOrderValue } from '../../sim/useTeamControl'
 import { EnergyBars } from './EnergyBars'
 import { RaceGroup } from '../../sim/shared'
 import { groupColor } from './RoadView'
@@ -22,8 +22,12 @@ export function TeamDock({ tc, kmRemaining, groups }: { tc: TeamControl; kmRemai
       <div className="dock-head">
         <h2>{tc.controlledTeam}</h2>
         <label className="dock-pause" title="Pause at key moments (attacks, breaks, a dropped leader, decisive climbs, the finale) and ask what to do">
-          <input type="checkbox" checked={tc.decisionsOn} onChange={(e) => tc.setDecisionsOn(e.target.checked)} />
-          Decision moments
+          Stop for
+          <select value={tc.decisionLevel} onChange={(e) => tc.setDecisionLevel(e.target.value as DecisionLevel)}>
+            <option value="all">every decision</option>
+            <option value="key">key moments</option>
+            <option value="off">nothing</option>
+          </select>
         </label>
       </div>
 

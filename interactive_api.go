@@ -301,10 +301,11 @@ func (a *App) ResolveMoment(sessionID string, momentID string, optionID string) 
 	return label
 }
 
-// SetDecisions turns decision moments on or off for a session.
-func (a *App) SetDecisions(sessionID string, on bool) {
+// SetDecisionLevel sets how often a session stops for decisions: "off",
+// "key" or "all".
+func (a *App) SetDecisionLevel(sessionID string, level string) {
 	if s := a.getSession(sessionID); s != nil {
-		s.SetDecisions(on)
+		s.SetDecisionLevel(level)
 	}
 }
 

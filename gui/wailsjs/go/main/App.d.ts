@@ -46,7 +46,7 @@ export function SaveSimulationParams(arg1:main.SimParams):Promise<void>;
 
 export function SeedDatabase():Promise<string>;
 
-export function SetDecisions(arg1:string,arg2:boolean):Promise<void>;
+export function SetDecisionLevel(arg1:string,arg2:string):Promise<void>;
 
 export function SetInteractivePaused(arg1:string,arg2:boolean):Promise<void>;
 

@@ -36,7 +36,10 @@ type Options struct {
 // within a pass use all CPUs). With 4 stage-race runs a pass, the Tour gap
 // error swung 140-460 s between passes; 24 runs keep it steady.
 func DefaultOptions() Options {
-	return Options{Iterations: 12, Runs: 40, StageRuns: 24, MaxChange: 0.08}
+	// ±5%: with race-to-race form in the model (RaceFormFactor), a bigger
+	// correction is more likely a rider's lucky (or unlucky) race than his
+	// rating (Martínez's and Hirt's 2024 Giros pinned them at the old ±8%).
+	return Options{Iterations: 12, Runs: 40, StageRuns: 24, MaxChange: 0.05}
 }
 
 // Step sizes: how many seconds of gap error ask for a 1% threshold change.

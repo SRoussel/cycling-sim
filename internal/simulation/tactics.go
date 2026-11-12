@@ -100,6 +100,16 @@ func breakawayProbability(rs *RiderState, segment *model.Segment, remainingKm fl
 
 // DailyFormFactor generates a daily form multiplier for a rider.
 // High consistency → small variance. Low consistency → larger variance.
+// raceFormSpread: the spread of a rider's form from one stage race to the
+// next (scaled down by Consistency): riders have good and bad weeks, which is
+// why a rider's best Grand Tour result can be far above his usual level.
+const raceFormSpread = 0.03
+
+// RaceFormFactor draws a rider's form for a whole stage race.
+func RaceFormFactor(rider *model.Rider, rng *rand.Rand) float64 {
+	return 1.0 + rng.NormFloat64()*raceFormSpread*(1.0-float64(rider.Consistency)/150.0)
+}
+
 func DailyFormFactor(rider *model.Rider, rng *rand.Rand) float64 {
 	stddev := 0.02 * (1.0 - float64(rider.Consistency)/150.0)
 	return 1.0 + rng.NormFloat64()*stddev

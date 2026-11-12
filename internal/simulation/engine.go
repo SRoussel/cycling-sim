@@ -32,6 +32,9 @@ type RaceConfig struct {
 	// FormDate, when set, gives riders their seasonal form for that date
 	// (see SeasonForm); zero: everyone at their best (one-off races).
 	FormDate time.Time
+	// RaceForm: each rider's form multiplier for the whole stage race
+	// (RaceFormFactor); nil in one-day races, where daily form is the race.
+	RaceForm map[int64]float64
 }
 
 // SimulateRoadRace runs a complete road race simulation and returns results.
@@ -44,6 +47,11 @@ func SimulateTT(config RaceConfig) []model.RaceResult {
 	rng := rngFromSeed(config.Seed)
 	states := initStates(config.Riders, rng)
 	applySeasonForm(states, config.FormDate)
+	for _, rs := range states {
+		if f, ok := config.RaceForm[rs.Rider.ID]; ok {
+			rs.FormFactor *= f
+		}
+	}
 
 	segments := PrepareSegments(config.Course.Segments, config.Race, 0)
 

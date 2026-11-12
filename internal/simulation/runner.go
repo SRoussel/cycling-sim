@@ -212,6 +212,11 @@ func SimulateRoadRaceWithProgress(config RaceConfig, onProgress func(ProgressSna
 
 	states := initStates(config.Riders, rng)
 	applySeasonForm(states, config.FormDate)
+	for _, rs := range states {
+		if f, ok := config.RaceForm[rs.Rider.ID]; ok {
+			rs.FormFactor *= f
+		}
+	}
 	segments := PrepareSegments(config.Course.Segments, config.Race, 0)
 	if len(segments) == 0 {
 		return nil
@@ -389,6 +394,13 @@ func SimulateStageRaceWithProgress(stageRace *model.StageRace, stages []StageCon
 	for _, r := range riders {
 		plan[r.ID] = planRNG.Float64()
 	}
+	// Race form: how good a race each rider is having, drawn once and held
+	// for every stage (on top of day-to-day form). Some riders have a great
+	// Giro, others a poor one.
+	raceForm := make(map[int64]float64, len(riders))
+	for _, r := range riders {
+		raceForm[r.ID] = RaceFormFactor(&r, planRNG)
+	}
 	stageWins := map[int64]int{}
 	// Seasonal form holds for the whole race: the form of its middle day.
 	var formDate time.Time
@@ -488,6 +500,7 @@ func SimulateStageRaceWithProgress(stageRace *model.StageRace, stages []StageCon
 			Prestige:        stage.Prestige,
 			StageWins:       stageWins,
 			FormDate:        formDate,
+			RaceForm:        raceForm,
 		}
 
 		var results []model.RaceResult

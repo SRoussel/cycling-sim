@@ -160,6 +160,8 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
   // The player's calls this race (decisions and stage plans), for the
   // debrief: the log keeps only its last MAX_EVENTS lines.
   const [calls, setCalls] = useState<string[]>([])
+  // Every starter's team by name (road groups list names), for team colours.
+  const [teamByName, setTeamByName] = useState<Record<string, string>>({})
   // togglePause is defined before the stage plan's submit: read both by ref.
   const stagePlanRef = useRef<StagePlanRequest | null>(null)
   stagePlanRef.current = stagePlan
@@ -390,6 +392,7 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
     setStagePlan(null)
     setLive(null)
     setCalls([])
+    setTeamByName(Object.fromEntries((sess.allRiders || []).map((r) => [r.name, r.team])))
     radioRef.current = newRadioState()
     setTeamOrders(DEFAULT_TEAM_ORDERS)
     lastAttackKmRef.current = {}
@@ -611,6 +614,7 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
     submitStagePlan,
     live,
     calls,
+    teamByName,
     decisionLevel,
     setDecisionLevel,
     skipping: skipFrom !== null,

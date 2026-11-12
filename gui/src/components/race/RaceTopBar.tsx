@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { RouteProfile, clamp01, formatRaceClock, sectorIcon, sectorNoun } from '../../sim/shared'
-import { ProfileView, findClimbs, stars } from './ProfileView'
+import { GroupMark, ProfileView, findClimbs, stars } from './ProfileView'
 import { DecisionLevel } from '../../sim/useTeamControl'
 import { PlaybackControls } from './RacePanels'
 
@@ -27,6 +27,7 @@ export function RaceTopBar({
   goal,
   decisionLevel,
   onDecisionLevel,
+  marks,
 }: {
   title: string
   subtitle?: string
@@ -46,6 +47,7 @@ export function RaceTopBar({
   goal?: string
   decisionLevel?: DecisionLevel
   onDecisionLevel?: (level: DecisionLevel) => void
+  marks?: GroupMark[]
 }) {
   const total = profile?.totalKm || kmTotal
   return (
@@ -89,7 +91,7 @@ export function RaceTopBar({
           onSpeedChange={onSpeedChange}
         />
       </div>
-      <RouteStrip profile={profile} km={kmCovered} kmTotal={total} />
+      <RouteStrip profile={profile} km={kmCovered} kmTotal={total} marks={marks} />
     </header>
   )
 }
@@ -99,7 +101,7 @@ export function RaceTopBar({
 const ZOOM_BEHIND_KM = 3
 const ZOOM_SPAN_KM = 28
 
-function RouteStrip({ profile, km, kmTotal }: { profile: RouteProfile | null; km: number; kmTotal: number }) {
+function RouteStrip({ profile, km, kmTotal, marks }: { profile: RouteProfile | null; km: number; kmTotal: number; marks?: GroupMark[] }) {
   const [open, setOpen] = useState(false)
   const climbs = useMemo(() => findClimbs(profile), [profile])
   if (!profile || profile.points.length < 2) {
@@ -150,7 +152,7 @@ function RouteStrip({ profile, km, kmTotal }: { profile: RouteProfile | null; km
         <ProfileView profile={profile} km={km} fromKm={from} toKm={from + span} tickEvery={span > 15 ? 5 : 2} className="zoom" showSectorNames />
       </div>
       <button className="route-mini" onClick={() => setOpen(true)} title="Show the whole course">
-        <ProfileView profile={profile} km={km} fromKm={0} toKm={total} tickEvery={total > 150 ? 50 : 25} minElevRange={600} labels="km" className="mini" />
+        <ProfileView profile={profile} km={km} fromKm={0} toKm={total} tickEvery={total > 150 ? 50 : 25} minElevRange={600} labels="km" className="mini" marks={marks} />
         <span className="route-mini-hint">Whole course ⤢</span>
       </button>
       {open && (
@@ -160,7 +162,7 @@ function RouteStrip({ profile, km, kmTotal }: { profile: RouteProfile | null; km
               <h2>Course profile · {total.toFixed(0)} km · {Math.max(0, total - km).toFixed(1)} km to go</h2>
               <button className="secondary" onClick={() => setOpen(false)}>Close</button>
             </div>
-            <ProfileView profile={profile} km={km} fromKm={0} toKm={total} tickEvery={total > 150 ? 20 : 10} minElevRange={600} className="large" />
+            <ProfileView profile={profile} km={km} fromKm={0} toKm={total} tickEvery={total > 150 ? 20 : 10} minElevRange={600} className="large" marks={marks} />
             {climbs.length > 0 && (
               <table className="route-climbs">
                 <thead>

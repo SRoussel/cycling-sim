@@ -3,6 +3,7 @@ import { EFFORT_MAX_PCT, EFFORT_MIN_PCT, RaceGroup, formatGap } from '../../sim/
 import { LiveOrder, LiveRider, TEAM_ORDER_KINDS, TEAM_ORDERS, TeamControl, TeamOrderValue } from '../../sim/useTeamControl'
 import { EnergyBars, LegsBadge } from './EnergyBars'
 import { groupColor } from './RoadView'
+import { teamColor } from '../../sim/teamColors'
 
 const ACTION_WORDS: Record<string, string> = {
   hold: 'Racing on his own judgement',
@@ -49,6 +50,7 @@ export function TeamDock({ tc, groups }: { tc: TeamControl; kmRemaining: number;
           <span className="dock-gc-label">GC live</span>
           {tc.gc.slice(0, 5).map((g) => (
             <span key={g.riderId} className={`dock-gc-entry${g.team === tc.controlledTeam ? ' mine' : ''}`}>
+              <i className="team-dot" style={{ background: teamColor(g.team) }} title={g.team} />
               {g.livePos}. {g.name}
               {g.livePos > 1 && <> +{formatGap(g.liveGap)}</>}
               {g.pos > 0 && g.pos !== g.livePos && <span className="dock-gc-was"> (was {g.pos})</span>}
@@ -110,7 +112,7 @@ export function TeamDock({ tc, groups }: { tc: TeamControl; kmRemaining: number;
           const open = manual[r.id] ?? false
           const why = provenance(liveCmd)
           return (
-            <li key={r.id} className={`dock-rider${liveCmd ? ' commanded' : ''}`}>
+            <li key={r.id} className={`dock-rider${liveCmd ? ' commanded' : ''}`} style={{ '--gc': groupColor(groups, tc.riderGroups[r.id]) } as React.CSSProperties}>
               <div className="dock-rider-top">
                 <span className="dock-rider-name" title={tel ? `${r.name}: ${Math.round(tel.speedKph)} km/h, ${Math.round(tel.powerWatts)} W` : r.name}>{r.name}</span>
                 <LegsBadge telemetry={tel} />

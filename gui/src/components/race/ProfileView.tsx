@@ -88,6 +88,15 @@ export function stars(n: number): string {
 const W = 1000
 const H = 100
 
+/** A group drawn on the profile: where it is, its colour and size. */
+export interface GroupMark {
+  km: number
+  color: string
+  size: number
+  label: string
+  mine: boolean
+}
+
 /**
  * The route between fromKm and toKm, coloured by gradient, with the riders'
  * position and km marks (as km to go, or km from the start).
@@ -102,6 +111,7 @@ export function ProfileView({
   labels = 'toGo',
   className,
   showSectorNames = false,
+  marks = [],
 }: {
   profile: RouteProfile
   km: number
@@ -112,6 +122,7 @@ export function ProfileView({
   labels?: 'toGo' | 'km'
   className?: string
   showSectorNames?: boolean
+  marks?: GroupMark[]
 }) {
   const total = profile.totalKm
   const span = Math.max(0.1, toKm - fromKm)
@@ -186,6 +197,29 @@ export function ProfileView({
         <rect x={0} y={0} width={x(Math.max(fromKm, Math.min(km, toKm)))} height={H} className="pv-done" />
       </svg>
       <div className="pv-marker" style={{ left: `${markerPct}%` }} />
+      <div className="pv-marks">
+        {marks
+          .filter((m) => m.km >= fromKm && m.km <= toKm)
+          .map((m, i) => {
+            const d = Math.max(9, Math.min(22, 7 + Math.sqrt(m.size) * 2.2))
+            return (
+              <span
+                key={i}
+                className={`pv-mark${m.mine ? ' mine' : ''}`}
+                title={m.label}
+                style={{
+                  left: `${((m.km - fromKm) / span) * 100}%`,
+                  top: `${(y(elevAt(profile.points, m.km)) / H) * 100}%`,
+                  width: d,
+                  height: d,
+                  background: m.color,
+                }}
+              >
+                {m.size > 1 && d >= 14 ? m.size : ''}
+              </span>
+            )
+          })}
+      </div>
       <div className="pv-labels">
         {ticks.map((t) => (
           <span key={t.k} style={{ left: `${((t.k - fromKm) / span) * 100}%` }}>{t.label}</span>

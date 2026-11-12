@@ -7,6 +7,7 @@ import { RaceGroup, formatRaceClock, toDisplayGroups } from '../sim/shared'
 import { LiveProgressPayload, RaceGoal, useTeamControl } from '../sim/useTeamControl'
 import { RaceDashboard } from '../components/race/RaceDashboard'
 import { RaceTopBar } from '../components/race/RaceTopBar'
+import { groupMarks } from '../components/race/RoadView'
 import { StagePlanCard } from '../components/race/StagePlanCard'
 import './Simulation.css'
 import './RaceSetup.css'
@@ -170,6 +171,7 @@ function StageRaceSimulation() {
           goal={[tc.gcGoal?.text, tc.goal ? `Today: ${tc.goal.text}` : ''].filter(Boolean).join(' · ') || undefined}
           onSkip={interactiveMode ? tc.skipToDecision : undefined}
           decisionLevel={interactiveMode ? tc.decisionLevel : undefined}
+          marks={groupMarks(groups, tc)}
           onDecisionLevel={tc.setDecisionLevel}
           skipping={tc.skipping}
           extra={

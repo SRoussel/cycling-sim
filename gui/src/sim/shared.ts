@@ -176,6 +176,8 @@ export interface RaceGroup {
   riders: string[]
   /** Riders in the group (riders lists only the first few names). */
   size?: number
+  /** Seconds behind the front of the race. */
+  gapS?: number
 }
 
 export function formatGap(seconds: number): string {
@@ -201,6 +203,7 @@ export function toDisplayGroups(
   return (groups || []).map((g) => ({
     name: g.name,
     gap: g.gap <= 0 ? '—' : '+' + formatGap(g.gap),
+    gapS: g.gap,
     riders: g.riders,
     size: g.size,
   }))

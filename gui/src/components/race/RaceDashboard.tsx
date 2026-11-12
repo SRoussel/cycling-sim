@@ -20,6 +20,7 @@ export function RaceDashboard({
   kmRemaining,
   emptyText,
   footer,
+  banner,
 }: {
   top: React.ReactNode
   groups: RaceGroup[]
@@ -28,14 +29,16 @@ export function RaceDashboard({
   kmRemaining: number
   emptyText: string
   footer?: React.ReactNode
+  /** Shown above the road in place of a decision (the debrief). */
+  banner?: React.ReactNode
 }) {
   // Newest first, so the latest move is always in view.
   const events = useMemo(() => [...tc.events].reverse(), [tc.events])
   return (
     <div className={`race-dash${interactive ? ' interactive' : ''}`}>
       {top}
-      <div className={`dash-race${tc.moment ? ' deciding' : ''}`}>
-        {interactive && <DecisionCard tc={tc} />}
+      <div className={`dash-race${tc.moment || banner ? ' deciding' : ''}`}>
+        {banner ?? (interactive && <DecisionCard tc={tc} />)}
         <RoadView groups={groups} tc={interactive ? tc : undefined} emptyText={emptyText} />
         <EventLog events={events} emptyText="Waiting for the race…" />
         {footer}

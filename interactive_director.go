@@ -70,6 +70,7 @@ func (s *interactiveSession) Observe(view *simulation.RaceView, profile *simulat
 	}
 	d.km = kmRemaining
 	s.tickLocked()
+	d.dir.Watch(view)
 	if view == nil || !d.enabled || d.pending != nil {
 		return nil
 	}
@@ -156,6 +157,16 @@ func (s *interactiveSession) applyCommandLocked(c director.Command) {
 			d.timed = append(d.timed, timedCommand{cmd: c, untilKm: d.km - c.ForKm})
 		}
 	}
+}
+
+// Goal returns today's goal and whether a rider of ours made the break.
+func (s *interactiveSession) Goal() (*director.Goal, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.director.dir == nil {
+		return nil, false
+	}
+	return s.director.dir.Goal(), s.director.dir.BreakMade()
 }
 
 // PendingMoment returns the moment waiting for the player, if any.

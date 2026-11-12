@@ -27,6 +27,8 @@ type RiderBrief struct {
 	Team      string
 	Role      TeamRole
 	Favourite bool // one of the riders the bunch marks
+	Rank      int  // time over the course at threshold, 1 = fastest (0: unknown)
+	Sprint    int  // sprint rating
 	WPrimePct float64
 	LegsPct   float64
 }
@@ -79,10 +81,12 @@ func buildRaceView(states []*RiderState, state *RaceState, kmRemaining, kmTotal 
 				Role:      rs.TeamRole,
 				WPrimePct: clampPercent(rs.WPrime.FractionRemaining() * 100),
 				LegsPct:   legsPct(rs),
+				Sprint:    rs.Rider.SprintAbility,
 			}
 			if state != nil {
 				// Read-only: no RaceState helper with per-step caches.
 				brief.Favourite = state.Favourites[rs.Rider.ID]
+				brief.Rank = state.CourseRank[rs.Rider.ID]
 			}
 			view.Riders[rs.Rider.ID] = brief
 		}

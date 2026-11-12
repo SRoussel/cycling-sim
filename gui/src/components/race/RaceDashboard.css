@@ -861,3 +861,98 @@ button.decision-option:hover {
 .dock-rider-spacer {
   flex: 1;
 }
+
+/* ---------- goal and debrief ---------- */
+
+.dash-goal {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #fbbf24;
+  border: 1px solid rgba(251, 191, 36, 0.5);
+  border-radius: 999px;
+  padding: 0.05rem 0.55rem;
+  white-space: nowrap;
+}
+
+.debrief {
+  background: var(--color-surface);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  padding: 0.7rem 0.85rem 0.8rem;
+  overflow-y: auto;
+  max-height: 60vh;
+}
+
+.debrief.met {
+  border-color: rgba(34, 197, 94, 0.8);
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.14), rgba(34, 197, 94, 0.03));
+}
+
+.debrief.missed {
+  border-color: rgba(239, 68, 68, 0.7);
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.12), rgba(239, 68, 68, 0.03));
+}
+
+.debrief-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.debrief-head h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--color-text);
+}
+
+.debrief-verdict {
+  margin: 0.35rem 0 0.5rem;
+}
+
+.debrief-cols {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr;
+  gap: 1rem;
+}
+
+.debrief h3 {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
+  margin: 0 0 0.25rem;
+}
+
+.debrief-riders,
+.debrief-calls {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: 0.85rem;
+}
+
+.debrief-riders li span:first-child {
+  display: inline-block;
+  min-width: 2.6rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-muted);
+}
+
+.debrief-gap {
+  color: var(--color-text-muted);
+  font-size: 0.78rem;
+}
+
+.debrief-calls li {
+  padding: 0.12rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.debrief-none {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  margin: 0;
+}

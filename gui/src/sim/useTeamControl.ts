@@ -33,6 +33,7 @@ export interface LiveProgressPayload {
   teamState?: TeamState
   events?: string[]
   moment?: Moment
+  goal?: RaceGoal
   groups?: Array<{ name: string; gap: number; size?: number }>
   kmTotal?: number
   kmCovered?: number
@@ -54,6 +55,15 @@ export interface Moment {
   text: string
   kmRemaining: number
   options: MomentOption[]
+}
+
+/** Today's goal for the player's team (internal/director/goal.go). */
+export interface RaceGoal {
+  kind: 'place' | 'break' | string
+  riderId: number
+  riderName: string
+  target: number
+  text: string
 }
 
 /** How often the race stops: never, at the moments that decide it, or all. */
@@ -100,6 +110,7 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
   }
   // ── Race radio ────────────────────────────────────────────
   const radioRef = useRef<RadioState>(newRadioState())
+  const [goal, setGoal] = useState<RaceGoal | null>(null)
 
   // ── Decision moments ──────────────────────────────────────
   const [moment, setMoment] = useState<Moment | null>(null)
@@ -146,6 +157,7 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
     if (!active || !moment) return
     const m = moment
     setMoment(null)
+    setGoal(null)
     radioRef.current = newRadioState()
     const label = await App.ResolveMoment(sessionId!, m.id, optionId)
     setPaused(false)
@@ -316,6 +328,7 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
 
   const ingestProgress = (payload: LiveProgressPayload) => {
     if (payload.riderGroups) setRiderGroups(payload.riderGroups)
+    if (payload.goal && interactiveMode) setGoal((g) => g ?? payload.goal!)
     if (interactiveMode) {
       const total = payload.stageKmTotal ?? payload.kmTotal ?? 0
       const done = payload.stageKm ?? payload.kmCovered ?? 0
@@ -470,6 +483,7 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
     togglePause,
     moment,
     resolveMoment,
+    goal,
     decisionLevel,
     setDecisionLevel,
     skipping: skipFrom !== null,

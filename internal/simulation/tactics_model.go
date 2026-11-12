@@ -143,6 +143,10 @@ type RaceState struct {
 	Clusters [][]*RiderState
 	// Favourites are the riders the bunch marks (see markFavourites).
 	Favourites map[int64]bool
+	// CourseRank ranks every starter by time over the course at threshold
+	// (1 = fastest), the measure favourites are picked by. Read-only for the
+	// game layer; tactics use Favourites.
+	CourseRank map[int64]int
 }
 
 type TacticsParams struct {
@@ -506,8 +510,12 @@ func (s *RaceState) markFavourites(states []*RiderState, segments []model.Segmen
 	}
 	sort.Slice(all, func(i, j int) bool { return all[i].t < all[j].t })
 	s.Favourites = map[int64]bool{}
-	for i := 0; i < len(all) && i < favouriteCount; i++ {
-		s.Favourites[all[i].id] = true
+	s.CourseRank = make(map[int64]int, len(all))
+	for i := 0; i < len(all); i++ {
+		if i < favouriteCount {
+			s.Favourites[all[i].id] = true
+		}
+		s.CourseRank[all[i].id] = i + 1
 	}
 }
 

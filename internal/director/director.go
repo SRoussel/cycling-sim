@@ -114,6 +114,9 @@ type Director struct {
 	KeyOnly bool
 
 	totalKm         float64
+	goal            *Goal
+	goalTried       bool
+	breakMade       bool
 	climbs          []Climb
 	decisive        map[float64]bool // decisive climbs by start km
 	sectors         []simulation.RouteSector
@@ -135,6 +138,7 @@ func New(team string) *Director {
 }
 
 func (d *Director) reset() {
+	d.goal, d.goalTried, d.breakMade = nil, false, false
 	d.lastMomentKm = math.Inf(1)
 	d.fired = map[string]bool{}
 	d.attackAt = map[int64]float64{}
@@ -475,6 +479,7 @@ func (d *Director) Next(v *simulation.RaceView) *Moment {
 	if len(w.myRiders(-1)) == 0 {
 		return nil
 	}
+	d.observeGoal(w)
 	km := v.KmRemaining
 	spaced := d.lastMomentKm-km >= minMomentSpacingKm
 	// Attacks can't wait; the rest keep a little road between moments

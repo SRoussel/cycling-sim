@@ -1,6 +1,7 @@
 package main
 
 import (
+	"cycling_sim/internal/director"
 	"sort"
 	"strings"
 
@@ -24,6 +25,9 @@ type InteractiveComplete struct {
 	SessionID   string `json:"sessionId"`
 	RaceID      int64  `json:"raceId"`
 	StageRaceID int64  `json:"stageRaceId"`
+	// One-day races: today's goal and whether a rider of ours made the break.
+	Goal      *director.Goal `json:"goal,omitempty"`
+	BreakMade bool           `json:"breakMade"`
 }
 
 func (a *App) getSession(sessionID string) *interactiveSession {
@@ -128,7 +132,8 @@ func (a *App) StartInteractiveSimulation(raceID int64, enableIncidents bool, con
 			return // abandoned by the user: don't overwrite saved results
 		}
 		_ = a.db.SaveRaceResults(results)
-		runtime.EventsEmit(a.ctx, "interactive_simulation_complete", InteractiveComplete{SessionID: sess.id, RaceID: raceID})
+		goal, breakMade := sess.Goal()
+		runtime.EventsEmit(a.ctx, "interactive_simulation_complete", InteractiveComplete{SessionID: sess.id, RaceID: raceID, Goal: goal, BreakMade: breakMade})
 	}()
 
 	return InteractiveSessionInfo{

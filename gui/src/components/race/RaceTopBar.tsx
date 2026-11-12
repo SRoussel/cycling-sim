@@ -23,6 +23,7 @@ export function RaceTopBar({
   extra,
   onSkip,
   skipping,
+  goal,
 }: {
   title: string
   subtitle?: string
@@ -39,6 +40,7 @@ export function RaceTopBar({
   extra?: React.ReactNode
   onSkip?: () => void
   skipping?: boolean
+  goal?: string
 }) {
   const total = profile?.totalKm || kmTotal
   return (
@@ -46,6 +48,7 @@ export function RaceTopBar({
       <div className="dash-top-row">
         <div className="dash-title">
           <h1>{title}</h1>
+          {goal && <span className="dash-goal" title="Today's goal for your team">🎯 {goal}</span>}
           {subtitle && <span className="dash-subtitle">{subtitle}</span>}
         </div>
         <div className="dash-stat dash-km">

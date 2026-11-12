@@ -310,3 +310,56 @@ func TestKeyOnlySkipsEarlyAttacksAndLateBreakChecks(t *testing.T) {
 		t.Fatalf("key moments: no second look at the break, got %+v", m)
 	}
 }
+
+func TestGoalFromStrength(t *testing.T) {
+	mk := func(rank int) *simulation.RaceView {
+		v := race(200, [][]int64{append([]int64{1, 2, 3, 10}, bunch(11, 40)...)}, []float64{0})
+		for id, b := range v.Riders {
+			b.Rank = int(id) + 50
+			v.Riders[id] = b
+		}
+		b := v.Riders[1]
+		b.Rank, b.Name = rank, "Lead"
+		v.Riders[1] = b
+		return v
+	}
+	climbs := &simulation.RouteProfile{TotalKm: 250, Points: []simulation.ProfilePoint{{Km: 0}, {Km: 230}, {Km: 234, Elev: 240}, {Km: 250}}}
+	for _, tc := range []struct {
+		rank int
+		want string
+	}{{1, "Win with Lead"}, {4, "Podium with Lead"}, {8, "Top 5 with Lead"}, {15, "Top 10 with Lead"}, {40, "Get a rider in the break"}} {
+		d := New("Us")
+		d.SetRoute(climbs)
+		d.Next(mk(tc.rank))
+		if g := d.Goal(); g == nil || g.Text != tc.want {
+			t.Errorf("rank %d: goal %+v, want %q", tc.rank, g, tc.want)
+		}
+	}
+}
+
+func TestBreakGoalTracked(t *testing.T) {
+	d := New("Us")
+	field := append([]int64{1, 3}, bunch(11, 60)...)
+	d.Next(race(150, [][]int64{{2, 70, 71}, field}, []float64{0, 90}))
+	if !d.BreakMade() {
+		t.Fatal("our rider 90 s clear of the peloton made the break")
+	}
+}
+
+func TestGoalNamesTheLeader(t *testing.T) {
+	d := New("Us")
+	d.SetRoute(&simulation.RouteProfile{TotalKm: 250, Points: []simulation.ProfilePoint{{Km: 0}, {Km: 230}, {Km: 234, Elev: 240}, {Km: 250}}})
+	v := race(200, [][]int64{append([]int64{1, 2, 3, 10}, bunch(11, 40)...)}, []float64{0})
+	for id, b := range v.Riders {
+		b.Rank = int(id) + 50
+		v.Riders[id] = b
+	}
+	lead, tt := v.Riders[1], v.Riders[2] // 1 is our leader, 2 a domestique faster on course time
+	lead.Rank, lead.Name = 9, "Leader"
+	tt.Rank, tt.Name = 3, "Rouleur"
+	v.Riders[1], v.Riders[2] = lead, tt
+	d.Next(v)
+	if g := d.Goal(); g == nil || g.Text != "Top 5 with Leader" {
+		t.Fatalf("the goal is the leader's, at his rank: %+v", g)
+	}
+}

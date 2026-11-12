@@ -4,7 +4,8 @@ import * as App from '../../wailsjs/go/main/App'
 import { main } from '../../wailsjs/go/models'
 import { EventsOn } from '../../wailsjs/runtime/runtime'
 import { RaceGroup, formatGap, toDisplayGroups } from '../sim/shared'
-import { LiveProgressPayload, useTeamControl } from '../sim/useTeamControl'
+import { LiveProgressPayload, RaceGoal, useTeamControl } from '../sim/useTeamControl'
+import { Debrief } from '../components/race/Debrief'
 import { RaceDashboard } from '../components/race/RaceDashboard'
 import { RaceTopBar } from '../components/race/RaceTopBar'
 import './Simulation.css'
@@ -23,6 +24,8 @@ interface SimulationProgressEvent extends LiveProgressPayload {
 interface InteractiveCompleteEvent {
   sessionId: string
   raceId: number
+  goal?: RaceGoal
+  breakMade?: boolean
 }
 
 function Simulation() {
@@ -44,6 +47,7 @@ function Simulation() {
   const [elapsedTime, setElapsedTime] = useState(0)
   const [simulationComplete, setSimulationComplete] = useState(false)
   const [results, setResults] = useState<main.RaceResults | null>(null)
+  const [breakMade, setBreakMade] = useState(false)
   const [liveProgress, setLiveProgress] = useState(false)
   const [groups, setGroups] = useState<RaceGroup[]>([])
   const [currentSegmentName, setCurrentSegmentName] = useState('')
@@ -89,6 +93,7 @@ function Simulation() {
     const off = EventsOn('interactive_simulation_complete', async (payload: InteractiveCompleteEvent) => {
       if (!race || !sessionId || payload.sessionId !== sessionId || payload.raceId !== race.id) return
       try {
+        setBreakMade(!!payload.breakMade)
         setResults(await App.GetRaceResults(race.id))
         setSimulationComplete(true)
       } catch (err) {
@@ -123,6 +128,7 @@ function Simulation() {
   // Jump to 100% and show the podium when the simulation completes.
   useEffect(() => {
     if (!simulationComplete || !results) return
+    if (tc.skipping) void tc.skipToDecision() // stop fast-forwarding: nothing left to skip to
     setProgress(100)
     tc.setPaused(true)
     const [winner, second, third] = results.results
@@ -147,6 +153,16 @@ function Simulation() {
       interactive={interactiveMode}
       kmRemaining={kmRemaining}
       emptyText="Simulation running. Results will appear here when finished."
+      banner={interactiveMode && simulationComplete && results ? (
+        <Debrief
+          goal={tc.goal}
+          breakMade={breakMade}
+          results={results}
+          team={tc.controlledTeam}
+          decisions={tc.events.filter((e) => e.startsWith('🎬'))}
+          onResults={() => navigate(`/results/${raceId}`, { state: { results } })}
+        />
+      ) : undefined}
       top={
         <RaceTopBar
           title={raceName}
@@ -162,6 +178,7 @@ function Simulation() {
           onTogglePause={tc.togglePause}
           onSpeedChange={tc.changeSpeed}
           onSkip={interactiveMode ? tc.skipToDecision : undefined}
+          goal={tc.goal?.text}
           skipping={tc.skipping}
           extra={simulationComplete && results ? (
             <button className="primary" onClick={() => navigate(`/results/${raceId}`, { state: { results } })}>

@@ -156,6 +156,7 @@ type SimulationProgress struct {
 	TeamState      *simulation.TeamState                    `json:"teamState,omitempty"`
 	Events         []string                                 `json:"events"`
 	Moment         *director.Moment                         `json:"moment,omitempty"`
+	Goal           *director.Goal                           `json:"goal,omitempty"`
 }
 
 // StageRaceProgress is emitted during a stage race simulation.
@@ -702,8 +703,10 @@ func (a *App) makeRaceProgressCallback(raceID int64, sess *interactiveSession) f
 			groups[i] = ProgressGroup{Name: g.Name, Gap: g.GapSeconds, Riders: g.Riders, Size: g.Size}
 		}
 		var moment *director.Moment
+		var goal *director.Goal
 		if sess != nil {
 			moment = sess.Observe(snapshot.Race, snapshot.RouteProfile, snapshot.KmTotal-snapshot.KmCovered, 0)
+			goal, _ = sess.Goal()
 		}
 		runtime.EventsEmit(a.ctx, "simulation_progress", SimulationProgress{
 			SessionID:      sessionID,
@@ -720,6 +723,7 @@ func (a *App) makeRaceProgressCallback(raceID int64, sess *interactiveSession) f
 			TeamState:      snapshot.TeamState,
 			Events:         snapshot.Events,
 			Moment:         moment,
+			Goal:           goal,
 		})
 		if sess != nil {
 			sess.Pace()

@@ -38,12 +38,16 @@ const level = (pct: number, low: number, empty: number) => (pct < empty ? 'empty
 /** Reserve (thick, the one to act on) and effort (thin, 100% marked). */
 function Bars({ tel }: { tel: RiderTelemetryPoint | null }) {
   const reserve = Math.max(0, Math.min(100, tel?.wPrimePct ?? 100))
+  const fuel = Math.max(0, Math.min(100, tel?.fuelPct ?? 100))
   const effort = Math.max(0, tel?.effortPct ?? 0)
   const effortCls = effort > 100 ? 'over' : effort >= 80 ? 'work' : 'easy'
   return (
     <div className="crew-bars">
       <div className="bar reserve" title={`Reserve ${Math.round(reserve)}%: the punch for attacks and surges; refills when riding easier`}>
         <i className={level(reserve, 50, 20)} style={{ width: `${reserve}%` }} />
+      </div>
+      <div className="bar fuel" title={`Fuel ${Math.round(fuel)}%: carbohydrate left. Hard riding burns it fast, eating tops it up; under 30% his threshold starts to fall`}>
+        <i className={level(fuel, 50, 30)} style={{ width: `${fuel}%` }} />
       </div>
       <div className="bar effort" title={`Effort ${Math.round(effort)}%: power now vs what he can sustain; over 100% burns reserve`}>
         <i className={effortCls} style={{ width: `${Math.min(100, (effort / 150) * 100)}%` }} />
@@ -231,7 +235,7 @@ export function TeamDock({ tc, groups }: { tc: TeamControl; kmRemaining: number;
           )
         })}
       </ul>
-      <p className="crew-key">Bars: reserve (thick) and effort (thin, line at 100%). −%: how far his threshold has faded today.</p>
+      <p className="crew-key">Bars: reserve (thick), fuel, effort (thin, line at 100%). −%: how far his threshold has faded today.</p>
     </section>
   )
 }

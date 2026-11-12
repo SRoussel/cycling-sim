@@ -1281,3 +1281,10 @@
 .sheet-table .num.low { color: var(--low, #fbbf24); }
 .sheet-table .num.empty { color: var(--empty, #f87171); }
 .sheet-table .num.over { color: var(--accent, #e86f37); }
+
+.bar.fuel { height: 4px; }
+.bar.effort { height: 3px; }
+.bar.fuel i.ok { background: #8b95a3; }
+.bar.fuel i.low { background: var(--low); }
+.bar.fuel i.empty { background: var(--empty); }
+.crew-bars { gap: 3px; }

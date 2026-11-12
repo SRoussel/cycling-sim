@@ -3,7 +3,7 @@ import { RaceGroup } from '../../sim/shared'
 import { TeamControl } from '../../sim/useTeamControl'
 import { Jersey } from './Jersey'
 
-type SortKey = 'name' | 'wkg' | 'now' | 'reserve' | 'effort'
+type SortKey = 'name' | 'wkg' | 'now' | 'reserve' | 'fuel' | 'effort'
 
 const level = (pct: number, low: number, empty: number) => (pct < empty ? 'empty' : pct < low ? 'low' : 'ok')
 
@@ -35,6 +35,7 @@ export function GroupSheet({ name, groups, tc, onClose }: { name: string; groups
           ftp: info?.ftp ?? 0,
           wkg,
           reserve: tel?.wPrimePct ?? 100,
+          fuel: tel?.fuelPct ?? 100,
           effort: tel?.effortPct ?? 0,
           legs: tel?.legsPct ?? 100,
           now: ((info?.ftp ?? 0) * (tel?.legsPct ?? 100)) / 100,
@@ -45,6 +46,7 @@ export function GroupSheet({ name, groups, tc, onClose }: { name: string; groups
       name: (a, b) => a.name.localeCompare(b.name),
       wkg: (a, b) => b.wkg - a.wkg,
       reserve: (a, b) => b.reserve - a.reserve,
+      fuel: (a, b) => a.fuel - b.fuel,
       effort: (a, b) => b.effort - a.effort,
       now: (a, b) => b.nowWkg - a.nowWkg,
     }
@@ -75,6 +77,7 @@ export function GroupSheet({ name, groups, tc, onClose }: { name: string; groups
                 {th('wkg', 'W/kg', 'Threshold power per kg this morning (and watts)')}
                 {th('now', 'Threshold now', 'What he can sustain now, after today\'s fade: watts, W/kg, and how much he has lost')}
                 {th('reserve', 'Reserve', 'The punch for attacks and surges; refills when riding easier')}
+                {th('fuel', 'Fuel', 'Carbohydrate left; under 30% his threshold starts to fall (sorts emptiest first)')}
                 {th('effort', 'Effort', 'Power now vs what he can sustain; over 100% burns reserve')}
               </tr>
             </thead>
@@ -95,6 +98,7 @@ export function GroupSheet({ name, groups, tc, onClose }: { name: string; groups
                     <div className="bar reserve"><i className={level(r.reserve, 50, 20)} style={{ width: `${Math.max(0, Math.min(100, r.reserve))}%` }} /></div>
                     <span className={`num ${level(r.reserve, 50, 20)}`}>{Math.round(r.reserve)}%</span>
                   </td>
+                  <td className={`num ${level(r.fuel, 50, 30)}`}>{Math.round(r.fuel)}%</td>
                   <td className={`num ${r.effort > 100 ? 'over' : ''}`}>{Math.round(r.effort)}%</td>
                 </tr>
               ))}

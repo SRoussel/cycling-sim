@@ -9,6 +9,8 @@ export interface RiderTelemetryPoint {
   wPrimePct: number
   /** Threshold now as a share of the rider's fresh one (fatigue, durability). */
   legsPct?: number
+  /** Carbohydrate left, % of a full store (fuel.go). */
+  fuelPct?: number
   routeKm: number
   routePct: number
 }

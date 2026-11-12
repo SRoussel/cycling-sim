@@ -293,6 +293,9 @@ func SimulateRoadRaceWithProgress(config RaceConfig, onProgress func(ProgressSna
 		AssignCourseLeaders(states, segments)
 	}
 	raceState := NewRaceState(states, rng, stageRace)
+	if !stageRace {
+		raceState.OpenKm = openingKm(segments, states)
+	}
 	raceState.markFavourites(states, segments)
 	raceState.Overrides = config.ActionOverrides
 	raceState.GCGaps = config.GCGaps

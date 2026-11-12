@@ -191,7 +191,7 @@ func simulateStep(riders []*RiderState, segment *model.Segment, isTT bool, dista
 	}
 	if state != nil {
 		state.KmRemaining = distanceRemaining
-		state.Phase = PhaseFromKm(distanceRemaining)
+		state.Phase = state.phaseAt(distanceRemaining)
 		state.Segment = segment
 		state.Climb = climbOf(segment)
 		// Sprint trains only really matter on flat/rolling finishes.

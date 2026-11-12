@@ -39,7 +39,7 @@ func FormGroups(riders []*RiderState, segment *model.Segment, isTT bool, remaini
 	}
 	if state != nil {
 		state.KmRemaining = remainingDistance
-		state.Phase = PhaseFromKm(remainingDistance)
+		state.Phase = state.phaseAt(remainingDistance)
 		state.Segment = segment
 	}
 

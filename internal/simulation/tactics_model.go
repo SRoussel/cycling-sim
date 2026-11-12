@@ -156,7 +156,9 @@ type RaceState struct {
 	ChaseGap float64
 	// Course is the prepared course and SegIndex the current segment, so
 	// riders can look ahead to the line (see escape.go).
-	Course                []model.Segment
+	Course []model.Segment
+	// OpenKm: one-day races: km to go at which the race opens (openingKm).
+	OpenKm                float64
 	SegIndex              int
 	lineTime              map[lineKey]float64       // per-step cache of timeToLine
 	reach                 float64                   // per-step cache of breakReach
@@ -277,6 +279,68 @@ func perStep(p float64, state *RaceState) float64 {
 		return p
 	}
 	return ScaleToDistance(p, state.Segment.DistanceKm)
+}
+
+// openShare: a one-day race opens (PhaseMid) where its remaining hard
+// sections (climbs, cobbles, gravel) make up this share of the course's
+// hard riding: Flanders, Roubaix and Liège ~80 km out, Strade ~100,
+// Lombardia 2024 ~115; never later than PhaseFromKm's 60 km (Milan-San Remo
+// keeps it). Before Nov 2026 every one-day race stayed in its calm early
+// phase until 60 km to go: fields of 110-130 riders with all their
+// domestiques reached the finale.
+const openShare = 0.5
+
+// openingKm: km to go at which a one-day course opens (see openShare), timed
+// for a median rider of the field at threshold on each hard section.
+func openingKm(segments []model.Segment, states []*RiderState) float64 {
+	if len(states) == 0 {
+		return 0
+	}
+	ws := make([]float64, 0, len(states))
+	for _, rs := range states {
+		ws = append(ws, float64(rs.Rider.FTPWatts)/rs.Rider.WeightKg)
+	}
+	sort.Float64s(ws)
+	ref := states[0].Rider
+	for _, rs := range states {
+		if float64(rs.Rider.FTPWatts)/rs.Rider.WeightKg == ws[len(ws)/2] {
+			ref = rs.Rider
+			break
+		}
+	}
+	hard := make([]float64, len(segments))
+	total := 0.0
+	for i := range segments {
+		seg := &segments[i]
+		if !seg.SurfaceType.Unpaved() && climbOf(seg) < terrainClimb {
+			continue
+		}
+		v := segmentSpeed(EffectivePower(ref, float64(ref.FTPWatts), seg, false), ref.TotalMassKg(), ref.CdA, seg, ref.Handling)
+		hard[i] = SegmentTime(v, seg.DistanceKm)
+		total += hard[i]
+	}
+	if total == 0 {
+		return 0
+	}
+	acc, km := 0.0, 0.0
+	for i := len(segments) - 1; i >= 0; i-- {
+		km += segments[i].DistanceKm
+		acc += hard[i]
+		if acc >= openShare*total {
+			return km
+		}
+	}
+	return km
+}
+
+// phaseAt is the race phase with km to go: one-day races open where their
+// decisive hard sections begin (OpenKm), otherwise by distance.
+func (s *RaceState) phaseAt(remainingKm float64) RacePhase {
+	p := PhaseFromKm(remainingKm)
+	if s != nil && !s.IsStageRace && p == PhaseEarly && remainingKm < s.OpenKm {
+		return PhaseMid
+	}
+	return p
 }
 
 func PhaseFromKm(remainingKm float64) RacePhase {

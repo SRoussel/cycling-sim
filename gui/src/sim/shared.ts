@@ -160,6 +160,8 @@ export interface RaceGroup {
   name: string
   gap: string
   riders: string[]
+  /** Riders in the group (riders lists only the first few names). */
+  size?: number
 }
 
 export function formatGap(seconds: number): string {
@@ -179,11 +181,14 @@ export function formatRaceClock(seconds: number): string {
 }
 
 /** Converts backend groups (gap in seconds) to display groups. */
-export function toDisplayGroups(groups: Array<{ name: string; gap: number; riders: string[] }> | undefined): RaceGroup[] {
+export function toDisplayGroups(
+  groups: Array<{ name: string; gap: number; riders: string[]; size?: number }> | undefined,
+): RaceGroup[] {
   return (groups || []).map((g) => ({
     name: g.name,
     gap: g.gap <= 0 ? '—' : '+' + formatGap(g.gap),
     riders: g.riders,
+    size: g.size,
   }))
 }
 

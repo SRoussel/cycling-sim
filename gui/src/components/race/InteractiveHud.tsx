@@ -7,13 +7,24 @@ export function InteractiveHud({ tc, groups }: { tc: TeamControl; groups: RaceGr
   return (
     <section className="card interactive-hud">
       <div className="hud-groups-strip">
-        {groups.map((g, i) => (
-          <div key={i} className={`hud-group-chip ${g.name.toLowerCase().replace(/\s+/g, '-')}`}>
-            <span className="hud-chip-name">{g.name}</span>
-            <span className="hud-chip-gap">{g.gap}</span>
-            <span className="hud-chip-count">{g.riders.length} riders</span>
-          </div>
-        ))}
+        {groups.map((g, i) => {
+          const mine = tc.sortedTeamRiders.filter((r) => tc.riderGroups[r.id] === g.name).length
+          const size = g.size ?? g.riders.length
+          return (
+            <div
+              key={i}
+              className={`hud-group-chip ${g.name.toLowerCase().replace(/\s+/g, '-')}${mine > 0 ? ' has-mine' : ''}`}
+              title={g.riders.join(', ')}
+            >
+              <span className="hud-chip-name">{g.name}</span>
+              <span className="hud-chip-gap">{g.gap}</span>
+              <span className="hud-chip-count">
+                {size} {size === 1 ? 'rider' : 'riders'}
+                {mine > 0 && <span className="hud-chip-mine"> · {mine} yours</span>}
+              </span>
+            </div>
+          )
+        })}
       </div>
       <div className="hud-rider-strip">
         {tc.sortedTeamRiders.map((r) => {

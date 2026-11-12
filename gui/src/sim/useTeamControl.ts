@@ -13,13 +13,11 @@ import {
   RiderTelemetryPoint,
   RouteProfile,
   TELEMETRY_HISTORY_MAX,
-  TELEMETRY_INTERP_MS,
   TeamState,
   clampEffortPct,
   formatCommandLabel,
   groupBucket,
   groupSortRank,
-  interpolateTelemetryMap,
   parseAttackEvent,
   formatEventLine,
 } from './shared'
@@ -146,18 +144,6 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
   const telemetryRafRef = useRef<number | null>(null)
   const telemetryHistoryRef = useRef<Record<number, RiderTelemetryPoint[]>>({})
 
-  const startTelemetryInterpolation = () => {
-    if (telemetryRafRef.current !== null) return
-    const tick = () => {
-      const elapsedMs = performance.now() - telemetryLastUpdateRef.current
-      const alpha = Math.max(0, Math.min(1, elapsedMs / TELEMETRY_INTERP_MS))
-      const interpolated = interpolateTelemetryMap(telemetryPrevRef.current, telemetryTargetRef.current, alpha)
-      telemetryDisplayRef.current = interpolated
-      setTelemetryByRider(interpolated)
-      telemetryRafRef.current = alpha < 1 ? requestAnimationFrame(tick) : null
-    }
-    telemetryRafRef.current = requestAnimationFrame(tick)
-  }
 
   useEffect(() => {
     return () => {
@@ -281,7 +267,12 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
         if (series.length > TELEMETRY_HISTORY_MAX) series.splice(0, series.length - TELEMETRY_HISTORY_MAX)
         history[Number(id)] = series
       }
-      startTelemetryInterpolation()
+      // One render per update: the bars and numbers ease with CSS
+      // transitions. (A per-frame interpolation loop re-rendered the whole
+      // page ~60 times a second for every rider, which crawled under WSL's
+      // software rendering.)
+      telemetryDisplayRef.current = payload.riderTelemetry
+      setTelemetryByRider(payload.riderTelemetry)
     }
     if (payload.profile) setRouteProfile(payload.profile)
     if (payload.teamState) {

@@ -13,7 +13,8 @@ import (
 type ProgressGroup struct {
 	Name       string
 	GapSeconds float64
-	Riders     []string
+	Riders     []string // the first few names (and "+N more")
+	Size       int      // riders in the group
 }
 
 type RiderTelemetryPoint struct {
@@ -668,6 +669,9 @@ func SimulateStageRaceWithProgress(stageRace *model.StageRace, stages []StageCon
 	return allResults, allStandings
 }
 
+// maxProgressGroups: the live view lists at most this many road groups.
+const maxProgressGroups = 8
+
 func buildProgressData(states []*RiderState, segment *model.Segment) ([]ProgressGroup, map[int64]string) {
 	active := make([]*RiderState, 0, len(states))
 	for _, rs := range states {
@@ -698,21 +702,32 @@ func buildProgressData(states []*RiderState, segment *model.Segment) ([]Progress
 	clusters = append(clusters, cluster)
 
 	leaderTime := active[0].TotalTime
+	// The largest group of 15 or more is the peloton, wherever it is.
+	peloton := -1
+	for idx, group := range clusters {
+		if len(group) >= 15 && (peloton < 0 || len(group) > len(clusters[peloton])) {
+			peloton = idx
+		}
+	}
 	groups := make([]ProgressGroup, 0, len(clusters))
 	riderGroups := make(map[int64]string, len(active))
 	for idx, group := range clusters {
 		name := groupName(idx, len(group))
-		for _, rs := range group {
-			riderGroups[rs.Rider.ID] = name
+		if idx == peloton {
+			name = "Peloton"
+		} else if name == "Peloton" {
+			name = fmt.Sprintf("Group %d", idx+1)
 		}
-		gap := group[0].TotalTime - leaderTime
-		groups = append(groups, ProgressGroup{
-			Name:       name,
-			GapSeconds: gap,
-			Riders:     riderNames(group, 5),
-		})
-		if len(groups) >= 4 {
-			break
+		for _, rs := range group {
+			riderGroups[rs.Rider.ID] = name // every rider gets his group
+		}
+		if len(groups) < maxProgressGroups {
+			groups = append(groups, ProgressGroup{
+				Name:       name,
+				GapSeconds: group[0].TotalTime - leaderTime,
+				Riders:     riderNames(group, 5),
+				Size:       len(group),
+			})
 		}
 	}
 	return groups, riderGroups
@@ -761,6 +776,7 @@ func interpolateProgressGroups(previous []ProgressGroup, current []ProgressGroup
 			Name:       group.Name,
 			GapSeconds: gap,
 			Riders:     displayRiders,
+			Size:       group.Size,
 		}
 	}
 

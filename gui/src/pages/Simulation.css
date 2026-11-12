@@ -135,6 +135,22 @@
   padding-right: 0.25rem;
 }
 
+/* Team control spans the page; riders sit in a responsive grid. */
+.sim-grid > .team-controls {
+  grid-column: 1 / -1;
+}
+
+
+.hud-group-chip.has-mine {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 1px var(--color-primary) inset;
+}
+
+.hud-chip-mine {
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
 .team-orders-panel {
   border: 1px solid var(--color-secondary);
   border-radius: 4px;
@@ -270,9 +286,13 @@
 }
 
 .team-group-section {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  gap: 0.6rem;
+}
+
+.team-group-section > .team-group-header {
+  grid-column: 1 / -1;
 }
 
 .team-group-header {
@@ -490,14 +510,8 @@
   padding: 0.45rem;
 }
 
-@media (min-width: 980px) {
-  .team-rider-row {
-    grid-template-columns: 1.2fr 1fr;
-    align-items: center;
-  }
-  .team-rider-controls {
-    grid-template-columns: 1fr;
-  }
+.team-rider-controls {
+  grid-template-columns: 1fr;
 }
 
 .team-rider-actions button:disabled {
@@ -838,4 +852,25 @@
   text-align: right;
   color: var(--color-text);
   font-variant-numeric: tabular-nums;
+}
+
+/* Rider cards in the team grid: allow shrinking, wrap the controls. */
+.team-group-section > .team-rider {
+  min-width: 0;
+}
+
+.team-rider-actions.compact {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.team-rider-actions.compact select {
+  flex: 1 1 8rem;
+  min-width: 0;
+}
+
+.team-rider .energy-bars {
+  min-width: 0;
 }

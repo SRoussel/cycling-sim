@@ -136,6 +136,7 @@ type ProgressGroup struct {
 	Name   string   `json:"name"`
 	Gap    float64  `json:"gap"`
 	Riders []string `json:"riders"`
+	Size   int      `json:"size"`
 }
 
 // SimulationProgress is emitted during a race simulation.
@@ -691,7 +692,7 @@ func (a *App) makeRaceProgressCallback(raceID int64, sessionID string, pace func
 		}
 		groups := make([]ProgressGroup, len(snapshot.Groups))
 		for i, g := range snapshot.Groups {
-			groups[i] = ProgressGroup{Name: g.Name, Gap: g.GapSeconds, Riders: g.Riders}
+			groups[i] = ProgressGroup{Name: g.Name, Gap: g.GapSeconds, Riders: g.Riders, Size: g.Size}
 		}
 		runtime.EventsEmit(a.ctx, "simulation_progress", SimulationProgress{
 			SessionID:      sessionID,
@@ -730,7 +731,7 @@ func (a *App) makeStageRaceProgressCallback(stageRaceID int64, stageCount int, s
 		}
 		groups := make([]ProgressGroup, len(snapshot.Groups))
 		for i, g := range snapshot.Groups {
-			groups[i] = ProgressGroup{Name: g.Name, Gap: g.GapSeconds, Riders: g.Riders}
+			groups[i] = ProgressGroup{Name: g.Name, Gap: g.GapSeconds, Riders: g.Riders, Size: g.Size}
 		}
 		runtime.EventsEmit(a.ctx, "stage_race_progress", StageRaceProgress{
 			SessionID:       sessionID,

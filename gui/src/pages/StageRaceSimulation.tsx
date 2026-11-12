@@ -164,6 +164,8 @@ function StageRaceSimulation() {
           playbackDisabled={!interactiveMode || !sessionId}
           onTogglePause={tc.togglePause}
           onSpeedChange={tc.changeSpeed}
+          onSkip={interactiveMode ? tc.skipToDecision : undefined}
+          skipping={tc.skipping}
           extra={
             <div className="dash-stat" title={`Overall ${formatRaceClock(overallElapsed)}`}>
               <span className="dash-stat-value">{Math.round(progress)}%</span>

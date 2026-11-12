@@ -155,6 +155,8 @@ func FormGroups(riders []*RiderState, segment *model.Segment, isTT bool, remaini
 					key = 1
 				}
 				state.LogEvent("attack", fmt.Sprintf("rider=%d; key=%d; name=%s; team=%s", rs.Rider.ID, key, rs.Rider.Name, rs.Rider.Team))
+				last := &state.Events[len(state.Events)-1]
+				last.RiderID, last.Key = rs.Rider.ID, key == 1
 			}
 			state.LastActions[rs.Rider.ID] = action
 		}

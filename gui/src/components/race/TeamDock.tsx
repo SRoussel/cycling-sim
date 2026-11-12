@@ -21,31 +21,11 @@ export function TeamDock({ tc, kmRemaining, groups }: { tc: TeamControl; kmRemai
     <section className="dash-panel team-dock">
       <div className="dock-head">
         <h2>{tc.controlledTeam}</h2>
-        <label className="dock-pause" title="Pause when a favourite, GC contender or leader attacks">
-          <input
-            type="checkbox"
-            checked={tc.pauseOnRivalAttacks}
-            onChange={(e) => tc.setPauseOnRivalAttacks(e.target.checked)}
-          />
-          Pause on key attacks
+        <label className="dock-pause" title="Pause at key moments (attacks, breaks, a dropped leader, decisive climbs, the finale) and ask what to do">
+          <input type="checkbox" checked={tc.decisionsOn} onChange={(e) => tc.setDecisionsOn(e.target.checked)} />
+          Decision moments
         </label>
       </div>
-
-      {tc.attackAlert && (
-        <div className="dock-alert">
-          <span>⚠️ {tc.attackAlert.name ?? 'A rival'} attacks{tc.attackAlert.team ? ` (${tc.attackAlert.team})` : ''}</span>
-          <select
-            value={tc.followAttackRiderId ?? ''}
-            onChange={(e) => tc.setFollowAttackRiderId(e.target.value === '' ? null : Number(e.target.value))}
-          >
-            <option value="">Send…</option>
-            {tc.sortedTeamRiders.map((r) => (
-              <option key={r.id} value={r.id}>{r.name}</option>
-            ))}
-          </select>
-          <button className="primary" onClick={tc.handleFollowAttack} disabled={!tc.followAttackRiderId}>Follow</button>
-        </div>
-      )}
 
       <div className="dock-orders">
         {TEAM_ORDER_KINDS.filter((kind) => tc.stageRace || !TEAM_ORDERS[kind].stageRaceOnly).map((kind) => {
@@ -65,6 +45,11 @@ export function TeamDock({ tc, kmRemaining, groups }: { tc: TeamControl; kmRemai
           )
         })}
       </div>
+
+      <p className="dock-legend">
+        <b>Reserve</b>: the punch for attacks and surges; refills in minutes when riding easier.{' '}
+        <b>Legs</b>: what's left for the day; only falls.
+      </p>
 
       {/* Fixed order (the roster), so a rider's card never moves under the cursor. */}
       <ul className="dock-riders">

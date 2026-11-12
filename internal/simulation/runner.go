@@ -51,6 +51,9 @@ type ProgressSnapshot struct {
 	RouteProfile   *RouteProfile
 	TeamState      *TeamState
 	Events         []string
+	// Race is the true state at the end of each segment (nil on the
+	// interpolated frames in between): the input for decision moments.
+	Race *RaceView
 }
 
 type StageProgressSnapshot struct {
@@ -68,6 +71,7 @@ type StageProgressSnapshot struct {
 	RouteProfile     *RouteProfile
 	TeamState        *TeamState
 	Events           []string
+	Race             *RaceView
 }
 
 func clampPercent(v float64) float64 {
@@ -278,7 +282,9 @@ func SimulateRoadRaceWithProgress(config RaceConfig, onProgress func(ProgressSna
 		endElapsed := leaderElapsed(states)
 		if onProgress != nil {
 			events := []string{}
+			var rawEvents []TacticsEvent
 			if raceState != nil && eventIndex < len(raceState.Events) {
+				rawEvents = append(rawEvents, raceState.Events[eventIndex:]...)
 				for _, ev := range raceState.Events[eventIndex:] {
 					events = append(events, fmt.Sprintf("%s: %s | km=%.1f", ev.Type, ev.Reason, ev.Km))
 				}
@@ -302,8 +308,10 @@ func SimulateRoadRaceWithProgress(config RaceConfig, onProgress func(ProgressSna
 					teamState = raceState.Overrides.SprintTrainState(kmRemaining)
 				}
 				frameEvents := []string{}
+				var view *RaceView
 				if step == steps {
 					frameEvents = events
+					view = buildRaceView(states, raceState, kmRemaining, totalDist, rawEvents)
 				}
 				onProgress(ProgressSnapshot{
 					KmCovered:      km,
@@ -316,6 +324,7 @@ func SimulateRoadRaceWithProgress(config RaceConfig, onProgress func(ProgressSna
 					RouteProfile:   nil,
 					TeamState:      teamState,
 					Events:         frameEvents,
+					Race:           view,
 				})
 			}
 			prevGroups = groups
@@ -555,6 +564,7 @@ func SimulateStageRaceWithProgress(stageRace *model.StageRace, stages []StageCon
 					RouteProfile:     snapshot.RouteProfile,
 					TeamState:        snapshot.TeamState,
 					Events:           snapshot.Events,
+					Race:             snapshot.Race,
 				})
 			})
 			stageElapsedForUpdate = stageElapsed

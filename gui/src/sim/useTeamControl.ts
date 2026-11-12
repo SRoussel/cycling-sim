@@ -31,17 +31,28 @@ export interface LiveProgressPayload {
   profile?: RouteProfile
   teamState?: TeamState
   events?: string[]
+  moment?: Moment
 }
 
-export interface AttackAlert {
-  riderId: number | null
-  team: string | null
-  name: string | null
-  line: string
+/** A decision moment from the director (internal/director): the race is
+ * paused until the player picks an option. */
+export interface MomentOption {
+  id: string
+  label: string
+  help: string
+}
+export interface Moment {
+  id: string
+  kind: string
+  title: string
+  text: string
+  kmRemaining: number
+  options: MomentOption[]
 }
 
-// Minimum wall-clock time between two attack pauses.
-const ATTACK_PAUSE_COOLDOWN_MS = 60_000
+// Fast-forward speed for "skip to the next decision".
+const SKIP_SPEED = 16
+const DECISIONS_KEY = 'cyclingSim.decisions'
 // A rider's attacks within this distance show as one line in the log.
 const ATTACK_LOG_GAP_KM = 5
 
@@ -78,10 +89,53 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
     setPaused(next)
     if (active) await App.SetInteractivePaused(sessionId!, next)
   }
-  const togglePause = () => setBackendPaused(!paused)
+  // ── Decision moments ──────────────────────────────────────
+  const [moment, setMoment] = useState<Moment | null>(null)
+  const [decisionsOn, setDecisionsOnState] = useState<boolean>(() => {
+    try {
+      return window.localStorage.getItem(DECISIONS_KEY) !== 'off'
+    } catch {
+      return true
+    }
+  })
+  // Speed to return to after "skip to the next decision" (null: not skipping).
+  const [skipFrom, setSkipFrom] = useState<number | null>(null)
+
+  const togglePause = () => {
+    if (paused && moment) setMoment(null) // resuming dismisses the decision
+    return setBackendPaused(!paused)
+  }
   const changeSpeed = async (next: number) => {
     setSpeed(next)
+    setSkipFrom(null)
     if (active) await App.SetInteractiveSpeed(sessionId!, next)
+  }
+  const skipToDecision = async () => {
+    if (!active) return
+    if (skipFrom !== null) {
+      await changeSpeed(skipFrom)
+      return
+    }
+    setSkipFrom(speed)
+    if (active) await App.SetInteractiveSpeed(sessionId!, SKIP_SPEED)
+    if (paused) await setBackendPaused(false)
+  }
+  const setDecisionsOn = (on: boolean) => {
+    setDecisionsOnState(on)
+    try {
+      window.localStorage.setItem(DECISIONS_KEY, on ? 'on' : 'off')
+    } catch {
+      /* per-viewer convenience only */
+    }
+    if (active) void App.SetDecisions(sessionId!, on)
+  }
+  const resolveMoment = async (optionId: string) => {
+    if (!active || !moment) return
+    const m = moment
+    setMoment(null)
+    const label = await App.ResolveMoment(sessionId!, m.id, optionId)
+    setPaused(false)
+    if (label) appendEvents([`🎬 ${m.title.replace(/^\S+\s/, '')}: ${label}`])
   }
 
   // ── Team & rider state ────────────────────────────────────
@@ -96,10 +150,6 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
   const [followMap, setFollowMap] = useState<Record<number, number | null>>({})
   const [acceptedButtons, setAcceptedButtons] = useState<Record<string, boolean>>({})
   const [riderCommandLocked, setRiderCommandLocked] = useState<Record<number, boolean>>({})
-  // Off by default: when on, only attacks by riders who matter (favourites,
-  // GC contenders, team leaders) pause the race, at most once a minute.
-  const [pauseOnRivalAttacks, setPauseOnRivalAttacks] = useState(false)
-  const lastAttackPauseRef = useRef(0)
   // With 250 m decision steps a rider who keeps attacking logs an attack
   // every few hundred metres: the log shows one line per attack, a rider's
   // next only after ATTACK_LOG_GAP_KM.
@@ -126,9 +176,6 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
   }
   // Standing team orders (chase / break / pace), see SetTeamOrder.
   const [teamOrders, setTeamOrders] = useState<TeamOrders>(DEFAULT_TEAM_ORDERS)
-  const [attackAlert, setAttackAlert] = useState<AttackAlert | null>(null)
-  const [followAttackRiderId, setFollowAttackRiderId] = useState<number | null>(null)
-  const seenAttackEventsRef = useRef<Set<string>>(new Set())
   const effortDebounceTimersRef = useRef<Record<number, number>>({})
 
   // ── Route ─────────────────────────────────────────────────
@@ -230,10 +277,8 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
     setRouteProfile(null)
     setRouteKm(0)
     setTelemetryByRider({})
-    setAttackAlert(null)
-    setFollowAttackRiderId(null)
+    setMoment(null)
     setTeamOrders(DEFAULT_TEAM_ORDERS)
-    seenAttackEventsRef.current = new Set()
     lastAttackKmRef.current = {}
     lastConditionKmRef.current = {}
     telemetryDisplayRef.current = {}
@@ -241,14 +286,15 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
     telemetryTargetRef.current = {}
     telemetryHistoryRef.current = {}
     await App.SetInteractiveSpeed(sess.sessionId, speed)
+    await App.SetDecisions(sess.sessionId, decisionsOn)
     appendEvents([`🎮 Controlling: ${sess.controlledTeam}`])
   }
 
   // ── Progress ingestion ────────────────────────────────────
   // Event listeners are subscribed once per session, so they read changing
   // values through this ref instead of a stale closure.
-  const latest = useRef({ pauseOnRivalAttacks, paused, controlledTeam, normalizedSprintOrder, teamRiders, sessionId })
-  latest.current = { pauseOnRivalAttacks, paused, controlledTeam, normalizedSprintOrder, teamRiders, sessionId }
+  const latest = useRef({ paused, sessionId, skipFrom })
+  latest.current = { paused, sessionId, skipFrom }
 
   /** Returns true when the payload belongs to a different session. */
   const isForeignSession = (payloadSessionId?: string) =>
@@ -281,26 +327,19 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
       setFollowMap(payload.teamState.followMap || {})
     }
     if (payload.events && payload.events.length > 0) {
-      const cur = latest.current
-      if (interactiveMode && cur.sessionId && cur.pauseOnRivalAttacks && !cur.paused) {
-        for (const line of payload.events) {
-          const parsed = parseAttackEvent(line)
-          if (!parsed || !parsed.key || seenAttackEventsRef.current.has(line)) continue
-          seenAttackEventsRef.current.add(line)
-          const isRival = parsed.team ? parsed.team !== cur.controlledTeam : true
-          if (!isRival) continue
-          const now = performance.now()
-          if (now - lastAttackPauseRef.current < ATTACK_PAUSE_COOLDOWN_MS) continue
-          lastAttackPauseRef.current = now
-          setAttackAlert({ riderId: parsed.riderId, team: parsed.team, name: parsed.name, line })
-          setFollowAttackRiderId(cur.normalizedSprintOrder[0] ?? cur.teamRiders[0]?.id ?? null)
-          setPaused(true)
-          void App.SetInteractivePaused(cur.sessionId, true)
-          appendEvents([`⏸ Paused: ${parsed.name ?? 'a rival'} attacks`])
-          break
-        }
-      }
       appendEvents(payload.events.filter(isNewAttack).map(formatEventLine))
+    }
+    if (payload.moment && interactiveMode) {
+      // The session paused itself at this moment.
+      const cur = latest.current
+      setMoment(payload.moment)
+      setPaused(true)
+      appendEvents([`⏸ ${payload.moment.title}`])
+      if (cur.skipFrom !== null && cur.sessionId) {
+        setSpeed(cur.skipFrom)
+        setSkipFrom(null)
+        void App.SetInteractiveSpeed(cur.sessionId, cur.skipFrom)
+      }
     }
     setRiderOneShotQueued({})
   }
@@ -398,17 +437,6 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
     }
   }
 
-  const handleFollowAttack = async () => {
-    if (!active || !followAttackRiderId) return
-    try {
-      await App.SetRiderCommand(sessionId!, followAttackRiderId, 'chase', 'persistent')
-      appendEvents([`🎯 ${riderName(followAttackRiderId)}: Follow attack (Chase)`])
-    } finally {
-      setAttackAlert(null)
-      await setBackendPaused(false)
-    }
-  }
-
   return {
     interactiveMode,
     // log
@@ -420,6 +448,12 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
     setPaused,
     speed,
     togglePause,
+    moment,
+    resolveMoment,
+    decisionsOn,
+    setDecisionsOn,
+    skipping: skipFrom !== null,
+    skipToDecision,
     changeSpeed,
     beginSession,
     isForeignSession,
@@ -436,13 +470,8 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
     riderOneShotQueued,
     followMap,
     sprintPhaseLabel,
-    pauseOnRivalAttacks,
-    setPauseOnRivalAttacks,
     teamOrders,
     stageRace: opts.stageRace ?? false,
-    attackAlert,
-    followAttackRiderId,
-    setFollowAttackRiderId,
     sortedTeamRiders,
     groupedTeamRiders,
     teamRiderByID,
@@ -460,7 +489,6 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
     moveSprintTrainRider,
     handleFollowChange,
     handleLaunchSprint,
-    handleFollowAttack,
     handleTeamOrder,
   }
 }

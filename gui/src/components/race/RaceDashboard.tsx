@@ -4,6 +4,7 @@ import { TeamControl } from '../../sim/useTeamControl'
 import { useMemo } from 'react'
 import { EventLog } from './RacePanels'
 import { RoadView } from './RoadView'
+import { DecisionCard } from './DecisionCard'
 import { TeamDock } from './TeamDock'
 
 /**
@@ -33,7 +34,8 @@ export function RaceDashboard({
   return (
     <div className={`race-dash${interactive ? ' interactive' : ''}`}>
       {top}
-      <div className="dash-race">
+      <div className={`dash-race${tc.moment ? ' deciding' : ''}`}>
+        {interactive && <DecisionCard tc={tc} />}
         <RoadView groups={groups} tc={interactive ? tc : undefined} emptyText={emptyText} />
         <EventLog events={events} emptyText="Waiting for the race…" />
         {footer}

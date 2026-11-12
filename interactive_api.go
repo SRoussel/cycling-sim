@@ -123,7 +123,7 @@ func (a *App) StartInteractiveSimulation(raceID int64, enableIncidents bool, con
 		if a.ctx == nil {
 			return
 		}
-		results := service.RunRace(raceConfig, a.makeRaceProgressCallback(raceID, sess.id, sess.Pace))
+		results := service.RunRace(raceConfig, a.makeRaceProgressCallback(raceID, sess))
 		if sess.IsStopped() {
 			return // abandoned by the user: don't overwrite saved results
 		}
@@ -164,7 +164,7 @@ func (a *App) StartInteractiveStageRace(stageRaceID int64, controlledTeam string
 		if a.ctx == nil {
 			return
 		}
-		progress := a.makeStageRaceProgressCallback(stageRaceID, len(plan.Stages), sess.id, sess.Pace)
+		progress := a.makeStageRaceProgressCallback(stageRaceID, len(plan.Stages), sess)
 		out := service.RunStageRace(plan, 0, progress, sess)
 		if sess.IsStopped() {
 			return // abandoned by the user: don't overwrite saved results
@@ -285,6 +285,27 @@ func (a *App) SetTeamOrder(sessionID string, kind string, value string) {
 		order = simulation.OrderNo
 	}
 	sess.SetTeamOrder(kind, order)
+}
+
+// ResolveMoment applies the player's choice for a decision moment and resumes
+// the race. It returns the chosen option's label ("" if the moment is gone).
+func (a *App) ResolveMoment(sessionID string, momentID string, optionID string) string {
+	s := a.getSession(sessionID)
+	if s == nil {
+		return ""
+	}
+	label, err := s.Resolve(momentID, optionID)
+	if err != nil {
+		return ""
+	}
+	return label
+}
+
+// SetDecisions turns decision moments on or off for a session.
+func (a *App) SetDecisions(sessionID string, on bool) {
+	if s := a.getSession(sessionID); s != nil {
+		s.SetDecisions(on)
+	}
 }
 
 func (a *App) StopInteractiveSession(sessionID string) {

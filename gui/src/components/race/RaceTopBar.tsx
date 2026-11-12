@@ -21,6 +21,8 @@ export function RaceTopBar({
   onTogglePause,
   onSpeedChange,
   extra,
+  onSkip,
+  skipping,
 }: {
   title: string
   subtitle?: string
@@ -35,6 +37,8 @@ export function RaceTopBar({
   onTogglePause: () => void
   onSpeedChange: (speed: number) => void
   extra?: React.ReactNode
+  onSkip?: () => void
+  skipping?: boolean
 }) {
   const total = profile?.totalKm || kmTotal
   return (
@@ -53,6 +57,12 @@ export function RaceTopBar({
           <span className="dash-stat-label">race time</span>
         </div>
         {extra}
+        {onSkip && (
+          <button className={`dash-skip${skipping ? ' on' : ''}`} onClick={onSkip} disabled={playbackDisabled}
+            title="Fast-forward until the next decision moment">
+            {skipping ? '⏹ Stop skipping' : '⏩ Next decision'}
+          </button>
+        )}
         <PlaybackControls
           paused={paused}
           speed={speed}

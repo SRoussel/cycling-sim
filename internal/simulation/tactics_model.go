@@ -183,6 +183,10 @@ type TacticsEvent struct {
 	Type   string
 	Km     float64
 	Reason string
+	// RiderID and Key are set on rider events (attacks): Key marks a rider
+	// the race reacts to (favourite, GC contender, team leader).
+	RiderID int64
+	Key     bool
 }
 
 func NewRaceState(states []*RiderState, rng *rand.Rand, isStageRace bool) *RaceState {

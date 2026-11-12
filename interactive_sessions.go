@@ -22,6 +22,8 @@ type interactiveSession struct {
 	launchingRiderID int64
 	teamOrders       simulation.TeamOrders
 
+	director directorState
+
 	paused  bool
 	speed   float64
 	stopped bool
@@ -38,6 +40,7 @@ func newInteractiveSession(controlledTeam string) *interactiveSession {
 		followMap:      make(map[int64]int64),
 		speed:          0.5,
 		stopCh:         make(chan struct{}),
+		director:       directorState{enabled: true},
 	}
 }
 
@@ -167,6 +170,9 @@ func (s *interactiveSession) SetSpeed(speed float64) {
 func (s *interactiveSession) SetPaused(paused bool) {
 	s.mu.Lock()
 	s.paused = paused
+	if !paused {
+		s.director.pending = nil // resuming dismisses an open decision
+	}
 	s.mu.Unlock()
 }
 
@@ -306,6 +312,11 @@ func (s *interactiveSession) TeamOrders(team string) simulation.TeamOrders {
 func (s *interactiveSession) SetTeamOrder(kind string, order simulation.Order) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	s.director.orders = removeOrder(s.director.orders, kind) // the player's order stands
+	return s.setTeamOrderLocked(kind, order)
+}
+
+func (s *interactiveSession) setTeamOrderLocked(kind string, order simulation.Order) bool {
 	switch kind {
 	case "chase":
 		s.teamOrders.Chase = order

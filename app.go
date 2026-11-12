@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"cycling_sim/internal/director"
 	"fmt"
 	"os"
 	"sync"
@@ -154,6 +155,7 @@ type SimulationProgress struct {
 	Profile        *simulation.RouteProfile                 `json:"profile,omitempty"`
 	TeamState      *simulation.TeamState                    `json:"teamState,omitempty"`
 	Events         []string                                 `json:"events"`
+	Moment         *director.Moment                         `json:"moment,omitempty"`
 }
 
 // StageRaceProgress is emitted during a stage race simulation.
@@ -177,6 +179,7 @@ type StageRaceProgress struct {
 	Profile         *simulation.RouteProfile                 `json:"profile,omitempty"`
 	TeamState       *simulation.TeamState                    `json:"teamState,omitempty"`
 	Events          []string                                 `json:"events"`
+	Moment          *director.Moment                         `json:"moment,omitempty"`
 }
 
 // GCStanding holds GC standings
@@ -376,7 +379,7 @@ func (a *App) RunSimulation(raceID int64, enableIncidents bool) RaceResults {
 	if err != nil {
 		return raceResultsError(err)
 	}
-	simResults := service.RunRace(raceConfig, a.makeRaceProgressCallback(raceID, "", nil))
+	simResults := service.RunRace(raceConfig, a.makeRaceProgressCallback(raceID, nil))
 	_ = a.db.SaveRaceResults(simResults)
 	return RaceResults{
 		RaceID:   raceID,
@@ -394,7 +397,7 @@ func (a *App) RunStageRace(stageRaceID int64) []RaceResults {
 	if err != nil {
 		return nil
 	}
-	out := service.RunStageRace(plan, 0, a.makeStageRaceProgressCallback(stageRaceID, len(plan.Stages), "", nil), nil)
+	out := service.RunStageRace(plan, 0, a.makeStageRaceProgressCallback(stageRaceID, len(plan.Stages), nil), nil)
 	_ = service.SaveStageRaceOutput(a.db, out)
 
 	riderMap := buildRiderMap(plan.Riders)
@@ -681,7 +684,11 @@ func riderToInfo(r model.Rider) RiderInfo {
 // makeRaceProgressCallback returns a progress callback for a single-race simulation.
 // sessionID is included in the emitted event (empty for non-interactive runs).
 // If pace is non-nil it is called after each update (for interactive sessions).
-func (a *App) makeRaceProgressCallback(raceID int64, sessionID string, pace func()) func(simulation.ProgressSnapshot) {
+func (a *App) makeRaceProgressCallback(raceID int64, sess *interactiveSession) func(simulation.ProgressSnapshot) {
+	sessionID := ""
+	if sess != nil {
+		sessionID = sess.id
+	}
 	return func(snapshot simulation.ProgressSnapshot) {
 		if a.ctx == nil {
 			return
@@ -693,6 +700,10 @@ func (a *App) makeRaceProgressCallback(raceID int64, sessionID string, pace func
 		groups := make([]ProgressGroup, len(snapshot.Groups))
 		for i, g := range snapshot.Groups {
 			groups[i] = ProgressGroup{Name: g.Name, Gap: g.GapSeconds, Riders: g.Riders, Size: g.Size}
+		}
+		var moment *director.Moment
+		if sess != nil {
+			moment = sess.Observe(snapshot.Race, snapshot.RouteProfile, snapshot.KmTotal-snapshot.KmCovered, 0)
 		}
 		runtime.EventsEmit(a.ctx, "simulation_progress", SimulationProgress{
 			SessionID:      sessionID,
@@ -708,15 +719,20 @@ func (a *App) makeRaceProgressCallback(raceID int64, sessionID string, pace func
 			Profile:        snapshot.RouteProfile,
 			TeamState:      snapshot.TeamState,
 			Events:         snapshot.Events,
+			Moment:         moment,
 		})
-		if pace != nil {
-			pace()
+		if sess != nil {
+			sess.Pace()
 		}
 	}
 }
 
 // makeStageRaceProgressCallback returns a progress callback for a stage race simulation.
-func (a *App) makeStageRaceProgressCallback(stageRaceID int64, stageCount int, sessionID string, pace func()) func(simulation.StageProgressSnapshot) {
+func (a *App) makeStageRaceProgressCallback(stageRaceID int64, stageCount int, sess *interactiveSession) func(simulation.StageProgressSnapshot) {
+	sessionID := ""
+	if sess != nil {
+		sessionID = sess.id
+	}
 	return func(snapshot simulation.StageProgressSnapshot) {
 		if a.ctx == nil {
 			return
@@ -732,6 +748,10 @@ func (a *App) makeStageRaceProgressCallback(stageRaceID int64, stageCount int, s
 		groups := make([]ProgressGroup, len(snapshot.Groups))
 		for i, g := range snapshot.Groups {
 			groups[i] = ProgressGroup{Name: g.Name, Gap: g.GapSeconds, Riders: g.Riders, Size: g.Size}
+		}
+		var moment *director.Moment
+		if sess != nil {
+			moment = sess.Observe(snapshot.Race, snapshot.RouteProfile, snapshot.StageKmTotal-snapshot.StageKmCovered, snapshot.StageNumber)
 		}
 		runtime.EventsEmit(a.ctx, "stage_race_progress", StageRaceProgress{
 			SessionID:       sessionID,
@@ -753,9 +773,10 @@ func (a *App) makeStageRaceProgressCallback(stageRaceID int64, stageCount int, s
 			Profile:         snapshot.RouteProfile,
 			TeamState:       snapshot.TeamState,
 			Events:          snapshot.Events,
+			Moment:          moment,
 		})
-		if pace != nil {
-			pace()
+		if sess != nil {
+			sess.Pace()
 		}
 	}
 }

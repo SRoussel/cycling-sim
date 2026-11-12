@@ -34,6 +34,8 @@ export function PreviewRaceStartList(arg1:number):Promise<Array<main.RiderInfo>>
 
 export function PreviewStageRaceStartList(arg1:number):Promise<Array<main.RiderInfo>>;
 
+export function ResolveMoment(arg1:string,arg2:string,arg3:string):Promise<string>;
+
 export function RunSimulation(arg1:number,arg2:boolean):Promise<main.RaceResults>;
 
 export function RunStageRace(arg1:number):Promise<Array<main.RaceResults>>;
@@ -43,6 +45,8 @@ export function RunValidation():Promise<Array<main.ValidationResult>>;
 export function SaveSimulationParams(arg1:main.SimParams):Promise<void>;
 
 export function SeedDatabase():Promise<string>;
+
+export function SetDecisions(arg1:string,arg2:boolean):Promise<void>;
 
 export function SetInteractivePaused(arg1:string,arg2:boolean):Promise<void>;
 

@@ -161,6 +161,8 @@ function Simulation() {
           playbackDisabled={controlsDisabled}
           onTogglePause={tc.togglePause}
           onSpeedChange={tc.changeSpeed}
+          onSkip={interactiveMode ? tc.skipToDecision : undefined}
+          skipping={tc.skipping}
           extra={simulationComplete && results ? (
             <button className="primary" onClick={() => navigate(`/results/${raceId}`, { state: { results } })}>
               View Results →

@@ -66,6 +66,10 @@ export function PreviewStageRaceStartList(arg1) {
   return window['go']['main']['App']['PreviewStageRaceStartList'](arg1);
 }
 
+export function ResolveMoment(arg1, arg2, arg3) {
+  return window['go']['main']['App']['ResolveMoment'](arg1, arg2, arg3);
+}
+
 export function RunSimulation(arg1, arg2) {
   return window['go']['main']['App']['RunSimulation'](arg1, arg2);
 }
@@ -84,6 +88,10 @@ export function SaveSimulationParams(arg1) {
 
 export function SeedDatabase() {
   return window['go']['main']['App']['SeedDatabase']();
+}
+
+export function SetDecisions(arg1, arg2) {
+  return window['go']['main']['App']['SetDecisions'](arg1, arg2);
 }
 
 export function SetInteractivePaused(arg1, arg2) {

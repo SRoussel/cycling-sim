@@ -3,7 +3,7 @@ export function EventLog({ events, emptyText }: { events: string[]; emptyText?: 
     <section className="card events-panel">
       <h2>Event Log</h2>
       <ul className="events-list">
-        {events.length === 0 && emptyText ? <li>{emptyText}</li> : events.map((event, i) => <li key={i}>{event}</li>)}
+        {events.length === 0 && emptyText ? <li>{emptyText}</li> : events.map((event, i) => <li key={i} className={event.startsWith('📻') ? 'radio' : event.startsWith('🎬') ? 'decision' : undefined}>{event}</li>)}
       </ul>
     </section>
   )

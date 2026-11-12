@@ -2,6 +2,7 @@
 // pause/speed, interactive session lifecycle, per-rider telemetry (with
 // interpolation), route profile, and all team-control commands.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { RadioState, newRadioState, radioMessages } from './radio'
 import * as App from '../../wailsjs/go/main/App'
 import { main } from '../../wailsjs/go/models'
 import {
@@ -32,6 +33,11 @@ export interface LiveProgressPayload {
   teamState?: TeamState
   events?: string[]
   moment?: Moment
+  groups?: Array<{ name: string; gap: number; size?: number }>
+  kmTotal?: number
+  kmCovered?: number
+  stageKmTotal?: number
+  stageKm?: number
 }
 
 /** A decision moment from the director (internal/director): the race is
@@ -92,6 +98,9 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
     setPaused(next)
     if (active) await App.SetInteractivePaused(sessionId!, next)
   }
+  // ── Race radio ────────────────────────────────────────────
+  const radioRef = useRef<RadioState>(newRadioState())
+
   // ── Decision moments ──────────────────────────────────────
   const [moment, setMoment] = useState<Moment | null>(null)
   const [decisionLevel, setDecisionLevelState] = useState<DecisionLevel>(() => {
@@ -137,6 +146,7 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
     if (!active || !moment) return
     const m = moment
     setMoment(null)
+    radioRef.current = newRadioState()
     const label = await App.ResolveMoment(sessionId!, m.id, optionId)
     setPaused(false)
     if (label) appendEvents([`🎬 ${m.title.replace(/^\S+\s/, '')}: ${label}`])
@@ -297,8 +307,8 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
   // ── Progress ingestion ────────────────────────────────────
   // Event listeners are subscribed once per session, so they read changing
   // values through this ref instead of a stale closure.
-  const latest = useRef({ paused, sessionId, skipFrom })
-  latest.current = { paused, sessionId, skipFrom }
+  const latest = useRef({ paused, sessionId, skipFrom, teamRiders })
+  latest.current = { paused, sessionId, skipFrom, teamRiders }
 
   /** Returns true when the payload belongs to a different session. */
   const isForeignSession = (payloadSessionId?: string) =>
@@ -306,6 +316,12 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
 
   const ingestProgress = (payload: LiveProgressPayload) => {
     if (payload.riderGroups) setRiderGroups(payload.riderGroups)
+    if (interactiveMode) {
+      const total = payload.stageKmTotal ?? payload.kmTotal ?? 0
+      const done = payload.stageKm ?? payload.kmCovered ?? 0
+      const lines = radioMessages(radioRef.current, latest.current.teamRiders, payload.riderTelemetry, payload.riderGroups, payload.groups, Math.max(0, total - done))
+      if (lines.length > 0) appendEvents(lines)
+    }
     if (payload.riderTelemetry) {
       telemetryPrevRef.current = telemetryDisplayRef.current
       telemetryTargetRef.current = payload.riderTelemetry

@@ -815,3 +815,14 @@ button.decision-option:hover {
   border-color: rgba(214, 179, 106, 0.85);
   background: linear-gradient(135deg, rgba(214, 179, 106, 0.16), rgba(214, 179, 106, 0.05));
 }
+
+/* race radio and the player's decisions in the log */
+.events-list li.radio {
+  color: #93c5fd;
+  font-style: italic;
+}
+
+.events-list li.decision {
+  color: var(--color-primary);
+  font-weight: 600;
+}

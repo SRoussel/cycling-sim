@@ -138,7 +138,7 @@ func BuildRiders() ([]model.Rider, error) {
 	}
 	wdb, err := loadWorldDB()
 	if err != nil || wdb == nil {
-		return riders, err
+		return scaleThresholdsWithMass(riders), err
 	}
 	// Fits are trained on ratings without the fitted layer (a correction
 	// for particular races, not a property of the rating scale).
@@ -146,7 +146,7 @@ func BuildRiders() ([]model.Rider, error) {
 	if err != nil {
 		return nil, err
 	}
-	return withWorldDB(riders, train, wdb), nil
+	return scaleThresholdsWithMass(withWorldDB(riders, train, wdb)), nil
 }
 
 // UnfittedFTPs returns each rider's threshold from every rating layer except
@@ -173,6 +173,7 @@ func UnfittedFTPs() (map[string]int, error) {
 	} else if wdb != nil {
 		riders = withWorldDB(riders, riders, wdb)
 	}
+	riders = scaleThresholdsWithMass(riders)
 	out := make(map[string]int, len(riders))
 	for _, r := range riders {
 		out[normalizeName(r.Name)] = r.FTPWatts
@@ -256,6 +257,37 @@ func readRidersCSV(path string, layers ...map[string]RiderOverride) ([]model.Rid
 		out = append(out, rider)
 	}
 	return out, nil
+}
+
+// powerMassExponent: across trained cyclists, absolute aerobic power grows
+// with body mass to about the 0.75th power (published allometric exponents
+// run ~0.67-0.8): heavier riders have more watts but fewer per kilogram.
+const powerMassExponent = 0.75
+
+// ratingsMassExponent is how threshold scaled with mass in the full rated
+// field (922 riders, Nov 2026): mass^0.63. The ratings were drafted largely
+// as W/kg, leaving heavy riders short of watts; with drag following body
+// size that made big engines no faster on the flat than riders 10 kg
+// lighter. massRefKg is the field's geometric mean mass.
+const (
+	ratingsMassExponent = 0.63
+	massRefKg           = 68.1
+)
+
+// scaleThresholdsWithMass corrects every threshold to powerMassExponent:
+// × (m/massRefKg)^(0.75-0.63), +2.4% at 83 kg, -2.5% at 55 kg, none at the
+// reference mass. Applied once to the finished field (after the WorldDB
+// merge), identically for the fitted and unfitted builds.
+func scaleThresholdsWithMass(riders []model.Rider) []model.Rider {
+	for i := range riders {
+		r := &riders[i]
+		if r.WeightKg <= 0 || r.FTPWatts <= 0 {
+			continue
+		}
+		f := math.Pow(r.WeightKg/massRefKg, powerMassExponent-ratingsMassExponent)
+		r.FTPWatts = int(math.Round(float64(r.FTPWatts) * f))
+	}
+	return riders
 }
 
 // ApplyRatings recomputes every rider from riders.csv and the rating layers

@@ -129,6 +129,9 @@ func sectorName(name string) string {
 	return name
 }
 
+// BuildRouteProfile is a course's profile and sectors, as sent to the game.
+func BuildRouteProfile(course *model.Course) *RouteProfile { return buildRouteProfile(course) }
+
 func buildRouteProfile(course *model.Course) *RouteProfile {
 	if course == nil || len(course.Segments) == 0 {
 		return nil
@@ -287,7 +290,8 @@ func SimulateRoadRaceWithProgress(config RaceConfig, onProgress func(ProgressSna
 	raceState.Overrides = config.ActionOverrides
 	raceState.GCGaps = config.GCGaps
 	AssignCoLeaders(states, config.GCGaps, config.TeamPlan, raceState.IsStageRace)
-	raceState.setBreakIntent(states, segments, rng) // needs GC gaps and roles
+	applyLeaderChoices(states, config.ActionOverrides) // the player's race plan
+	raceState.setBreakIntent(states, segments, rng)    // needs GC gaps and roles
 	raceState.setHunting(states, config.Prestige, config.StageWins, rng)
 	eventIndex := 0
 	routeProfile := buildRouteProfile(config.Course)

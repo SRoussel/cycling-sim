@@ -54,11 +54,15 @@ func (d *Director) chooseGoal(w *view) *Goal {
 		// leader, our best rider by course time.
 		for _, leaderOnly := range []bool{true, false} {
 			for id, r := range w.Riders {
-				if r.Team != w.team || r.Rank == 0 || (leaderOnly && r.Role != simulation.RoleLeader) {
+				rank := r.HardRank // who can win here: time over the hard sections
+				if rank == 0 {
+					rank = r.Rank
+				}
+				if r.Team != w.team || rank == 0 || (leaderOnly && r.Role != simulation.RoleLeader) {
 					continue
 				}
-				if best == nil || r.Rank < best.rank {
-					best = &cand{id, r.Rank}
+				if best == nil || rank < best.rank {
+					best = &cand{id, rank}
 				}
 			}
 			if best != nil {

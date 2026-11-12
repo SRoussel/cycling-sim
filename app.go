@@ -200,6 +200,17 @@ type GCLine struct {
 	LiveGap float64 `json:"liveGap"`
 }
 
+// withNotes adds the session's race-plan lines to a frame's events.
+func withNotes(events []string, sess *interactiveSession) []string {
+	if sess == nil {
+		return events
+	}
+	if n := sess.DrainNotes(); len(n) > 0 {
+		return append(append([]string{}, events...), n...)
+	}
+	return events
+}
+
 // gcLines lists the live GC leader and the team's riders, live order.
 func gcLines(v *simulation.RaceView, team string) []GCLine {
 	if v == nil || !v.StageRace {
@@ -754,7 +765,7 @@ func (a *App) makeRaceProgressCallback(raceID int64, sess *interactiveSession) f
 			RiderTelemetry: snapshot.RiderTelemetry,
 			Profile:        snapshot.RouteProfile,
 			TeamState:      snapshot.TeamState,
-			Events:         snapshot.Events,
+			Events:         withNotes(snapshot.Events, sess),
 			Moment:         moment,
 			Goal:           goal,
 		})
@@ -814,7 +825,7 @@ func (a *App) makeStageRaceProgressCallback(stageRaceID int64, stageCount int, s
 			RiderTelemetry:  snapshot.RiderTelemetry,
 			Profile:         snapshot.RouteProfile,
 			TeamState:       snapshot.TeamState,
-			Events:          snapshot.Events,
+			Events:          withNotes(snapshot.Events, sess),
 			Moment:          moment,
 			Goal:            goal,
 			GCGoal:          gcGoal,

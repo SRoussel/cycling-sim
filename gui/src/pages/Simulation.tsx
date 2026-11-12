@@ -111,7 +111,8 @@ function Simulation() {
     const run = async () => {
       try {
         if (interactiveMode) {
-          const sess = await App.StartInteractiveSimulation(race.id, enableIncidents, initialTeam)
+          const plan = location.state?.plan ?? { leaderId: 0, break: 'auto', hardOn: [], attackOn: '' }
+          const sess = await App.StartInteractiveSimulation(race.id, enableIncidents, initialTeam, main.RacePlan.createFrom(plan))
           await tc.beginSession(sess)
           return
         }

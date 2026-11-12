@@ -1,3 +1,30 @@
+export namespace director {
+	
+	export class PlanPoint {
+	    key: string;
+	    label: string;
+	    kind: string;
+	    startKm: number;
+	    lengthKm: number;
+	    toGoKm: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new PlanPoint(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.key = source["key"];
+	        this.label = source["label"];
+	        this.kind = source["kind"];
+	        this.startKm = source["startKm"];
+	        this.lengthKm = source["lengthKm"];
+	        this.toGoKm = source["toGoKm"];
+	    }
+	}
+
+}
+
 export namespace main {
 	
 	export class CourseInfo {
@@ -180,6 +207,24 @@ export namespace main {
 	        this.distance = source["distance"];
 	        this.temperature = source["temperature"];
 	        this.windSpeed = source["windSpeed"];
+	    }
+	}
+	export class RacePlan {
+	    leaderId: number;
+	    break: string;
+	    hardOn: string[];
+	    attackOn: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new RacePlan(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.leaderId = source["leaderId"];
+	        this.break = source["break"];
+	        this.hardOn = source["hardOn"];
+	        this.attackOn = source["attackOn"];
 	    }
 	}
 	export class SimulationResult {

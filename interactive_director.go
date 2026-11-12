@@ -33,6 +33,11 @@ type directorState struct {
 	scheduled []director.Command
 	timed     []timedCommand
 	orders    []timedOrder
+	// the race plan's hard sections and attack (see interactive_plan.go)
+	scheduledOrders []scheduledOrder
+	planAttackKm    float64
+	planAttackName  string
+	notes           []string // race-plan lines for the log
 }
 
 // SetDecisionLevel sets how often the race stops for a decision: "off",
@@ -69,6 +74,8 @@ func (s *interactiveSession) Observe(view *simulation.RaceView, profile *simulat
 		}
 	}
 	d.km = kmRemaining
+	s.resolvePlanLocked(view)
+	s.tickPlanLocked()
 	s.tickLocked()
 	d.dir.Watch(view)
 	if view == nil || !d.enabled || d.pending != nil {
@@ -88,6 +95,9 @@ func (s *interactiveSession) tickLocked() {
 	keep := d.scheduled[:0]
 	for _, c := range d.scheduled {
 		if d.km <= c.AtKmRemaining {
+			if c.Note != "" {
+				s.noteLocked(c.Note)
+			}
 			c.AtKmRemaining = 0
 			s.applyCommandLocked(c)
 		} else {

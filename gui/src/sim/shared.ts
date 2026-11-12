@@ -164,6 +164,8 @@ export function formatEventLine(line: string): string {
       return `${at}⛰ Climb near the finish`
     case 'final':
       return `${at}🏁 Final 10 km`
+    case 'plan':
+      return `${at}📋 ${ev.reason}`
   }
   return line
 }

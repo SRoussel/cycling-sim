@@ -79,6 +79,45 @@ type TeamOrderProvider interface {
 	TeamOrders(team string) TeamOrders
 }
 
+// LeaderChoiceProvider is an optional ActionOverrideProvider interface: the
+// player's choice of leader for their team (the race plan).
+type LeaderChoiceProvider interface {
+	LeaderChoice(team string) (riderID int64, ok bool)
+}
+
+// applyLeaderChoices makes a chosen rider his team's leader: he becomes
+// RoleLeader and the team's other leaders domestiques (its sprinter stays
+// the sprinter). Teams without a choice keep the engine's roles.
+func applyLeaderChoices(states []*RiderState, p ActionOverrideProvider) {
+	lp, ok := p.(LeaderChoiceProvider)
+	if !ok {
+		return
+	}
+	chosen := map[string]int64{}
+	for _, rs := range states {
+		if _, seen := chosen[rs.Rider.Team]; seen {
+			continue
+		}
+		if id, ok := lp.LeaderChoice(rs.Rider.Team); ok {
+			chosen[rs.Rider.Team] = id
+		} else {
+			chosen[rs.Rider.Team] = 0
+		}
+	}
+	for _, rs := range states {
+		id := chosen[rs.Rider.Team]
+		if id == 0 {
+			continue
+		}
+		switch {
+		case rs.Rider.ID == id:
+			rs.TeamRole = RoleLeader
+		case rs.TeamRole == RoleLeader:
+			rs.TeamRole = RoleDomestique
+		}
+	}
+}
+
 // teamOrders returns a team's standing orders (all OrderAuto without any).
 func (s *RaceState) teamOrders(team string) TeamOrders {
 	if s == nil || s.Overrides == nil {
@@ -147,6 +186,7 @@ type RaceState struct {
 	// (1 = fastest), the measure favourites are picked by. Read-only for the
 	// game layer; tactics use Favourites.
 	CourseRank map[int64]int
+	HardRank   map[int64]int // by time over the hard sections (read-only, for the game)
 }
 
 type TacticsParams struct {
@@ -516,6 +556,19 @@ func (s *RaceState) markFavourites(states []*RiderState, segments []model.Segmen
 			s.Favourites[all[i].id] = true
 		}
 		s.CourseRank[all[i].id] = i + 1
+	}
+	// HardRank: by time over the hard sections (how one-day leaders are
+	// picked), the better one-day measure of who can win.
+	var hard []ranked
+	for _, rs := range states {
+		if !rs.DNF {
+			hard = append(hard, ranked{rs.Rider.ID, decisiveTime(rs, segments)})
+		}
+	}
+	sort.Slice(hard, func(i, j int) bool { return hard[i].t < hard[j].t })
+	s.HardRank = make(map[int64]int, len(hard))
+	for i, h := range hard {
+		s.HardRank[h.id] = i + 1
 	}
 }
 

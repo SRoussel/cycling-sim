@@ -1,7 +1,7 @@
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import * as App from '../../wailsjs/go/main/App'
-import { main } from '../../wailsjs/go/models'
+import { director, main } from '../../wailsjs/go/models'
 import './RaceSetup.css'
 
 function RaceSetup() {
@@ -13,6 +13,14 @@ function RaceSetup() {
 
   const [interactiveMode, setInteractiveMode] = useState(false)
   const [controlledTeam, setControlledTeam] = useState('')
+  // Race plan (interactive): who we ride for, the break, where to make it
+  // hard and where the leader goes. Points are the course's decisive climbs
+  // and sectors.
+  const [planPoints, setPlanPoints] = useState<director.PlanPoint[]>([])
+  const [planLeader, setPlanLeader] = useState(0)
+  const [planBreak, setPlanBreak] = useState('auto')
+  const [planHard, setPlanHard] = useState<string[]>([])
+  const [planAttack, setPlanAttack] = useState('')
 
   useEffect(() => {
     const loadData = async () => {
@@ -24,6 +32,7 @@ function RaceSetup() {
         if (found) {
           const preview = await App.PreviewRaceStartList(found.id)
           setStartList(preview || [])
+          setPlanPoints((await App.PreviewRacePlan(found.id)) || [])
           if (!controlledTeam && preview && preview.length > 0) {
             setControlledTeam(preview[0].team)
           }
@@ -40,11 +49,15 @@ function RaceSetup() {
   const handleStartSimulation = async () => {
     if (!race) return
     // Navigate to simulation page which will run the simulation
-    navigate(`/simulation/${race.id}`, { state: { race, enableIncidents, interactiveMode, controlledTeam } })
+    const plan = { leaderId: planLeader, break: planBreak, hardOn: planHard, attackOn: planAttack }
+    navigate(`/simulation/${race.id}`, { state: { race, enableIncidents, interactiveMode, controlledTeam, plan } })
   }
 
   // Get top riders by handling for preview
-  const topRiders = [...startList].sort((a, b) => b.handling - a.handling).slice(0, 5)
+  // The model is watt-based: threshold power (FTP) and W/kg are what decide a
+  // race; the 1-100 ratings only shift power a few percent by terrain.
+  const wkg = (r: main.RiderInfo) => (r.weight > 0 ? r.ftp / r.weight : 0)
+  const topRiders = [...startList].sort((a, b) => wkg(b) - wkg(a)).slice(0, 8)
   const teams = Array.from(new Set(startList.map((r) => r.team))).sort()
 
   return (
@@ -111,7 +124,10 @@ function RaceSetup() {
                 Your team
                 <select
                   value={controlledTeam}
-                  onChange={(e) => setControlledTeam(e.target.value)}
+                  onChange={(e) => {
+                    setControlledTeam(e.target.value)
+                    setPlanLeader(0)
+                  }}
                   style={{ marginLeft: 10 }}
                 >
                   {teams.map((t) => (
@@ -125,6 +141,58 @@ function RaceSetup() {
           )}
         </section>
 
+        {interactiveMode && controlledTeam && (
+          <section className="card race-plan">
+            <h2>Race plan</h2>
+            <p className="option-help">Your team follows the plan unless you change course during the race. Leave anything to the team.</p>
+            <div className="plan-grid">
+              <label>
+                <span>Ride for</span>
+                <select value={planLeader} onChange={(e) => setPlanLeader(Number(e.target.value))}>
+                  <option value={0}>Team decides</option>
+                  {startList.filter((r) => r.team === controlledTeam).map((r) => (
+                    <option key={r.id} value={r.id}>{r.name} ({wkg(r).toFixed(1)} W/kg, {r.ftp} W)</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                <span>The break</span>
+                <select value={planBreak} onChange={(e) => setPlanBreak(e.target.value)}>
+                  <option value="auto">Team decides</option>
+                  <option value="yes">Put a rider in the break</option>
+                  <option value="no">Nobody in the break</option>
+                </select>
+              </label>
+              <label>
+                <span>Leader attacks on</span>
+                <select value={planAttack} onChange={(e) => setPlanAttack(e.target.value)} disabled={planPoints.length === 0}>
+                  <option value="">Wherever he sees fit</option>
+                  {planPoints.map((p) => (
+                    <option key={p.key} value={p.key}>{p.label}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            {planPoints.length > 0 ? (
+              <fieldset className="plan-hard">
+                <legend>Make it hard on (the team drives into and over it)</legend>
+                {planPoints.map((p) => (
+                  <label key={p.key} className="checkbox-label">
+                    <input
+                      type="checkbox"
+                      checked={planHard.includes(p.key)}
+                      onChange={(e) => setPlanHard((h) => (e.target.checked ? [...h, p.key] : h.filter((k) => k !== p.key)))}
+                    />
+                    {p.kind === 'climb' ? '⛰' : p.kind === 'gravel' ? '💨' : '🪨'} {p.label}
+                  </label>
+                ))}
+              </fieldset>
+            ) : (
+              <p className="option-help">No decisive climbs or sectors on this course: it's one for the sprinters.</p>
+            )}
+          </section>
+        )}
+
         <section className="card start-list">
           <h2>Start List Preview</h2>
           <table>
@@ -132,9 +200,10 @@ function RaceSetup() {
               <tr>
                 <th>Rider</th>
                 <th>Team</th>
-                <th>Climbing</th>
-                <th>Sprint</th>
-                <th>Handling</th>
+                <th title="Threshold power per kg: the main lever in the model">W/kg</th>
+                <th title="Threshold power (FTP)">FTP</th>
+                <th title="Rating (1-100): shifts power on climbs by up to ±4%">Climbing</th>
+                <th title="Rating (1-100)">Sprint</th>
               </tr>
             </thead>
             <tbody>
@@ -142,13 +211,14 @@ function RaceSetup() {
                 <tr key={rider.id}>
                   <td>{rider.name}</td>
                   <td>{rider.team}</td>
+                  <td>{wkg(rider).toFixed(2)}</td>
+                  <td style={{ whiteSpace: 'nowrap' }}>{rider.ftp} W</td>
                   <td>{rider.climbing}</td>
                   <td>{rider.sprint}</td>
-                  <td>{rider.handling}</td>
                 </tr>
               ))}
               <tr>
-                <td colSpan={5} className="more-riders">+ {Math.max(0, startList.length - 5)} more riders...</td>
+                <td colSpan={6} className="more-riders">+ {Math.max(0, startList.length - topRiders.length)} more riders...</td>
               </tr>
             </tbody>
           </table>

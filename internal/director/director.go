@@ -25,6 +25,7 @@ type Command struct {
 	Mode          string // persistent, oneshot
 	ForKm         float64
 	AtKmRemaining float64
+	Note          string // logged when a scheduled command fires
 }
 
 // OrderChange sets a team order (see SetTeamOrder) for ForKm (0: for good).

@@ -23,6 +23,7 @@ type interactiveSession struct {
 	teamOrders       simulation.TeamOrders
 
 	director directorState
+	plan     RacePlan
 
 	paused  bool
 	speed   float64

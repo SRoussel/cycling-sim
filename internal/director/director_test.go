@@ -384,3 +384,13 @@ func TestGCGoalKeptAcrossStages(t *testing.T) {
 		t.Fatalf("the GC goal lasts the whole race: %+v", g)
 	}
 }
+
+func TestPlanPoints(t *testing.T) {
+	pts := PlanPoints(roubaixLike())
+	if len(pts) != 4 || pts[0].Kind != "cobbles" || pts[len(pts)-1].ToGoKm != 19 {
+		t.Fatalf("Roubaix-like plan points: %+v", pts)
+	}
+	if at := pts[len(pts)-1].AttackAtKm(); at > 19 || at < 18 {
+		t.Errorf("attack a third into the Carrefour (~18.3 km to go): %.1f", at)
+	}
+}

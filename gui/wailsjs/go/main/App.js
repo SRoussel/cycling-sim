@@ -58,6 +58,10 @@ export function LaunchSprint(arg1, arg2) {
   return window['go']['main']['App']['LaunchSprint'](arg1, arg2);
 }
 
+export function PreviewRacePlan(arg1) {
+  return window['go']['main']['App']['PreviewRacePlan'](arg1);
+}
+
 export function PreviewRaceStartList(arg1) {
   return window['go']['main']['App']['PreviewRaceStartList'](arg1);
 }
@@ -122,8 +126,8 @@ export function SetTeamOrder(arg1, arg2, arg3) {
   return window['go']['main']['App']['SetTeamOrder'](arg1, arg2, arg3);
 }
 
-export function StartInteractiveSimulation(arg1, arg2, arg3) {
-  return window['go']['main']['App']['StartInteractiveSimulation'](arg1, arg2, arg3);
+export function StartInteractiveSimulation(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['StartInteractiveSimulation'](arg1, arg2, arg3, arg4);
 }
 
 export function StartInteractiveStageRace(arg1, arg2) {

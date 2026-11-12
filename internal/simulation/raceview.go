@@ -29,6 +29,7 @@ type RiderBrief struct {
 	Favourite bool    // one of the riders the bunch marks
 	Rank      int     // time over the course at threshold, 1 = fastest (0: unknown)
 	Sprint    int     // sprint rating
+	HardRank  int     // time over the hard sections (climbs, cobbles), 1 = fastest
 	ClimbWKg  float64 // climbing W/kg (how stage races pick GC leaders)
 	// Stage races: GC before this stage, and live (with today's time so far).
 	GCPos, LiveGCPos int // 1 = leader (0: no GC yet)
@@ -92,6 +93,7 @@ func buildRaceView(states []*RiderState, state *RaceState, kmRemaining, kmTotal 
 				// Read-only: no RaceState helper with per-step caches.
 				brief.Favourite = state.Favourites[rs.Rider.ID]
 				brief.Rank = state.CourseRank[rs.Rider.ID]
+				brief.HardRank = state.HardRank[rs.Rider.ID]
 			}
 			view.Riders[rs.Rider.ID] = brief
 		}

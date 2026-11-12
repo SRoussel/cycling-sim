@@ -103,7 +103,7 @@ func sortRidersByTeamThenName(infos []RiderInfo) []RiderInfo {
 
 // StartInteractiveSimulation starts a race simulation in interactive mode (user controls one team).
 // It returns immediately with a session ID; progress is emitted via events.
-func (a *App) StartInteractiveSimulation(raceID int64, enableIncidents bool, controlledTeam string) InteractiveSessionInfo {
+func (a *App) StartInteractiveSimulation(raceID int64, enableIncidents bool, controlledTeam string, plan RacePlan) InteractiveSessionInfo {
 	if a.db == nil {
 		return InteractiveSessionInfo{}
 	}
@@ -118,6 +118,7 @@ func (a *App) StartInteractiveSimulation(raceID int64, enableIncidents bool, con
 	}
 
 	sess := newInteractiveSession(controlledTeam)
+	sess.SetPlan(plan, director.PlanPoints(simulation.BuildRouteProfile(raceConfig.Course)))
 	a.putSession(sess)
 	raceConfig.ActionOverrides = sess
 	allInfos, teamInfos := splitTeam(raceConfig.Riders, controlledTeam)
@@ -290,6 +291,23 @@ func (a *App) SetTeamOrder(sessionID string, kind string, value string) {
 		order = simulation.OrderNo
 	}
 	sess.SetTeamOrder(kind, order)
+}
+
+// PreviewRacePlan lists the decisive climbs and sectors of a race's course,
+// the places a race plan can target.
+func (a *App) PreviewRacePlan(raceID int64) []director.PlanPoint {
+	if a.db == nil {
+		return nil
+	}
+	race, err := a.db.GetRace(raceID)
+	if err != nil || race == nil {
+		return nil
+	}
+	course, err := a.db.GetCourse(race.CourseID)
+	if err != nil || course == nil {
+		return nil
+	}
+	return director.PlanPoints(simulation.BuildRouteProfile(course))
 }
 
 // ResolveMoment applies the player's choice for a decision moment and resumes

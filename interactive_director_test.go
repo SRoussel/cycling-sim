@@ -76,3 +76,40 @@ func TestResumeDismissesMoment(t *testing.T) {
 		t.Fatal("a dismissed moment can't be resolved")
 	}
 }
+
+func TestRacePlanSchedulesHardSectionAndAttack(t *testing.T) {
+	s := newInteractiveSession("Us")
+	pts := []director.PlanPoint{{Key: "s1", Kind: "cobbles", StartKm: 230, LengthKm: 2, ToGoKm: 20}}
+	s.SetPlan(RacePlan{LeaderID: 0, Break: "no", HardOn: []string{"s1"}, AttackOn: "s1"}, pts)
+	if s.TeamOrders("Us").Break != simulation.OrderNo {
+		t.Fatal("break order applies at once")
+	}
+	view := &simulation.RaceView{Riders: map[int64]simulation.RiderBrief{
+		7: {Team: "Us", Role: simulation.RoleLeader}, 8: {Team: "Us"}, 9: {Team: "Them", Role: simulation.RoleLeader}}}
+	s.Observe(view, nil, 30, 0)
+	if s.TeamOrders("Us").Pace != simulation.OrderAuto {
+		t.Fatal("the hard section starts 1 km before the sector, not at 30 km to go")
+	}
+	s.Observe(nil, nil, 20.9, 0)
+	if s.TeamOrders("Us").Pace != simulation.OrderYes {
+		t.Fatal("the team drives from 21 km to go into the sector")
+	}
+	s.Observe(nil, nil, 19.2, 0)
+	if a, ok := s.ConsumeOneShot(7); !ok || a != simulation.ActionAttack {
+		t.Fatal("the team's leader (from the race view) attacks a third into the sector")
+	}
+	s.Observe(nil, nil, 17.5, 0)
+	if s.TeamOrders("Us").Pace != simulation.OrderAuto {
+		t.Fatal("after the sector the team decides the pace again")
+	}
+	if _, ok := s.LeaderChoice("Us"); ok {
+		t.Fatal("no leader chosen: the team decides")
+	}
+	s.SetPlan(RacePlan{LeaderID: 8}, nil)
+	if id, ok := s.LeaderChoice("Us"); !ok || id != 8 {
+		t.Fatal("the chosen leader")
+	}
+	if _, ok := s.LeaderChoice("Them"); ok {
+		t.Fatal("only the player's team")
+	}
+}

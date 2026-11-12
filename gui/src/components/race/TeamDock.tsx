@@ -173,9 +173,9 @@ export function TeamDock({ tc, groups }: { tc: TeamControl; kmRemaining: number;
               <span className={`crew-num ${level(reserve, 50, 20)}`} title="Reserve">{reserve}%</span>
               <span
                 className={`crew-legs ${legs === undefined ? '' : legs < 86 ? 'empty' : legs < 89 ? 'low' : ''}`}
-                title="Legs: the power he can still sustain, as a share of his fresh threshold. Only falls over the day."
+                title={legs === undefined ? '' : `Fade: his threshold is ${Math.round(100 - legs)}% below this morning's${tc.riderById[r.id]?.ftp ? ` (${Math.round((tc.riderById[r.id].ftp * legs) / 100)} W of ${tc.riderById[r.id].ftp} W)` : ''}. It grows with the work he does and never comes back in a race.`}
               >
-                {legs === undefined ? '' : `${Math.round(legs)}`}
+                {legs === undefined ? '' : `−${Math.max(0, Math.round(100 - legs))}%`}
               </span>
               <button
                 className={`crew-attack ${tc.buttonClass(r.id, 'attack', 'oneshot')}`}
@@ -231,7 +231,7 @@ export function TeamDock({ tc, groups }: { tc: TeamControl; kmRemaining: number;
           )
         })}
       </ul>
-      <p className="crew-key">Bars: reserve (thick) and effort (thin, line at 100%). Number: legs.</p>
+      <p className="crew-key">Bars: reserve (thick) and effort (thin, line at 100%). −%: how far his threshold has faded today.</p>
     </section>
   )
 }

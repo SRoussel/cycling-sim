@@ -3,7 +3,7 @@ import { RaceGroup } from '../../sim/shared'
 import { TeamControl } from '../../sim/useTeamControl'
 import { Jersey } from './Jersey'
 
-type SortKey = 'name' | 'wkg' | 'reserve' | 'effort' | 'legs'
+type SortKey = 'name' | 'wkg' | 'now' | 'reserve' | 'effort'
 
 const level = (pct: number, low: number, empty: number) => (pct < empty ? 'empty' : pct < low ? 'low' : 'ok')
 
@@ -37,6 +37,8 @@ export function GroupSheet({ name, groups, tc, onClose }: { name: string; groups
           reserve: tel?.wPrimePct ?? 100,
           effort: tel?.effortPct ?? 0,
           legs: tel?.legsPct ?? 100,
+          now: ((info?.ftp ?? 0) * (tel?.legsPct ?? 100)) / 100,
+          nowWkg: info && info.weight > 0 ? (info.ftp * (tel?.legsPct ?? 100)) / 100 / info.weight : 0,
         }
       })
     const by: Record<SortKey, (a: (typeof out)[number], b: (typeof out)[number]) => number> = {
@@ -44,7 +46,7 @@ export function GroupSheet({ name, groups, tc, onClose }: { name: string; groups
       wkg: (a, b) => b.wkg - a.wkg,
       reserve: (a, b) => b.reserve - a.reserve,
       effort: (a, b) => b.effort - a.effort,
-      legs: (a, b) => b.legs - a.legs,
+      now: (a, b) => b.nowWkg - a.nowWkg,
     }
     return out.sort((a, b) => (a.mine !== b.mine ? (a.mine ? -1 : 1) : by[sort](a, b)))
   }, [tc.riderGroups, tc.riderById, tc.telemetryByRider, tc.controlledTeam, name, sort])
@@ -70,10 +72,10 @@ export function GroupSheet({ name, groups, tc, onClose }: { name: string; groups
             <thead>
               <tr>
                 {th('name', 'Rider')}
-                {th('wkg', 'W/kg', 'Threshold power per kg (and watts)')}
+                {th('wkg', 'W/kg', 'Threshold power per kg this morning (and watts)')}
+                {th('now', 'Threshold now', 'What he can sustain now, after today\'s fade: watts, W/kg, and how much he has lost')}
                 {th('reserve', 'Reserve', 'The punch for attacks and surges; refills when riding easier')}
                 {th('effort', 'Effort', 'Power now vs what he can sustain; over 100% burns reserve')}
-                {th('legs', 'Legs', 'The power he can still sustain, as a share of his fresh threshold')}
               </tr>
             </thead>
             <tbody>
@@ -85,12 +87,15 @@ export function GroupSheet({ name, groups, tc, onClose }: { name: string; groups
                     <small>{r.team}</small>
                   </td>
                   <td className="num">{r.wkg ? r.wkg.toFixed(2) : '—'}<small> {r.ftp ? `${r.ftp} W` : ''}</small></td>
+                  <td className={`num ${r.legs < 86 ? 'empty' : r.legs < 89 ? 'low' : ''}`}>
+                    {r.now ? `${Math.round(r.now)} W` : '—'}
+                    <small> {r.nowWkg ? r.nowWkg.toFixed(2) : ''} · −{Math.max(0, Math.round(100 - r.legs))}%</small>
+                  </td>
                   <td className="res">
                     <div className="bar reserve"><i className={level(r.reserve, 50, 20)} style={{ width: `${Math.max(0, Math.min(100, r.reserve))}%` }} /></div>
                     <span className={`num ${level(r.reserve, 50, 20)}`}>{Math.round(r.reserve)}%</span>
                   </td>
                   <td className={`num ${r.effort > 100 ? 'over' : ''}`}>{Math.round(r.effort)}%</td>
-                  <td className={`num ${r.legs < 86 ? 'empty' : r.legs < 89 ? 'low' : ''}`}>{Math.round(r.legs)}%</td>
                 </tr>
               ))}
             </tbody>

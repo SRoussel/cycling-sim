@@ -303,6 +303,9 @@ func simulateStep(riders []*RiderState, segment *model.Segment, isTT bool, dista
 			if actualPower < 0 {
 				actualPower = 0
 			}
+			if !isTT {
+				actualPower += bunchSurgePower(rs, group, segment, groupSpeed)
+			}
 
 			rs.WPrime.UpdateWithHandling(actualPower, rs.thresholdIntOn(segment), segTime, rs.Rider.Handling, segment.SurfaceType.Unpaved())
 			rs.addWork(actualPower, segTime)
@@ -335,6 +338,34 @@ func breakawayComposition(riders []*RiderState, limit int) string {
 		parts = append(parts, fmt.Sprintf("+%d more", len(riders)-limit))
 	}
 	return "breakaway: " + strings.Join(parts, ", ")
+}
+
+// Bunch surges: inside a bunch speed never holds steady. Corners, road
+// furniture, narrowings and riders moving up make each rider brake and
+// re-accelerate every few hundred metres, more the further back he is (the
+// line amplifies each change). The energy to regain the speed lost, ~m·v·Δv
+// per surge, is real work: it's why sheltered pros average ~200-250 W at
+// 45 km/h rather than the ~150 W steady drafting needs. Applied to bunches
+// riding together on roads within ±3% (climbs string groups out), not to a
+// strung-out group. ~20 W at the front to ~75 W at the back at 46 km/h.
+const (
+	surgesPerKm     = 4.0
+	surgeShareFront = 0.03 // speed lost and regained per surge, front of the bunch
+	surgeShareBack  = 0.12 // ... at the back
+	bunchMinRiders  = 8
+)
+
+// bunchSurgePower is a rider's extra power from the bunch's surges.
+func bunchSurgePower(rs *RiderState, g *Group, seg *model.Segment, v float64) float64 {
+	n := len(g.Riders)
+	if n < bunchMinRiders || g.LinedOut || seg.GradientPct > 3 || seg.GradientPct < -3 || v <= 0 {
+		return 0
+	}
+	depth := float64(rs.GroupPosition-1) / float64(n-1)
+	depth = math.Max(0, math.Min(1, depth))
+	share := surgeShareFront + (surgeShareBack-surgeShareFront)*depth
+	// surges per second (surgesPerKm·v/1000) × energy per surge (m·v·share·v)
+	return surgesPerKm * v / 1000 * rs.Rider.TotalMassKg() * v * share * v
 }
 
 // accordionGain: how much a group's speed-up is amplified per unit of depth

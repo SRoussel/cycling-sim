@@ -26,11 +26,15 @@ type RiderBrief struct {
 	Name      string
 	Team      string
 	Role      TeamRole
-	Favourite bool // one of the riders the bunch marks
-	Rank      int  // time over the course at threshold, 1 = fastest (0: unknown)
-	Sprint    int  // sprint rating
-	WPrimePct float64
-	LegsPct   float64
+	Favourite bool    // one of the riders the bunch marks
+	Rank      int     // time over the course at threshold, 1 = fastest (0: unknown)
+	Sprint    int     // sprint rating
+	ClimbWKg  float64 // climbing W/kg (how stage races pick GC leaders)
+	// Stage races: GC before this stage, and live (with today's time so far).
+	GCPos, LiveGCPos int // 1 = leader (0: no GC yet)
+	GCGap, LiveGCGap float64
+	WPrimePct        float64
+	LegsPct          float64
 }
 
 // roadClusters splits the active riders into road groups (contact range).
@@ -82,6 +86,7 @@ func buildRaceView(states []*RiderState, state *RaceState, kmRemaining, kmTotal 
 				WPrimePct: clampPercent(rs.WPrime.FractionRemaining() * 100),
 				LegsPct:   legsPct(rs),
 				Sprint:    rs.Rider.SprintAbility,
+				ClimbWKg:  climbingWKg(rs.Rider),
 			}
 			if state != nil {
 				// Read-only: no RaceState helper with per-step caches.
@@ -92,5 +97,40 @@ func buildRaceView(states []*RiderState, state *RaceState, kmRemaining, kmTotal 
 		}
 		view.Road = append(view.Road, g)
 	}
+	if state != nil && len(state.GCGaps) > 0 {
+		addGC(view, states, state.GCGaps)
+	}
 	return view
+}
+
+// addGC fills the GC positions before the stage and live (GC time plus the
+// stage so far: the classification if the race ended here).
+func addGC(view *RaceView, states []*RiderState, gaps map[int64]float64) {
+	type entry struct {
+		id        int64
+		gap, live float64
+	}
+	var es []entry
+	for _, rs := range states {
+		if g, ok := gaps[rs.Rider.ID]; ok && !rs.DNF {
+			es = append(es, entry{rs.Rider.ID, g, g + rs.TotalTime})
+		}
+	}
+	if len(es) == 0 {
+		return
+	}
+	sort.Slice(es, func(i, j int) bool { return es[i].gap < es[j].gap })
+	if es[len(es)-1].gap > es[0].gap { // before the first stage nobody has a GC time
+		for i, e := range es {
+			b := view.Riders[e.id]
+			b.GCPos, b.GCGap = i+1, e.gap-es[0].gap
+			view.Riders[e.id] = b
+		}
+	}
+	sort.Slice(es, func(i, j int) bool { return es[i].live < es[j].live })
+	for i, e := range es {
+		b := view.Riders[e.id]
+		b.LiveGCPos, b.LiveGCGap = i+1, e.live-es[0].live
+		view.Riders[e.id] = b
+	}
 }

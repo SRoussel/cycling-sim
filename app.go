@@ -5,6 +5,7 @@ import (
 	"cycling_sim/internal/director"
 	"fmt"
 	"os"
+	"sort"
 	"sync"
 
 	"cycling_sim/internal/database"
@@ -181,6 +182,38 @@ type StageRaceProgress struct {
 	TeamState       *simulation.TeamState                    `json:"teamState,omitempty"`
 	Events          []string                                 `json:"events"`
 	Moment          *director.Moment                         `json:"moment,omitempty"`
+	Goal            *director.Goal                           `json:"goal,omitempty"`
+	GCGoal          *director.Goal                           `json:"gcGoal,omitempty"`
+	// GC: the race leader and the player's riders, live (on the true
+	// end-of-segment frames only).
+	GC []GCLine `json:"gc,omitempty"`
+}
+
+// GCLine is a rider's place on GC, before the stage and live.
+type GCLine struct {
+	RiderID int64   `json:"riderId"`
+	Name    string  `json:"name"`
+	Team    string  `json:"team"`
+	Pos     int     `json:"pos"`
+	Gap     float64 `json:"gap"`
+	LivePos int     `json:"livePos"`
+	LiveGap float64 `json:"liveGap"`
+}
+
+// gcLines lists the live GC leader and the team's riders, live order.
+func gcLines(v *simulation.RaceView, team string) []GCLine {
+	if v == nil || !v.StageRace {
+		return nil
+	}
+	var out []GCLine
+	for id, r := range v.Riders {
+		if r.LiveGCPos == 0 || (r.LiveGCPos != 1 && r.Team != team) {
+			continue
+		}
+		out = append(out, GCLine{RiderID: id, Name: r.Name, Team: r.Team, Pos: r.GCPos, Gap: r.GCGap, LivePos: r.LiveGCPos, LiveGap: r.LiveGCGap})
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].LivePos < out[j].LivePos })
+	return out
 }
 
 // GCStanding holds GC standings
@@ -754,8 +787,13 @@ func (a *App) makeStageRaceProgressCallback(stageRaceID int64, stageCount int, s
 			groups[i] = ProgressGroup{Name: g.Name, Gap: g.GapSeconds, Riders: g.Riders, Size: g.Size}
 		}
 		var moment *director.Moment
+		var goal, gcGoal *director.Goal
+		var gc []GCLine
 		if sess != nil {
 			moment = sess.Observe(snapshot.Race, snapshot.RouteProfile, snapshot.StageKmTotal-snapshot.StageKmCovered, snapshot.StageNumber)
+			goal, _ = sess.Goal()
+			gcGoal = sess.GCGoal()
+			gc = gcLines(snapshot.Race, sess.controlledTeam)
 		}
 		runtime.EventsEmit(a.ctx, "stage_race_progress", StageRaceProgress{
 			SessionID:       sessionID,
@@ -778,6 +816,9 @@ func (a *App) makeStageRaceProgressCallback(stageRaceID int64, stageCount int, s
 			TeamState:       snapshot.TeamState,
 			Events:          snapshot.Events,
 			Moment:          moment,
+			Goal:            goal,
+			GCGoal:          gcGoal,
+			GC:              gc,
 		})
 		if sess != nil {
 			sess.Pace()

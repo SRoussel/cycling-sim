@@ -175,7 +175,7 @@ func (a *App) StartInteractiveStageRace(stageRaceID int64, controlledTeam string
 			return // abandoned by the user: don't overwrite saved results
 		}
 		_ = service.SaveStageRaceOutput(a.db, out)
-		runtime.EventsEmit(a.ctx, "interactive_stage_race_complete", InteractiveComplete{SessionID: sess.id, StageRaceID: stageRaceID})
+		runtime.EventsEmit(a.ctx, "interactive_stage_race_complete", InteractiveComplete{SessionID: sess.id, StageRaceID: stageRaceID, Goal: sess.GCGoal()})
 	}()
 
 	return InteractiveSessionInfo{

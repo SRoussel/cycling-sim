@@ -956,3 +956,32 @@ button.decision-option:hover {
   color: var(--color-text-muted);
   margin: 0;
 }
+
+/* live GC strip on the team panel (stage races) */
+.dock-gc {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 0.8rem;
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+  padding: 0.3rem 0.5rem;
+  border-radius: 6px;
+  background: rgba(244, 208, 63, 0.08);
+  border: 1px solid rgba(244, 208, 63, 0.3);
+}
+
+.dock-gc-label {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #f4d03f;
+}
+
+.dock-gc-entry.mine {
+  font-weight: 600;
+}
+
+.dock-gc-was {
+  color: var(--color-text-muted);
+  font-size: 0.72rem;
+}

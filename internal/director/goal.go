@@ -86,6 +86,47 @@ func (d *Director) chooseGoal(w *view) *Goal {
 	return &Goal{Kind: "break", Text: "Get a rider in the break"}
 }
 
+// chooseGCGoal sets a stage race's overall goal from the team's best
+// climber against the field (climbing W/kg decides a stage race's GC and is
+// how the engine picks GC leaders): win, podium, top 5, top 10, else a stage.
+func (d *Director) chooseGCGoal(w *view) *Goal {
+	var all []int64
+	for id := range w.Riders {
+		all = append(all, id)
+	}
+	sort.Slice(all, func(i, j int) bool {
+		a, b := w.Riders[all[i]].ClimbWKg, w.Riders[all[j]].ClimbWKg
+		if a != b {
+			return a > b
+		}
+		return all[i] < all[j]
+	})
+	for i, id := range all {
+		if !w.mine(id) {
+			continue
+		}
+		name := w.name(id)
+		g := func(target int, text string) *Goal {
+			return &Goal{Kind: "gc", RiderID: id, RiderName: name, Target: target, Text: text}
+		}
+		switch rank := i + 1; {
+		case rank <= 2:
+			return g(1, fmt.Sprintf("Win the GC with %s", name))
+		case rank <= 5:
+			return g(3, fmt.Sprintf("GC podium with %s", name))
+		case rank <= 10:
+			return g(5, fmt.Sprintf("Top 5 on GC with %s", name))
+		case rank <= 20:
+			return g(10, fmt.Sprintf("Top 10 on GC with %s", name))
+		}
+		return &Goal{Kind: "stage", Text: "Win a stage"}
+	}
+	return nil
+}
+
+// GCGoal returns a stage race's overall goal (nil in one-day races).
+func (d *Director) GCGoal() *Goal { return d.gcGoal }
+
 // Goal returns today's goal (nil until the race has started).
 func (d *Director) Goal() *Goal { return d.goal }
 
@@ -109,6 +150,10 @@ func (d *Director) observeGoal(w *view) {
 	if d.goal == nil && !d.goalTried {
 		d.goalTried = true
 		d.goal = d.chooseGoal(w)
+	}
+	if w.StageRace && d.gcGoal == nil && !d.gcGoalTried {
+		d.gcGoalTried = true
+		d.gcGoal = d.chooseGCGoal(w)
 	}
 	if d.breakMade || w.main == 0 || w.gap(w.main) < breakGoalGapS {
 		return

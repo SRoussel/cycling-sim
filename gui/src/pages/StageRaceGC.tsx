@@ -1,4 +1,4 @@
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useLocation } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import * as App from '../../wailsjs/go/main/App'
 import { main } from '../../wailsjs/go/models'
@@ -7,6 +7,9 @@ import './Results.css'
 
 function StageRaceGC() {
   const { stageRaceId } = useParams()
+  const location = useLocation()
+  const gcGoal = (location.state?.gcGoal ?? null) as { kind: string; riderName: string; target: number; text: string } | null
+  const myTeam = (location.state?.team ?? '') as string
   const [standings, setStandings] = useState<main.GCStanding[]>([])
   const [stageRace, setStageRace] = useState<main.StageRaceInfo | null>(null)
   const [riderStats, setRiderStats] = useState<Record<string, main.RiderInfo>>({})
@@ -86,6 +89,24 @@ function StageRaceGC() {
         <h1>{stageRace?.name || 'Stage Race'}</h1>
         <p>General Classification - Final</p>
       </header>
+
+      {gcGoal && (() => {
+        const ours = standings.filter((s) => s.team === myTeam)
+        const goalRider = standings.find((s) => s.riderName === gcGoal.riderName)
+        const best = ours[0]
+        const met = gcGoal.kind === 'gc' ? !!best && best.position <= gcGoal.target : false
+        return (
+          <section className={`card gc-verdict ${met ? 'met' : 'missed'}`}>
+            <h2>{gcGoal.kind === 'gc' ? `${met ? '✅ Goal met' : '❌ Goal missed'}: ${gcGoal.text}` : `🎯 ${gcGoal.text}: see the stage results`}</h2>
+            {gcGoal.kind === 'gc' && (
+              <p>
+                {goalRider ? `${goalRider.riderName} finished ${goalRider.position}${goalRider.gap > 0 ? `, ${formatGap(goalRider.gap)} down` : ''}.` : `${gcGoal.riderName} didn't finish.`}
+                {best && goalRider && best.riderName !== goalRider.riderName && ` Best of ours: ${best.riderName}, ${best.position}.`}
+              </p>
+            )}
+          </section>
+        )
+      })()}
 
       <div className="results-actions top-actions">
         <Link to="/">

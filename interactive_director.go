@@ -169,6 +169,16 @@ func (s *interactiveSession) Goal() (*director.Goal, bool) {
 	return s.director.dir.Goal(), s.director.dir.BreakMade()
 }
 
+// GCGoal returns a stage race's overall goal.
+func (s *interactiveSession) GCGoal() *director.Goal {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.director.dir == nil {
+		return nil
+	}
+	return s.director.dir.GCGoal()
+}
+
 // PendingMoment returns the moment waiting for the player, if any.
 func (s *interactiveSession) PendingMoment() *director.Moment {
 	s.mu.Lock()

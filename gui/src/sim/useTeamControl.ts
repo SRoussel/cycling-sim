@@ -34,6 +34,8 @@ export interface LiveProgressPayload {
   events?: string[]
   moment?: Moment
   goal?: RaceGoal
+  gcGoal?: RaceGoal
+  gc?: GCLine[]
   groups?: Array<{ name: string; gap: number; size?: number }>
   kmTotal?: number
   kmCovered?: number
@@ -64,6 +66,17 @@ export interface RaceGoal {
   riderName: string
   target: number
   text: string
+}
+
+/** A rider's place on GC before the stage (pos 0: none yet) and live. */
+export interface GCLine {
+  riderId: number
+  name: string
+  team: string
+  pos: number
+  gap: number
+  livePos: number
+  liveGap: number
 }
 
 /** How often the race stops: never, at the moments that decide it, or all. */
@@ -111,6 +124,8 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
   // ── Race radio ────────────────────────────────────────────
   const radioRef = useRef<RadioState>(newRadioState())
   const [goal, setGoal] = useState<RaceGoal | null>(null)
+  const [gcGoal, setGcGoal] = useState<RaceGoal | null>(null)
+  const [gc, setGc] = useState<GCLine[]>([])
 
   // ── Decision moments ──────────────────────────────────────
   const [moment, setMoment] = useState<Moment | null>(null)
@@ -158,6 +173,8 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
     const m = moment
     setMoment(null)
     setGoal(null)
+    setGcGoal(null)
+    setGc([])
     radioRef.current = newRadioState()
     const label = await App.ResolveMoment(sessionId!, m.id, optionId)
     setPaused(false)
@@ -328,7 +345,9 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
 
   const ingestProgress = (payload: LiveProgressPayload) => {
     if (payload.riderGroups) setRiderGroups(payload.riderGroups)
-    if (payload.goal && interactiveMode) setGoal((g) => g ?? payload.goal!)
+    if (payload.goal && interactiveMode) setGoal((g) => (g?.text === payload.goal!.text ? g : payload.goal!)) // a new one each stage
+    if (payload.gcGoal && interactiveMode) setGcGoal((g) => g ?? payload.gcGoal!)
+    if (payload.gc && payload.gc.length > 0) setGc(payload.gc)
     if (interactiveMode) {
       const total = payload.stageKmTotal ?? payload.kmTotal ?? 0
       const done = payload.stageKm ?? payload.kmCovered ?? 0
@@ -484,6 +503,8 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
     moment,
     resolveMoment,
     goal,
+    gcGoal,
+    gc,
     decisionLevel,
     setDecisionLevel,
     skipping: skipFrom !== null,

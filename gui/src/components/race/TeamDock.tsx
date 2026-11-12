@@ -1,7 +1,7 @@
 import { EFFORT_MAX_PCT, EFFORT_MIN_PCT } from '../../sim/shared'
 import { DecisionLevel, TEAM_ORDER_KINDS, TEAM_ORDERS, TeamControl, TeamOrderValue } from '../../sim/useTeamControl'
 import { EnergyBars, LegsBadge } from './EnergyBars'
-import { RaceGroup } from '../../sim/shared'
+import { RaceGroup, formatGap } from '../../sim/shared'
 import { groupColor } from './RoadView'
 
 const MODES: Array<{ value: string; label: string; title: string }> = [
@@ -55,6 +55,19 @@ export function TeamDock({ tc, kmRemaining, groups }: { tc: TeamControl; kmRemai
         <b>Effort</b>: power now vs what he can sustain; over 100% burns reserve.{' '}
         <b>Legs</b>: what's left for the day; only falls.
       </p>
+
+      {tc.gc.length > 0 && (
+        <div className="dock-gc" title="Live GC: the classification if the stage ended now (before the stage in brackets)">
+          <span className="dock-gc-label">GC live</span>
+          {tc.gc.slice(0, 5).map((g) => (
+            <span key={g.riderId} className={`dock-gc-entry${g.team === tc.controlledTeam ? ' mine' : ''}`}>
+              {g.livePos}. {g.name}
+              {g.livePos > 1 && <> +{formatGap(g.liveGap)}</>}
+              {g.pos > 0 && g.pos !== g.livePos && <span className="dock-gc-was"> (was {g.pos})</span>}
+            </span>
+          ))}
+        </div>
+      )}
 
       {/* Fixed order (the roster), so a rider's card never moves under the cursor. */}
       <ul className="dock-riders">

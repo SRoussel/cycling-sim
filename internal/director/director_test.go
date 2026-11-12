@@ -363,3 +363,24 @@ func TestGoalNamesTheLeader(t *testing.T) {
 		t.Fatalf("the goal is the leader's, at his rank: %+v", g)
 	}
 }
+
+func TestGCGoalKeptAcrossStages(t *testing.T) {
+	d := New("Us")
+	v := race(150, [][]int64{append([]int64{1, 2, 3, 10}, bunch(11, 40)...)}, []float64{0})
+	v.StageRace = true
+	for id, b := range v.Riders {
+		b.ClimbWKg = 5.0
+		v.Riders[id] = b
+	}
+	b := v.Riders[3]
+	b.ClimbWKg, b.Name = 6.5, "Climber" // ours, the best climber in the field
+	v.Riders[3] = b
+	d.Next(v)
+	if g := d.GCGoal(); g == nil || g.Text != "Win the GC with Climber" {
+		t.Fatalf("GC goal: %+v", g)
+	}
+	d.SetRoute(&simulation.RouteProfile{TotalKm: 180}) // the next stage
+	if g := d.GCGoal(); g == nil || g.RiderID != 3 {
+		t.Fatalf("the GC goal lasts the whole race: %+v", g)
+	}
+}

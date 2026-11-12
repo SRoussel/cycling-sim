@@ -116,6 +116,8 @@ type Director struct {
 	totalKm         float64
 	goal            *Goal
 	goalTried       bool
+	gcGoal          *Goal // the whole stage race's (kept across stages)
+	gcGoalTried     bool
 	breakMade       bool
 	climbs          []Climb
 	decisive        map[float64]bool // decisive climbs by start km

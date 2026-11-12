@@ -4,7 +4,7 @@ import * as App from '../../wailsjs/go/main/App'
 import { main } from '../../wailsjs/go/models'
 import { EventsOn } from '../../wailsjs/runtime/runtime'
 import { RaceGroup, formatRaceClock, toDisplayGroups } from '../sim/shared'
-import { LiveProgressPayload, useTeamControl } from '../sim/useTeamControl'
+import { LiveProgressPayload, RaceGoal, useTeamControl } from '../sim/useTeamControl'
 import { RaceDashboard } from '../components/race/RaceDashboard'
 import { RaceTopBar } from '../components/race/RaceTopBar'
 import './Simulation.css'
@@ -30,6 +30,7 @@ interface StageRaceProgressEvent extends LiveProgressPayload {
 interface InteractiveStageRaceCompleteEvent {
   sessionId: string
   stageRaceId: number
+  goal?: RaceGoal
 }
 
 function StageRaceSimulation() {
@@ -92,10 +93,10 @@ function StageRaceSimulation() {
   useEffect(() => {
     const off = EventsOn('interactive_stage_race_complete', (payload: InteractiveStageRaceCompleteEvent) => {
       if (!stageRace || !sessionId || payload.sessionId !== sessionId || payload.stageRaceId !== stageRace.id) return
-      navigate(`/stage-race-gc/${stageRaceId}`)
+      navigate(`/stage-race-gc/${stageRaceId}`, { state: { gcGoal: payload.goal ?? null, team: tc.controlledTeam } })
     })
     return () => off?.()
-  }, [stageRace, sessionId, navigate, stageRaceId])
+  }, [stageRace, sessionId, navigate, stageRaceId, tc.controlledTeam])
 
   useEffect(() => {
     if (!stageRace || simulationStarted.current) return
@@ -164,6 +165,7 @@ function StageRaceSimulation() {
           playbackDisabled={!interactiveMode || !sessionId}
           onTogglePause={tc.togglePause}
           onSpeedChange={tc.changeSpeed}
+          goal={[tc.gcGoal?.text, tc.goal ? `Today: ${tc.goal.text}` : ''].filter(Boolean).join(' · ') || undefined}
           onSkip={interactiveMode ? tc.skipToDecision : undefined}
           skipping={tc.skipping}
           extra={

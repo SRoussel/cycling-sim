@@ -45,7 +45,7 @@ func TestRivalAttackOffersFollow(t *testing.T) {
 	if m == nil || m.Kind != "attack" {
 		t.Fatalf("want an attack moment, got %+v", m)
 	}
-	o, ok := m.Option("follow")
+	o, ok := m.Option("follow-1")
 	if !ok || len(o.Commands) != 1 || o.Commands[0].RiderID != 1 || o.Commands[0].Action != "chase" {
 		t.Fatalf("follow should send our leader after him: %+v", o)
 	}
@@ -126,7 +126,7 @@ func TestKeyClimbScheduledAttack(t *testing.T) {
 	if m == nil || m.Kind != "climb" {
 		t.Fatalf("want a climb moment, got %+v", m)
 	}
-	o, _ := m.Option("attack-top")
+	o, _ := m.Option("attack-top-1")
 	if c := o.Commands[0]; c.RiderID != 1 || c.AtKmRemaining != 17 {
 		t.Fatalf("attack near the top should be scheduled 3 km up the climb (17 km to go): %+v", c)
 	}
@@ -150,5 +150,62 @@ func TestFinaleSprint(t *testing.T) {
 	v.KmRemaining = 6
 	if m := d.Next(v); m != nil {
 		t.Fatalf("finale asked twice: %+v", m)
+	}
+}
+
+// withFavourite makes rider 3 (ours, a domestique by role) a favourite: the
+// Van Aert riding for Jorgenson case.
+func withFavourite(v *simulation.RaceView) *simulation.RaceView {
+	b := v.Riders[3]
+	b.Favourite, b.Name = true, "Fav"
+	v.Riders[3] = b
+	return v
+}
+
+func TestEveryCardCanAnswer(t *testing.T) {
+	d := New("Us")
+	v := withFavourite(race(30, [][]int64{{10}, append([]int64{1, 2, 3}, bunch(11, 40)...)}, []float64{0, 5},
+		simulation.TacticsEvent{Type: "attack", RiderID: 10, Key: true}))
+	m := d.Next(v)
+	if m == nil {
+		t.Fatal("want an attack moment")
+	}
+	for _, id := range []string{"follow-1", "follow-3"} {
+		if _, ok := m.Option(id); !ok {
+			t.Errorf("missing option %s: %+v", id, m.Options)
+		}
+	}
+}
+
+func TestDroppedLeaderWithFavouriteInFront(t *testing.T) {
+	d := New("Us")
+	front := append([]int64{10, 3}, bunch(11, 40)...)
+	m := d.Next(withFavourite(race(40, [][]int64{front, {1, 2}}, []float64{0, 30})))
+	if m == nil || m.Kind != "dropped" {
+		t.Fatalf("want a dropped moment, got %+v", m)
+	}
+	if o, ok := m.Option("let"); !ok || o.Label != "Race for Fav instead" {
+		t.Fatalf("should offer to ride for the favourite up front: %+v", m.Options)
+	}
+}
+
+func TestDroppedFavouriteIsPacedByTeammates(t *testing.T) {
+	d := New("Us")
+	front := append([]int64{10, 1}, bunch(11, 40)...)
+	m := d.Next(withFavourite(race(40, [][]int64{front, {3, 2}}, []float64{0, 30})))
+	if m == nil || m.Title != "🚨 Fav is dropped" {
+		t.Fatalf("a dropped favourite of ours is a moment too, got %+v", m)
+	}
+	o, ok := m.Option("wait")
+	if !ok || len(o.Orders) != 0 || len(o.Commands) != 1 || o.Commands[0].RiderID != 2 {
+		t.Fatalf("not the team leader: his teammate paces him (Protect waits for the leader): %+v", o)
+	}
+}
+
+func TestSelectionWithRivalFavouritesIsNotABreak(t *testing.T) {
+	d := New("Us")
+	v := race(30, [][]int64{{2, 10, 11, 12}, append([]int64{1, 3}, bunch(13, 60)...)}, []float64{0, 70})
+	if m := d.Next(v); m != nil && m.Kind == "break" {
+		t.Fatalf("a front group with a rival favourite is the race, not a break: %+v", m)
 	}
 }

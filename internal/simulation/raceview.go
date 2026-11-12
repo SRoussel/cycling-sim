@@ -36,6 +36,7 @@ type RiderBrief struct {
 	GCGap, LiveGCGap float64
 	WPrimePct        float64
 	LegsPct          float64
+	FuelPct          float64 // carbohydrate left, % of a full store
 }
 
 // roadClusters splits the active riders into road groups (contact range).
@@ -86,6 +87,7 @@ func buildRaceView(states []*RiderState, state *RaceState, kmRemaining, kmTotal 
 				Role:      rs.TeamRole,
 				WPrimePct: clampPercent(rs.WPrime.FractionRemaining() * 100),
 				LegsPct:   legsPct(rs),
+				FuelPct:   rs.FuelShare() * 100,
 				Sprint:    rs.Rider.SprintAbility,
 				ClimbWKg:  climbingWKg(rs.Rider),
 			}

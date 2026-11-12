@@ -27,6 +27,8 @@ type RiderState struct {
 	TotalPenalty     float64  // cumulative penalty time from incidents
 	TeamRole         TeamRole // role within team (leader, sprinter, domestique)
 	WorkKJ           float64  // work done so far this race (for durability)
+	FuelKJ           float64  // carbohydrate left (metabolic kJ, see fuel.go)
+	fuelSet          bool
 }
 
 // Calculate each rider's sustainable power for this segment.

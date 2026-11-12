@@ -224,8 +224,14 @@ func DurabilityFactor(workKJ float64, endurance int) float64 {
 }
 
 // CurrentFTP is the rider's threshold right now: stage-race fatigue (in
-// EffectiveFTP), daily form and in-race durability combined.
+// EffectiveFTP), daily form, in-race durability and fuel combined.
 func (rs *RiderState) CurrentFTP() float64 {
+	return rs.freshFTPToday() * rs.fuelFactor()
+}
+
+// freshFTPToday is the threshold before fuel: what intensity is measured
+// against when burning carbohydrate.
+func (rs *RiderState) freshFTPToday() float64 {
 	return float64(rs.EffectiveFTP) * rs.FormFactor * DurabilityFactor(rs.WorkKJ, rs.Rider.Endurance)
 }
 
@@ -241,6 +247,7 @@ func (rs *RiderState) addWork(powerWatts, seconds float64) {
 	if powerWatts > 0 && seconds > 0 {
 		rs.WorkKJ += powerWatts * seconds / 1000
 	}
+	rs.burnFuel(math.Max(0, powerWatts), seconds, rs.freshFTPToday())
 	// The anaerobic reserve fades with the day's work like threshold does
 	// (W' falls after prolonged exercise as CP does; Clark et al. 2019).
 	if rs.WPrime != nil {

@@ -1,6 +1,6 @@
 import { EFFORT_MAX_PCT, EFFORT_MIN_PCT } from '../../sim/shared'
 import { DecisionLevel, TEAM_ORDER_KINDS, TEAM_ORDERS, TeamControl, TeamOrderValue } from '../../sim/useTeamControl'
-import { EnergyBars } from './EnergyBars'
+import { EnergyBars, LegsBadge } from './EnergyBars'
 import { RaceGroup } from '../../sim/shared'
 import { groupColor } from './RoadView'
 
@@ -51,7 +51,8 @@ export function TeamDock({ tc, kmRemaining, groups }: { tc: TeamControl; kmRemai
       </div>
 
       <p className="dock-legend">
-        <b>Reserve</b>: the punch for attacks and surges; refills in minutes when riding easier.{' '}
+        <b>Reserve</b>: the punch for attacks and surges; refills when riding easier.{' '}
+        <b>Effort</b>: power now vs what he can sustain; over 100% burns reserve.{' '}
         <b>Legs</b>: what's left for the day; only falls.
       </p>
 
@@ -65,11 +66,10 @@ export function TeamDock({ tc, kmRemaining, groups }: { tc: TeamControl; kmRemai
           return (
             <li key={r.id} className="dock-rider">
               <div className="dock-rider-top">
-                <span className="dock-rider-name">{r.name}</span>
+                <span className="dock-rider-name" title={tel ? `${r.name}: ${Math.round(tel.speedKph)} km/h, ${Math.round(tel.powerWatts)} W` : r.name}>{r.name}</span>
+                <LegsBadge telemetry={tel} />
                 <span className="dock-rider-group" style={{ '--gc': groupColor(groups, tc.riderGroups[r.id]) } as React.CSSProperties}>{tc.riderGroups[r.id] || '—'}</span>
-                {tel && (
-                  <span className="dock-rider-tel">{Math.round(tel.speedKph)} km/h · {Math.round(tel.powerWatts)} W</span>
-                )}
+                <span className="dock-rider-spacer" />
                 <button
                   className={`dock-attack ${tc.buttonClass(r.id, 'attack', 'oneshot')}`}
                   onClick={() => tc.sendCommand(r.id, 'attack', 'oneshot')}

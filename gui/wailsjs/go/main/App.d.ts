@@ -3,7 +3,13 @@
 import {main} from '../models';
 import {director} from '../models';
 
+export function AutoRenewContracts(arg1:number):Promise<Array<string>>;
+
 export function ClearDatabase():Promise<string>;
+
+export function DeleteSeason(arg1:number):Promise<void>;
+
+export function EndSeasonYear(arg1:number):Promise<Array<main.NewsInfo>>;
 
 export function GetCourses():Promise<Array<main.CourseInfo>>;
 
@@ -19,17 +25,37 @@ export function GetRaces():Promise<Array<main.RaceInfo>>;
 
 export function GetRiders():Promise<Array<main.RiderInfo>>;
 
+export function GetSeasonEventResults(arg1:number,arg2:number):Promise<Array<main.SeasonResultRow>>;
+
+export function GetSeasonHub(arg1:number):Promise<main.SeasonHub>;
+
+export function GetSeasonMarket(arg1:number):Promise<Array<main.SeasonRiderInfo>>;
+
+export function GetSeasonRaceResults(arg1:number,arg2:number):Promise<main.RaceResults>;
+
+export function GetSeasonRoster(arg1:number):Promise<Array<main.SeasonRiderInfo>>;
+
+export function GetSeasonSquad(arg1:number,arg2:number):Promise<main.SquadInfo>;
+
 export function GetSimulationParams():Promise<main.SimParams>;
 
 export function GetStageRaceStages(arg1:number):Promise<Array<main.StageRaceStageInfo>>;
 
 export function GetStageRaces():Promise<Array<main.StageRaceInfo>>;
 
+export function GetTeamNames():Promise<Array<string>>;
+
 export function GetYouthStandings(arg1:number,arg2:number):Promise<Array<main.YouthStanding>>;
 
 export function IsDatabaseSeeded():Promise<boolean>;
 
 export function LaunchSprint(arg1:string,arg2:number):Promise<void>;
+
+export function ListSeasons():Promise<Array<main.SeasonInfo>>;
+
+export function NewSeason(arg1:string,arg2:string):Promise<main.SeasonInfo>;
+
+export function OfferContract(arg1:number,arg2:number,arg3:number,arg4:number):Promise<main.OfferReply>;
 
 export function PreviewRacePlan(arg1:number):Promise<Array<director.PlanPoint>>;
 
@@ -61,14 +87,24 @@ export function SetRiderEffort(arg1:string,arg2:number,arg3:number):Promise<void
 
 export function SetRiderFollow(arg1:string,arg2:number,arg3:number):Promise<void>;
 
+export function SetSeasonSquad(arg1:number,arg2:number,arg3:Array<number>):Promise<void>;
+
 export function SetSprintTrainOrder(arg1:string,arg2:Array<number>):Promise<void>;
 
 export function SetStagePlan(arg1:string,arg2:main.RacePlan):Promise<void>;
 
 export function SetTeamOrder(arg1:string,arg2:string,arg3:string):Promise<void>;
 
+export function SimulateSeasonEvent(arg1:number,arg2:number):Promise<main.SeasonEventInfo>;
+
 export function StartInteractiveSimulation(arg1:number,arg2:boolean,arg3:string,arg4:main.RacePlan):Promise<main.InteractiveSessionInfo>;
 
 export function StartInteractiveStageRace(arg1:number,arg2:string):Promise<main.InteractiveSessionInfo>;
+
+export function StartSeasonRace(arg1:number,arg2:number,arg3:main.RacePlan):Promise<main.InteractiveSessionInfo>;
+
+export function StartSeasonStageRace(arg1:number,arg2:number):Promise<main.InteractiveSessionInfo>;
+
+export function StartSeasonYear(arg1:number):Promise<Array<main.NewsInfo>>;
 
 export function StopInteractiveSession(arg1:string):Promise<void>;

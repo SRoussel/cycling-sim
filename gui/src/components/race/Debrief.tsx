@@ -20,6 +20,7 @@ export function Debrief({
   team,
   decisions,
   onResults,
+  resultsLabel,
 }: {
   goal: RaceGoal | null
   breakMade: boolean
@@ -27,6 +28,7 @@ export function Debrief({
   team: string
   decisions: string[]
   onResults: () => void
+  resultsLabel?: string
 }) {
   const ours = results.results.filter((r) => r.team === team).sort((a, b) => a.position - b.position)
   const best = ours[0]
@@ -57,7 +59,7 @@ export function Debrief({
               ? `✅ Goal met by ${best.riderName}: ${goal.text}`
               : `${met ? '✅ Goal met' : '❌ Goal missed'}: ${goal.text}`}
         </h2>
-        <button className="primary" onClick={onResults}>Full results →</button>
+        <button className="primary" onClick={onResults}>{resultsLabel ?? 'Full results →'}</button>
       </div>
       {verdict && <p className="debrief-verdict">{verdict}</p>}
       <ol className="debrief-podium" aria-label="Podium">

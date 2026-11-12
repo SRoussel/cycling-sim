@@ -112,3 +112,20 @@ func applySeasonForm(states []*RiderState, date time.Time) {
 		rs.FormFactor *= SeasonForm(rs.Rider, date)
 	}
 }
+
+// SpecialtyName labels a rider's specialty as the season model reads it
+// (which races he peaks for): "Climber", "Puncheur", "Cobbles", "Sprinter"
+// or "All-rounder".
+func SpecialtyName(r *model.Rider) string {
+	switch specialtyOf(r) {
+	case specClimber:
+		return "Climber"
+	case specPuncheur:
+		return "Puncheur"
+	case specCobbles:
+		return "Cobbles"
+	case specSprinter:
+		return "Sprinter"
+	}
+	return "All-rounder"
+}

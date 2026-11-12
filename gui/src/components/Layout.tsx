@@ -10,7 +10,8 @@ function Layout() {
           <span className="brand-text">Cycling Sim</span>
         </div>
         <ul className="nav-links">
-          <li><NavLink to="/">Home</NavLink></li>
+          <li><NavLink to="/season">Season</NavLink></li>
+          <li><NavLink to="/" end>Races</NavLink></li>
           <li><NavLink to="/validation">Validation</NavLink></li>
           <li><NavLink to="/settings">Settings</NavLink></li>
         </ul>

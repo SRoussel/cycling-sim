@@ -41,6 +41,8 @@ function StageRaceSimulation() {
   const location = useLocation()
   const interactiveMode = location.state?.interactiveMode as boolean ?? false
   const initialTeam = location.state?.controlledTeam as string ?? ''
+  // A season race: started through the season and recorded into it.
+  const season = location.state?.season as { seasonId: number; eventId: number } | undefined
 
   const tc = useTeamControl({ interactiveMode, initialTeam, stageRace: true })
   const { appendEvents, sessionId } = tc
@@ -95,6 +97,10 @@ function StageRaceSimulation() {
   useEffect(() => {
     const off = EventsOn('interactive_stage_race_complete', (payload: InteractiveStageRaceCompleteEvent) => {
       if (!stageRace || !sessionId || payload.sessionId !== sessionId || payload.stageRaceId !== stageRace.id) return
+      if (season) {
+        navigate(`/season/${season.seasonId}`)
+        return
+      }
       navigate(`/stage-race-gc/${stageRaceId}`, { state: { gcGoal: payload.goal ?? null, team: tc.controlledTeam } })
     })
     return () => off?.()
@@ -106,7 +112,9 @@ function StageRaceSimulation() {
     const run = async () => {
       try {
         if (interactiveMode) {
-          await tc.beginSession(await App.StartInteractiveStageRace(stageRace.id, initialTeam))
+          await tc.beginSession(season
+            ? await App.StartSeasonStageRace(season.seasonId, season.eventId)
+            : await App.StartInteractiveStageRace(stageRace.id, initialTeam))
           return
         }
         await App.RunStageRace(stageRace.id)

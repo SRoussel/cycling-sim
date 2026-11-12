@@ -38,6 +38,9 @@ function Simulation() {
   const enableIncidents = location.state?.enableIncidents as boolean ?? false
   const interactiveMode = location.state?.interactiveMode as boolean ?? false
   const initialTeam = location.state?.controlledTeam as string ?? ''
+  // A season race: started through the season and recorded into it.
+  const season = location.state?.season as { seasonId: number; eventId: number } | undefined
+  const seasonPage = season ? `/season/${season.seasonId}` : ''
   const raceName = race?.name || raceId?.replace(/-/g, ' ') || 'Race'
   const raceDistance = race?.distance || 257
 
@@ -95,7 +98,7 @@ function Simulation() {
       if (!race || !sessionId || payload.sessionId !== sessionId || payload.raceId !== race.id) return
       try {
         setBreakMade(!!payload.breakMade)
-        setResults(await App.GetRaceResults(race.id))
+        setResults(season ? await App.GetSeasonRaceResults(season.seasonId, season.eventId) : await App.GetRaceResults(race.id))
         setSimulationComplete(true)
       } catch (err) {
         console.error('Failed to load results:', err)
@@ -113,7 +116,9 @@ function Simulation() {
       try {
         if (interactiveMode) {
           const plan = location.state?.plan ?? { leaderId: 0, break: 'auto', hardOn: [], attackOn: '' }
-          const sess = await App.StartInteractiveSimulation(race.id, enableIncidents, initialTeam, main.RacePlan.createFrom(plan))
+          const sess = season
+            ? await App.StartSeasonRace(season.seasonId, season.eventId, main.RacePlan.createFrom(plan))
+            : await App.StartInteractiveSimulation(race.id, enableIncidents, initialTeam, main.RacePlan.createFrom(plan))
           await tc.beginSession(sess)
           return
         }
@@ -162,7 +167,8 @@ function Simulation() {
           results={results}
           team={tc.controlledTeam}
           decisions={tc.calls}
-          onResults={() => navigate(`/results/${raceId}`, { state: { results } })}
+          onResults={() => (season ? navigate(seasonPage) : navigate(`/results/${raceId}`, { state: { results } }))}
+          resultsLabel={season ? 'Back to the season →' : undefined}
         />
       ) : undefined}
       top={

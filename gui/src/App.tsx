@@ -10,6 +10,8 @@ import StageRaceStages from './pages/StageRaceStages'
 import StageRaceSimulation from './pages/StageRaceSimulation'
 import Validation from './pages/Validation'
 import Settings from './pages/Settings'
+import Seasons from './pages/Seasons'
+import SeasonHub from './pages/SeasonHub'
 
 function App() {
   return (
@@ -23,6 +25,8 @@ function App() {
         <Route path="stage-race-sim/:stageRaceId" element={<StageRaceSimulation />} />
         <Route path="stage-race-gc/:stageRaceId" element={<StageRaceGC />} />
         <Route path="stage-race-stages/:stageRaceId" element={<StageRaceStages />} />
+        <Route path="season" element={<Seasons />} />
+        <Route path="season/:seasonId" element={<SeasonHub />} />
         <Route path="validation" element={<Validation />} />
         <Route path="settings" element={<Settings />} />
       </Route>

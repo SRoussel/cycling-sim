@@ -25,6 +25,8 @@ type App struct {
 
 	sessionsMu sync.Mutex
 	sessions   map[string]*interactiveSession
+
+	seasonMu sync.Mutex // one season change at a time (racing, signing, year end)
 }
 
 // SimParams holds simulation parameters

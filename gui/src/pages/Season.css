@@ -1,0 +1,526 @@
+/* Season mode: the hub, squad picker, tables. Same language as the rest of
+   the app: flat panels, hairlines, orange only for ours and for actions. */
+
+.season-cols {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.new-season {
+  display: grid;
+  gap: 10px;
+  max-width: 420px;
+}
+
+.new-season label {
+  display: grid;
+  gap: 4px;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.new-season button {
+  justify-self: start;
+}
+
+.season-error {
+  color: var(--color-danger);
+  margin-top: 10px;
+  font-size: 0.85rem;
+}
+
+.season-list {
+  list-style: none;
+}
+
+.season-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.season-list li + li {
+  border-top: 1px solid var(--color-line);
+}
+
+.season-list a {
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 11rem;
+  gap: 10px;
+  align-items: center;
+  padding: 9px 4px;
+  text-decoration: none;
+  border-radius: 6px;
+}
+
+.season-list a:hover {
+  background: var(--color-surface-2);
+}
+
+.muted {
+  color: var(--color-text-muted);
+}
+
+.small {
+  font-size: 0.78rem;
+}
+
+.warn {
+  color: var(--color-warning);
+}
+
+button.link {
+  background: none;
+  border: none;
+  padding: 2px 4px;
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+}
+
+button.link:hover {
+  color: var(--color-text);
+}
+
+button.link.danger:hover {
+  color: var(--color-danger);
+}
+
+/* Header */
+
+.season-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.season-head h1 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.season-money {
+  display: flex;
+  gap: 18px;
+}
+
+.season-money div {
+  display: grid;
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+}
+
+.season-money b {
+  font-size: 0.95rem;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.season-money b.warn {
+  color: var(--color-warning);
+}
+
+.season-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--color-line);
+  margin-bottom: 14px;
+}
+
+.season-tabs button {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  color: var(--color-text-muted);
+  padding: 8px 12px;
+}
+
+.season-tabs button.on {
+  color: var(--color-text);
+  border-bottom-color: var(--color-primary);
+}
+
+/* Overview */
+
+.season-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 14px;
+  align-items: start;
+}
+
+.next-race .next-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.next-race h2 {
+  font-size: 1.05rem;
+  color: var(--color-text);
+  margin-bottom: 4px;
+}
+
+.next-race .muted {
+  font-size: 0.82rem;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.next-head .actions {
+  margin-top: 0;
+}
+
+.last-result {
+  background: var(--color-surface-2);
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin-bottom: 12px;
+  font-size: 0.85rem;
+}
+
+.mine-result {
+  color: var(--color-primary);
+  font-size: 0.82rem;
+}
+
+.squad-count {
+  font-size: 0.85rem;
+  margin: 6px 0;
+}
+
+.squad-count .muted {
+  font-size: 0.75rem;
+}
+
+table.squad tr {
+  cursor: pointer;
+}
+
+table.squad td,
+table.squad th {
+  padding: 6px 6px;
+}
+
+.rider-cell {
+  white-space: nowrap;
+}
+
+.next-race {
+  overflow-x: auto;
+}
+
+table.squad tr.picked td {
+  background: rgba(232, 111, 55, 0.07);
+}
+
+table.squad tr.picked td:first-child {
+  box-shadow: inset 2px 0 0 var(--color-primary);
+}
+
+table.squad tr.unavailable {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.rider-cell .why {
+  color: var(--color-warning);
+  font-size: 0.75rem;
+}
+
+.programme {
+  font-size: 0.75rem;
+  max-width: 13rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fitbar {
+  display: inline-block;
+  width: 64px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--color-surface-2);
+  overflow: hidden;
+  vertical-align: middle;
+}
+
+.fitbar i {
+  display: block;
+  height: 100%;
+  background: #7c8794;
+}
+
+.fitbar i.good {
+  background: #c3cad4;
+}
+
+.fitbar i.top {
+  background: var(--color-primary);
+}
+
+.race-plan.inline {
+  border-top: 1px solid var(--color-line);
+  border-bottom: 1px solid var(--color-line);
+  padding: 10px 0;
+  margin: 8px 0 10px;
+}
+
+.race-plan.inline h3 {
+  font-size: 0.85rem;
+  margin-bottom: 6px;
+}
+
+.objectives {
+  list-style: none;
+}
+
+.objectives li {
+  display: grid;
+  grid-template-columns: 1.2rem minmax(0, 1fr) auto;
+  gap: 8px;
+  padding: 6px 0;
+  font-size: 0.875rem;
+}
+
+.objectives li + li {
+  border-top: 1px solid var(--color-line);
+}
+
+.objectives li.met .obj-mark {
+  color: var(--color-success);
+}
+
+.objectives li.missed {
+  color: var(--color-text-muted);
+}
+
+.objectives li.missed .obj-mark {
+  color: var(--color-danger);
+}
+
+.confidence {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--color-surface-2);
+  margin-top: 10px;
+  overflow: hidden;
+}
+
+.confidence i {
+  display: block;
+  height: 100%;
+  background: var(--color-success);
+}
+
+.confidence i.low {
+  background: var(--color-warning);
+}
+
+.news {
+  list-style: none;
+  font-size: 0.85rem;
+  max-height: 22rem;
+  overflow: auto;
+}
+
+.news li {
+  padding: 5px 0;
+}
+
+.news li + li {
+  border-top: 1px solid var(--color-line);
+}
+
+.news li.mine {
+  color: var(--color-text);
+}
+
+.news li:not(.mine) {
+  color: var(--color-text-soft);
+}
+
+.news .muted {
+  font-size: 0.75rem;
+  margin-right: 6px;
+}
+
+.news.compact {
+  max-height: 14rem;
+  margin: 8px 0;
+}
+
+.recent {
+  list-style: none;
+  font-size: 0.85rem;
+}
+
+.recent li {
+  display: grid;
+  gap: 1px;
+  padding: 6px 0;
+}
+
+.recent li + li {
+  border-top: 1px solid var(--color-line);
+}
+
+table.standings td.pos,
+.event-results td.pos {
+  width: 2rem;
+  color: var(--color-text-muted);
+}
+
+table td.num {
+  text-align: right;
+}
+
+table tr.mine td {
+  color: var(--color-primary);
+}
+
+/* Calendar */
+
+.calendar {
+  list-style: none;
+}
+
+.calendar li + li {
+  border-top: 1px solid var(--color-line);
+}
+
+.cal-row {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 8rem minmax(0, 14rem) 6.5rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  background: none;
+  border: none;
+  color: inherit;
+  text-align: left;
+  padding: 9px 4px;
+  border-radius: 6px;
+}
+
+.cal-row:disabled {
+  cursor: default;
+  opacity: 1;
+}
+
+.calendar li.done .cal-row:hover {
+  background: var(--color-surface-2);
+}
+
+.calendar li:not(.done) .race-name {
+  color: var(--color-text-soft);
+  font-weight: 500;
+}
+
+.calendar li.next .race-name {
+  color: var(--color-primary);
+}
+
+.cal-date {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.cal-podium {
+  font-size: 0.8rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.event-results {
+  padding: 4px 8px 12px 8.5rem;
+}
+
+.stage-wins {
+  list-style: none;
+  font-size: 0.82rem;
+  margin-top: 8px;
+  columns: 2;
+}
+
+/* Team & contracts */
+
+table.roster {
+  font-size: 0.82rem;
+}
+
+table.roster td,
+table.roster th {
+  white-space: nowrap;
+}
+
+.card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.card-head h2 {
+  margin-bottom: 0;
+}
+
+.reply {
+  border-radius: 6px;
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  font-size: 0.85rem;
+  background: var(--color-surface-2);
+}
+
+.reply.ok {
+  box-shadow: inset 3px 0 0 var(--color-success);
+}
+
+.reply.no {
+  box-shadow: inset 3px 0 0 var(--color-warning);
+}
+
+td.offer {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+td.offer input {
+  width: 5.5rem;
+}
+
+td.offer button {
+  padding: 0.3rem 0.7rem;
+}
+
+@media (max-width: 1100px) {
+  .season-grid,
+  .season-cols {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+table.standings td,
+table.squad td:nth-child(3),
+table.roster td {
+  white-space: nowrap;
+}

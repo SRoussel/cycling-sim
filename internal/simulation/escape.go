@@ -105,6 +105,12 @@ func (s *RaceState) attackPays(rs *RiderState, seg *model.Segment) bool {
 	if len(chase) == 0 {
 		return false
 	}
+	// In a front selection no chase can catch (frontSafe), the rivals left
+	// behind race each other for the podium rather than chase together: the
+	// attack only has to beat the strongest of them alone.
+	if s.frontSafe(rs) {
+		chase = chase[:1]
+	}
 	return s.timeToLine([]*RiderState{rs}) < s.timeToLine(chase)
 }
 
@@ -117,7 +123,7 @@ func (s *RaceState) attackPays(rs *RiderState, seg *model.Segment) bool {
 // (attackPays), so it doesn't depend on beating a fresh chase: attrition
 // over many sections is what decides hard classics.
 func (s *RaceState) pressPays(rs *RiderState, seg *model.Segment) bool {
-	if !s.escapeEligible(rs) || s.IsStageRace || !s.isDangerous(rs) {
+	if !s.escapeEligible(rs) || s.IsStageRace || !s.isDangerous(rs) || s.frontSafe(rs) {
 		return false
 	}
 	if !seg.SurfaceType.Unpaved() && climbOf(seg) < terrainClimb {
@@ -320,4 +326,46 @@ func (s *RaceState) winGone(rs *RiderState) bool {
 		front = front[:maxRotation]
 	}
 	return s.timeToLine(front) < s.timeToLine(chase)+gap
+}
+
+// frontSafe: one-day races, rs is in the front selection of rival leaders
+// (no rival leader ahead, at least one in his group) and no group behind can
+// catch it. The race is now among themselves: a favourite stops pressing
+// (surges that wear down a bunch only empty him in a small selection) and
+// keeps his reserve for the attack that drops the others (attackPays).
+func (s *RaceState) frontSafe(rs *RiderState) bool {
+	if s == nil || s.IsStageRace || s.Phase == PhaseEarly || len(s.Course) == 0 {
+		return false
+	}
+	for o := range s.Ahead {
+		if rivalLeaderOf(rs, o) {
+			return false
+		}
+	}
+	var own []*RiderState
+	rival := false
+	for _, o := range s.Road {
+		if o.DNF {
+			continue
+		}
+		own = append(own, o)
+		rival = rival || rivalLeaderOf(rs, o)
+	}
+	if !rival {
+		return false
+	}
+	chasers, gap := s.rivalChase(rs)
+	if len(chasers) == 0 {
+		return true
+	}
+	chase := append([]*RiderState(nil), chasers...)
+	sort.Slice(chase, func(i, j int) bool { return wkg(chase[i]) > wkg(chase[j]) })
+	sort.Slice(own, func(i, j int) bool { return wkg(own[i]) > wkg(own[j]) })
+	if len(chase) > maxRotation {
+		chase = chase[:maxRotation]
+	}
+	if len(own) > maxRotation {
+		own = own[:maxRotation]
+	}
+	return s.timeToLine(own) < s.timeToLine(chase)+gap
 }

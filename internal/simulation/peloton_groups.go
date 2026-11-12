@@ -513,6 +513,11 @@ func riderEffort(rs *RiderState, action Action, segment *model.Segment, remainin
 		return threshold * IntensityForPhase(phase)
 	}
 
+	// One-day races: when the front can't be caught, the win is gone and
+	// this group races for placings instead of chasing (winGone).
+	if !holdBack && state.winGone(rs) {
+		return threshold * IntensityForPhase(PhaseMid), ActionHold
+	}
 	// A rival up the road is chased to the line: by the leader's domestiques
 	// when the team has them here (the leader sits in, see shelteredFor),
 	// otherwise by the rider themself.

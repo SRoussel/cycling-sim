@@ -270,3 +270,54 @@ func (s *RaceState) sprintLoserAttacks(rs *RiderState, seg *model.Segment) bool 
 	}
 	return faster
 }
+
+// winGone: one-day races, a group behind the front of the race (which holds
+// a rival leader) that can't catch it: the front's projected time to the
+// line beats this group's best pace line plus the gap. The win is gone, so
+// nobody here chases for it: riders ride for placings (their own tempo,
+// attacks for the podium) and domestiques stop working. A chase that still
+// can catch the front chases as before.
+func (s *RaceState) winGone(rs *RiderState) bool {
+	if s == nil || s.IsStageRace || s.Phase == PhaseEarly || len(s.Ahead) == 0 || len(s.Course) == 0 {
+		return false
+	}
+	gap := 0.0
+	for _, g := range s.Ahead {
+		gap = math.Max(gap, g)
+	}
+	var front []*RiderState
+	rival := false
+	for o, g := range s.Ahead {
+		if g < gap-contactSeconds || o.DNF {
+			continue
+		}
+		front = append(front, o)
+		if o.TeamRole == RoleLeader && o.Rider.Team != rs.Rider.Team {
+			rival = true
+		}
+		if o.TeamRole == RoleLeader && o.Rider.Team == rs.Rider.Team {
+			return false // our leader is winning: not our chase anyway
+		}
+	}
+	if !rival {
+		return false
+	}
+	var chase []*RiderState
+	for _, o := range s.Road {
+		if !o.DNF && o.TeamRole != RoleSprinter {
+			chase = append(chase, o)
+		}
+	}
+	if len(chase) == 0 {
+		return false
+	}
+	sort.Slice(chase, func(i, j int) bool { return wkg(chase[i]) > wkg(chase[j]) })
+	sort.Slice(front, func(i, j int) bool { return wkg(front[i]) > wkg(front[j]) })
+	if len(chase) > maxRotation {
+		chase = chase[:maxRotation]
+	}
+	if len(front) > maxRotation {
+		front = front[:maxRotation]
+	}
+	return s.timeToLine(front) < s.timeToLine(chase)+gap
+}

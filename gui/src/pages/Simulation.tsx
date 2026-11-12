@@ -160,7 +160,7 @@ function Simulation() {
           breakMade={breakMade}
           results={results}
           team={tc.controlledTeam}
-          decisions={tc.events.filter((e) => e.startsWith('🎬'))}
+          decisions={tc.calls}
           onResults={() => navigate(`/results/${raceId}`, { state: { results } })}
         />
       ) : undefined}

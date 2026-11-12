@@ -157,6 +157,9 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
   // The team's orders and rider commands as the race applies them: the
   // panel shows this, whoever set them (you, the plan, a decision).
   const [live, setLive] = useState<LiveTeam | null>(null)
+  // The player's calls this race (decisions and stage plans), for the
+  // debrief: the log keeps only its last MAX_EVENTS lines.
+  const [calls, setCalls] = useState<string[]>([])
   // togglePause is defined before the stage plan's submit: read both by ref.
   const stagePlanRef = useRef<StagePlanRequest | null>(null)
   stagePlanRef.current = stagePlan
@@ -221,7 +224,9 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
       plan.hardOn.length ? `hard on ${plan.hardOn.length} point${plan.hardOn.length > 1 ? 's' : ''}` : '',
       plan.attackOn ? 'a planned attack' : '',
     ].filter(Boolean)
-    appendEvents([`📋 Stage ${req.stage} plan: ${bits.length ? bits.join(', ') : 'the team decides'}`])
+    const line = `📋 Stage ${req.stage} plan: ${bits.length ? bits.join(', ') : 'the team decides'}`
+    appendEvents([line])
+    setCalls((c) => [...c, line])
   }
 
   submitStagePlanRef.current = submitStagePlan
@@ -230,15 +235,13 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
     if (!active || !moment) return
     const m = moment
     setMoment(null)
-    setGoal(null)
-    setGcGoal(null)
-    setGc([])
-    setStagePlan(null)
-    setLive(null)
-    radioRef.current = newRadioState()
     const label = await App.ResolveMoment(sessionId!, m.id, optionId)
     setPaused(false)
-    if (label) appendEvents([`🎬 ${m.title.replace(/^\S+\s/, '')}: ${label}`])
+    if (label) {
+      const line = `🎬 ${m.title.replace(/^\S+\s/, '')}: ${label}`
+      appendEvents([line])
+      setCalls((c) => [...c, line])
+    }
   }
 
   // ── Team & rider state ────────────────────────────────────
@@ -381,6 +384,13 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
     setRouteKm(0)
     setTelemetryByRider({})
     setMoment(null)
+    setGoal(null)
+    setGcGoal(null)
+    setGc([])
+    setStagePlan(null)
+    setLive(null)
+    setCalls([])
+    radioRef.current = newRadioState()
     setTeamOrders(DEFAULT_TEAM_ORDERS)
     lastAttackKmRef.current = {}
     lastConditionKmRef.current = {}
@@ -600,6 +610,7 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
     stagePlan,
     submitStagePlan,
     live,
+    calls,
     decisionLevel,
     setDecisionLevel,
     skipping: skipFrom !== null,

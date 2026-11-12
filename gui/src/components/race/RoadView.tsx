@@ -1,6 +1,8 @@
+import { useState } from 'react'
 import { RaceGroup } from '../../sim/shared'
 import { TeamControl } from '../../sim/useTeamControl'
 import { GroupMark } from './ProfileView'
+import { GroupSheet } from './GroupSheet'
 
 /** A group's dot: the front of the race white, the rest grey (groups with
  * the player's riders get an orange ring where drawn). */
@@ -14,6 +16,7 @@ export function groupTone(index: number): string {
  * the player's riders are in it.
  */
 export function RoadView({ groups, tc, emptyText }: { groups: RaceGroup[]; tc?: TeamControl; emptyText: string }) {
+  const [open, setOpen] = useState<string | null>(null)
   return (
     <section className="panel road">
       <header className="panel-head">
@@ -24,7 +27,7 @@ export function RoadView({ groups, tc, emptyText }: { groups: RaceGroup[]; tc?: 
         <div className="empty-state">{emptyText}</div>
       ) : (
         <>
-          {groups.length > 1 && <GapGraphic groups={groups} tc={tc} />}
+          {groups.length > 1 && <GapGraphic groups={groups} tc={tc} onPick={tc ? setOpen : undefined} />}
           <ol className="groups">
             {groups.map((g, i) => {
               const mine = tc ? tc.teamRiders.filter((r) => tc.riderGroups[r.id] === g.name) : []
@@ -36,7 +39,12 @@ export function RoadView({ groups, tc, emptyText }: { groups: RaceGroup[]; tc?: 
               const shown = named.slice(0, 6)
               const rest = size - mine.length - shown.length
               return (
-                <li key={i} className={mine.length > 0 ? 'mine' : ''}>
+                <li
+                  key={i}
+                  className={`${mine.length > 0 ? 'mine' : ''}${tc ? ' clickable' : ''}`}
+                  onClick={tc ? () => setOpen(g.name) : undefined}
+                  title={tc ? 'Show every rider in this group' : undefined}
+                >
                   <span className="g-name">{g.name}</span>
                   <span className="g-size">{size}</span>
                   <span className="g-gap">{(g.gapS ?? 0) > 0 ? g.gap : ''}</span>
@@ -57,6 +65,7 @@ export function RoadView({ groups, tc, emptyText }: { groups: RaceGroup[]; tc?: 
           </ol>
         </>
       )}
+      {open && tc && <GroupSheet name={open} groups={groups} tc={tc} onClose={() => setOpen(null)} />}
     </section>
   )
 }
@@ -93,7 +102,7 @@ export function groupMarks(groups: RaceGroup[], tc: TeamControl): GroupMark[] {
  * The TV gap graphic: the leaders on the right, every group placed by its
  * time gap (scale fits the groups shown), sized by riders; ours ringed.
  */
-function GapGraphic({ groups, tc }: { groups: RaceGroup[]; tc?: TeamControl }) {
+function GapGraphic({ groups, tc, onPick }: { groups: RaceGroup[]; tc?: TeamControl; onPick?: (name: string) => void }) {
   const shown = groups.slice(0, 8)
   const maxGap = Math.max(30, ...shown.map((g) => g.gapS ?? 0))
   const mineIn = new Set(tc ? tc.teamRiders.map((r) => tc.riderGroups[r.id]) : [])
@@ -112,7 +121,8 @@ function GapGraphic({ groups, tc }: { groups: RaceGroup[]; tc?: TeamControl }) {
         return (
           <span
             key={i}
-            className={`gap-dot${mineIn.has(g.name) ? ' mine' : ''}`}
+            onClick={onPick ? () => onPick(g.name) : undefined}
+            className={`gap-dot${mineIn.has(g.name) ? ' mine' : ''}${onPick ? ' clickable' : ''}`}
             title={`${g.name}: ${size} ${size === 1 ? 'rider' : 'riders'}${(g.gapS ?? 0) > 0 ? `, ${g.gap}` : ''}`}
             style={{ right: `${(((g.gapS ?? 0) / maxGap) * 94 + 3)}%`, width: d, height: d, background: groupTone(i) }}
           >

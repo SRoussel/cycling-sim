@@ -172,7 +172,7 @@ export function TeamDock({ tc, groups }: { tc: TeamControl; kmRemaining: number;
               <Bars tel={tel} />
               <span className={`crew-num ${level(reserve, 50, 20)}`} title="Reserve">{reserve}%</span>
               <span
-                className={`crew-legs ${legs === undefined ? '' : legs < 88 ? 'empty' : legs < 92 ? 'low' : ''}`}
+                className={`crew-legs ${legs === undefined ? '' : legs < 86 ? 'empty' : legs < 89 ? 'low' : ''}`}
                 title="Legs: the power he can still sustain, as a share of his fresh threshold. Only falls over the day."
               >
                 {legs === undefined ? '' : `${Math.round(legs)}`}

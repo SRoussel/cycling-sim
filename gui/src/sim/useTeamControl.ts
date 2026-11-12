@@ -162,6 +162,8 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
   const [calls, setCalls] = useState<string[]>([])
   // Every starter's team by name (road groups list names), for team colours.
   const [teamByName, setTeamByName] = useState<Record<string, string>>({})
+  // Every starter by id (team, watts, weight): for the group sheet.
+  const [riderById, setRiderById] = useState<Record<number, main.RiderInfo>>({})
   // togglePause is defined before the stage plan's submit: read both by ref.
   const stagePlanRef = useRef<StagePlanRequest | null>(null)
   stagePlanRef.current = stagePlan
@@ -393,6 +395,7 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
     setLive(null)
     setCalls([])
     setTeamByName(Object.fromEntries((sess.allRiders || []).map((r) => [r.name, r.team])))
+    setRiderById(Object.fromEntries((sess.allRiders || []).map((r) => [r.id, r])))
     radioRef.current = newRadioState()
     setTeamOrders(DEFAULT_TEAM_ORDERS)
     lastAttackKmRef.current = {}
@@ -618,6 +621,8 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
     live,
     calls,
     teamByName,
+    riderById,
+    telemetryByRider,
     decisionLevel,
     setDecisionLevel,
     skipping: skipFrom !== null,

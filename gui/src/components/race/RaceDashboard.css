@@ -1152,3 +1152,132 @@
   margin-right: 5px;
   flex-shrink: 0;
 }
+
+/* ---------- group sheet ---------- */
+
+.groups > li.clickable,
+.gap-dot.clickable {
+  cursor: pointer;
+}
+
+.groups > li.clickable:hover .g-name {
+  color: var(--accent);
+}
+
+.gap-dot.clickable:hover {
+  filter: brightness(1.25);
+}
+
+.sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(5, 7, 10, 0.55);
+  display: flex;
+  justify-content: flex-start;
+  z-index: 90;
+}
+
+.sheet {
+  width: min(640px, 100%);
+  height: 100%;
+  overflow-y: auto;
+  background: var(--panel, #141920);
+  padding: 16px 18px;
+  box-shadow: 8px 0 30px rgba(0, 0, 0, 0.5);
+  animation: sheet-in 0.18s ease-out;
+}
+
+@keyframes sheet-in {
+  from { transform: translateX(-16px); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+
+.sheet-head {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.sheet-head h2 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.sheet-head .link {
+  margin-left: auto;
+}
+
+.sheet-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.sheet-table th {
+  text-align: left;
+  font-weight: 500;
+  font-size: 0.72rem;
+  color: var(--muted, #8b95a3);
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--line, rgba(255, 255, 255, 0.06));
+  cursor: pointer;
+  user-select: none;
+}
+
+.sheet-table th.sorted {
+  color: var(--color-text);
+}
+
+.sheet-table td {
+  padding: 5px 6px;
+  border-bottom: 1px solid var(--line, rgba(255, 255, 255, 0.06));
+  vertical-align: middle;
+}
+
+.sheet-table td.who {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 2px;
+  align-items: center;
+}
+
+.sheet-table td.who span {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.sheet-table td.who small {
+  grid-column: 2;
+  color: var(--muted, #8b95a3);
+  font-size: 0.7rem;
+}
+
+.sheet-table tr.mine td.who span {
+  color: var(--accent, #e86f37);
+}
+
+.sheet-table .num {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.sheet-table .num small {
+  color: var(--muted, #8b95a3);
+  font-size: 0.7rem;
+}
+
+.sheet-table td.res {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 140px;
+}
+
+.sheet-table td.res .bar {
+  flex: 1;
+}
+
+.sheet-table .num.low { color: var(--low, #fbbf24); }
+.sheet-table .num.empty { color: var(--empty, #f87171); }
+.sheet-table .num.over { color: var(--accent, #e86f37); }

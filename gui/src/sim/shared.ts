@@ -7,6 +7,8 @@ export interface RiderTelemetryPoint {
   effortPct: number
   fatiguePct: number
   wPrimePct: number
+  /** Threshold now as a share of the rider's fresh one (fatigue, durability). */
+  legsPct?: number
   routeKm: number
   routePct: number
 }
@@ -66,6 +68,7 @@ export function interpolateTelemetryMap(
       effortPct: lerp(from!.effortPct, to!.effortPct, alpha),
       fatiguePct: lerp(from!.fatiguePct, to!.fatiguePct, alpha),
       wPrimePct: lerp(from!.wPrimePct, to!.wPrimePct, alpha),
+      legsPct: lerp(from!.legsPct ?? 100, to!.legsPct ?? 100, alpha),
       routeKm: lerp(from!.routeKm, to!.routeKm, alpha),
       routePct: lerp(from!.routePct, to!.routePct, alpha),
     }
@@ -99,15 +102,58 @@ export function profilePath(points: Array<{ km: number; elev: number }>): string
     .join(' ')
 }
 
-export function parseAttackEvent(line: string): { riderId: number | null; team: string | null } | null {
-  const lower = line.toLowerCase()
-  if (!lower.startsWith('attack:')) return null
-  const riderMatch = line.match(/\brider=(\d+)\b/i)
-  const teamMatch = line.match(/\bteam=([^\s]+)\b/i)
-  return {
-    riderId: riderMatch ? Number(riderMatch[1]) : null,
-    team: teamMatch ? String(teamMatch[1]) : null,
+/** Engine event lines look like "type: reason | km=12.3". */
+function splitEvent(line: string): { type: string; reason: string; km: number | null } {
+  const [body, kmPart] = line.split(' | km=')
+  const colon = body.indexOf(': ')
+  const type = colon >= 0 ? body.slice(0, colon) : body
+  const reason = colon >= 0 ? body.slice(colon + 2) : ''
+  const km = kmPart !== undefined && !Number.isNaN(Number(kmPart)) ? Number(kmPart) : null
+  return { type: type.trim().toLowerCase(), reason, km }
+}
+
+/** Attack events: "attack: rider=581; key=1; name=Tadej Pogačar; team=UAE Team Emirates". */
+export function parseAttackEvent(
+  line: string,
+): { riderId: number | null; team: string | null; name: string | null; key: boolean } | null {
+  const ev = splitEvent(line)
+  if (ev.type !== 'attack') return null
+  const fields: Record<string, string> = {}
+  for (const part of ev.reason.split('; ')) {
+    const eq = part.indexOf('=')
+    if (eq > 0) fields[part.slice(0, eq).trim()] = part.slice(eq + 1).trim()
   }
+  return {
+    riderId: fields.rider ? Number(fields.rider) : null,
+    team: fields.team ?? null,
+    name: fields.name ?? null,
+    key: fields.key === '1',
+  }
+}
+
+/** A readable line for the event log (engine lines are formatted; others pass through). */
+export function formatEventLine(line: string): string {
+  const ev = splitEvent(line)
+  const at = ev.km !== null ? `${ev.km.toFixed(1)} km to go · ` : ''
+  switch (ev.type) {
+    case 'attack': {
+      const a = parseAttackEvent(line)
+      if (!a) return line
+      return `${at}⚡ ${a.name ?? `Rider ${a.riderId}`}${a.team ? ` (${a.team})` : ''} attacks`
+    }
+    case 'breakaway':
+      if (ev.reason === 'breakaway caught') return `${at}🤝 Breakaway caught`
+      return `${at}🏃 Breakaway: ${ev.reason.replace(/^breakaway:\s*/, '')}`
+    case 'sprint-chase':
+      return `${at}🚴 Sprinters' teams chase`
+    case 'cobbles':
+      return `${at}🪨 Cobbles / technical section`
+    case 'summit':
+      return `${at}⛰ Climb near the finish`
+    case 'final':
+      return `${at}🏁 Final 10 km`
+  }
+  return line
 }
 
 export interface RaceGroup {
@@ -181,7 +227,8 @@ export function groupBucket(groupName: string | undefined): string {
   if (g.includes('peloton')) return 'Peloton'
   if (g.includes('group')) return groupName || 'Group'
   if (g.includes('dropped')) return 'Dropped'
-  return 'Unknown'
+  if (/^\d+(st|nd|rd|th)$/.test(g)) return 'Finished'
+  return 'Finished'
 }
 
 export function clampEffortPct(value: number): number {

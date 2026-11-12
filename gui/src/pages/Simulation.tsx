@@ -80,7 +80,6 @@ function Simulation() {
       if (payload.segmentName && payload.segmentName !== lastSegmentName.current) {
         lastSegmentName.current = payload.segmentName
         setCurrentSegmentName(payload.segmentName)
-        appendEvents([`Segment: ${payload.segmentName}`])
       }
       ingestRef.current(payload)
     })

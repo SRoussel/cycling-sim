@@ -21,6 +21,7 @@ import {
   groupSortRank,
   interpolateTelemetryMap,
   parseAttackEvent,
+  formatEventLine,
 } from './shared'
 
 export type CommandMode = 'persistent' | 'oneshot'
@@ -37,8 +38,14 @@ export interface LiveProgressPayload {
 export interface AttackAlert {
   riderId: number | null
   team: string | null
+  name: string | null
   line: string
 }
+
+// Minimum wall-clock time between two attack pauses.
+const ATTACK_PAUSE_COOLDOWN_MS = 60_000
+// A rider's attacks within this distance show as one line in the log.
+const ATTACK_LOG_GAP_KM = 5
 
 export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: string; initialEvents?: string[]; stageRace?: boolean }) {
   const { interactiveMode } = opts
@@ -91,7 +98,34 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
   const [followMap, setFollowMap] = useState<Record<number, number | null>>({})
   const [acceptedButtons, setAcceptedButtons] = useState<Record<string, boolean>>({})
   const [riderCommandLocked, setRiderCommandLocked] = useState<Record<number, boolean>>({})
-  const [pauseOnRivalAttacks, setPauseOnRivalAttacks] = useState(true)
+  // Off by default: when on, only attacks by riders who matter (favourites,
+  // GC contenders, team leaders) pause the race, at most once a minute.
+  const [pauseOnRivalAttacks, setPauseOnRivalAttacks] = useState(false)
+  const lastAttackPauseRef = useRef(0)
+  // With 250 m decision steps a rider who keeps attacking logs an attack
+  // every few hundred metres: the log shows one line per attack, a rider's
+  // next only after ATTACK_LOG_GAP_KM.
+  const lastAttackKmRef = useRef<Record<number, number>>({})
+  // Race conditions alternate when two hold at once (the final 10 km and a
+  // climb near the finish): "once per race" conditions show once, the rest
+  // at most once per ATTACK_LOG_GAP_KM.
+  const lastConditionKmRef = useRef<Record<string, number>>({})
+  const isNewAttack = (line: string): boolean => {
+    const km = Number(line.split(' | km=')[1])
+    const kind = line.slice(0, line.indexOf(':')).trim().toLowerCase()
+    if (['final', 'summit', 'cobbles', 'sprint-chase'].includes(kind)) {
+      const prev = lastConditionKmRef.current[kind]
+      if (prev !== undefined && (kind === 'final' || kind === 'summit' || Number.isNaN(km) || prev - km < ATTACK_LOG_GAP_KM)) return false
+      lastConditionKmRef.current[kind] = km
+      return true
+    }
+    const a = parseAttackEvent(line)
+    if (!a || a.riderId === null) return true
+    const prev = lastAttackKmRef.current[a.riderId]
+    if (prev !== undefined && !Number.isNaN(km) && prev - km < ATTACK_LOG_GAP_KM) return false
+    if (!Number.isNaN(km)) lastAttackKmRef.current[a.riderId] = km
+    return true
+  }
   // Standing team orders (chase / break / pace), see SetTeamOrder.
   const [teamOrders, setTeamOrders] = useState<TeamOrders>(DEFAULT_TEAM_ORDERS)
   const [attackAlert, setAttackAlert] = useState<AttackAlert | null>(null)
@@ -214,6 +248,8 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
     setFollowAttackRiderId(null)
     setTeamOrders(DEFAULT_TEAM_ORDERS)
     seenAttackEventsRef.current = new Set()
+    lastAttackKmRef.current = {}
+    lastConditionKmRef.current = {}
     telemetryDisplayRef.current = {}
     telemetryPrevRef.current = {}
     telemetryTargetRef.current = {}
@@ -258,19 +294,22 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
       if (interactiveMode && cur.sessionId && cur.pauseOnRivalAttacks && !cur.paused) {
         for (const line of payload.events) {
           const parsed = parseAttackEvent(line)
-          if (!parsed || seenAttackEventsRef.current.has(line)) continue
+          if (!parsed || !parsed.key || seenAttackEventsRef.current.has(line)) continue
           seenAttackEventsRef.current.add(line)
           const isRival = parsed.team ? parsed.team !== cur.controlledTeam : true
           if (!isRival) continue
-          setAttackAlert({ riderId: parsed.riderId, team: parsed.team, line })
+          const now = performance.now()
+          if (now - lastAttackPauseRef.current < ATTACK_PAUSE_COOLDOWN_MS) continue
+          lastAttackPauseRef.current = now
+          setAttackAlert({ riderId: parsed.riderId, team: parsed.team, name: parsed.name, line })
           setFollowAttackRiderId(cur.normalizedSprintOrder[0] ?? cur.teamRiders[0]?.id ?? null)
           setPaused(true)
           void App.SetInteractivePaused(cur.sessionId, true)
-          appendEvents(['⏸ Paused: rival attack detected'])
+          appendEvents([`⏸ Paused: ${parsed.name ?? 'a rival'} attacks`])
           break
         }
       }
-      appendEvents(payload.events)
+      appendEvents(payload.events.filter(isNewAttack).map(formatEventLine))
     }
     setRiderOneShotQueued({})
   }

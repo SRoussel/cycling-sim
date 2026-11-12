@@ -13,6 +13,18 @@ func (db *DB) SaveRaceResults(results []model.RaceResult) error {
 	}
 	defer tx.Rollback()
 
+	// A race keeps one result set: the new run replaces earlier ones (they
+	// used to pile up, so a race's podium mixed several runs).
+	cleared := map[int64]bool{}
+	for _, r := range results {
+		if !cleared[r.RaceID] {
+			if _, err := tx.Exec(`DELETE FROM race_results WHERE race_id = ?`, r.RaceID); err != nil {
+				return fmt.Errorf("clearing results for race %d: %w", r.RaceID, err)
+			}
+			cleared[r.RaceID] = true
+		}
+	}
+
 	stmt, err := tx.Prepare(`
 		INSERT INTO race_results (race_id, rider_id, position, finish_time_seconds, time_gap_seconds)
 		VALUES (?, ?, ?, ?, ?)`)

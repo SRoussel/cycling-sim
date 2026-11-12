@@ -22,8 +22,11 @@ type RiderTelemetryPoint struct {
 	EffortPct  float64 `json:"effortPct"`
 	FatiguePct float64 `json:"fatiguePct"`
 	WPrimePct  float64 `json:"wPrimePct"`
-	RouteKm    float64 `json:"routeKm"`
-	RoutePct   float64 `json:"routePct"`
+	// LegsPct: the rider's threshold now as a share of his fresh one (the
+	// day's durability fade, stage-race fatigue and form included).
+	LegsPct  float64 `json:"legsPct"`
+	RouteKm  float64 `json:"routeKm"`
+	RoutePct float64 `json:"routePct"`
 }
 
 type ProfilePoint struct {
@@ -134,6 +137,7 @@ func buildRiderTelemetry(states []*RiderState, segment *model.Segment, segmentTi
 			EffortPct:  effortPct,
 			FatiguePct: clampPercent(fatiguePct),
 			WPrimePct:  wPrimePct,
+			LegsPct:    clampPercent(legsPct(rs)),
 			RouteKm:    routeKm,
 			RoutePct:   routePct,
 		}
@@ -270,12 +274,9 @@ func SimulateRoadRaceWithProgress(config RaceConfig, onProgress func(ProgressSna
 			events := []string{}
 			if raceState != nil && eventIndex < len(raceState.Events) {
 				for _, ev := range raceState.Events[eventIndex:] {
-					events = append(events, fmt.Sprintf("%s: %s", ev.Type, ev.Reason))
+					events = append(events, fmt.Sprintf("%s: %s | km=%.1f", ev.Type, ev.Reason, ev.Km))
 				}
 				eventIndex = len(raceState.Events)
-			}
-			if len(events) == 0 {
-				events = append(events, fmt.Sprintf("Segment complete: %s", seg.Name))
 			}
 			groups, riderGroups := buildProgressData(states, seg)
 			steps := timelineStepsForSegment(seg.DistanceKm)
@@ -791,4 +792,12 @@ func riderNames(group []*RiderState, limit int) []string {
 	}
 	names = append(names, fmt.Sprintf("+%d more", len(group)-limit))
 	return names
+}
+
+// legsPct is a rider's current threshold as a percentage of his rated one.
+func legsPct(rs *RiderState) float64 {
+	if rs.Rider.FTPWatts <= 0 {
+		return 100
+	}
+	return rs.CurrentFTP() / float64(rs.Rider.FTPWatts) * 100
 }

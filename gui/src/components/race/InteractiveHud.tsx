@@ -1,5 +1,6 @@
 import { RaceGroup, groupClassName } from '../../sim/shared'
 import { TeamControl } from '../../sim/useTeamControl'
+import { EnergyBars } from './EnergyBars'
 
 /** Compact strip of live groups plus one-tap controls for each team rider. */
 export function InteractiveHud({ tc, groups }: { tc: TeamControl; groups: RaceGroup[] }) {
@@ -17,7 +18,7 @@ export function InteractiveHud({ tc, groups }: { tc: TeamControl; groups: RaceGr
       <div className="hud-rider-strip">
         {tc.sortedTeamRiders.map((r) => {
           const telemetry = tc.telemetryForRider(r.id)
-          const groupName = tc.riderGroups[r.id] || 'Unknown'
+          const groupName = tc.riderGroups[r.id] || '—'
           const locked = tc.isRiderLocked(r.id)
           const queued = tc.riderOneShotQueued[r.id]
           return (
@@ -26,11 +27,10 @@ export function InteractiveHud({ tc, groups }: { tc: TeamControl; groups: RaceGr
                 <span className="hud-rider-name">{r.name}</span>
                 <span className={groupClassName(groupName)}>{groupName}</span>
                 {telemetry && (
-                  <span className="hud-rider-tel">
-                    {Math.round(telemetry.speedKph)} kph · W' {Math.round(telemetry.wPrimePct)}%
-                  </span>
+                  <span className="hud-rider-tel">{Math.round(telemetry.speedKph)} kph</span>
                 )}
               </div>
+              <EnergyBars telemetry={telemetry} compact />
               <div className="hud-rider-btns">
                 <button
                   className={`hud-attack-btn${queued ? ' queued' : ''}${tc.isAccepted(r.id, 'attack', 'oneshot') ? ' accepted' : ''}`}

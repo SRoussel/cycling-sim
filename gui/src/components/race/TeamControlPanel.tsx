@@ -1,4 +1,5 @@
 import { EFFORT_MAX_PCT, EFFORT_MIN_PCT, formatCommandLabel, groupClassName } from '../../sim/shared'
+import { EnergyBars } from './EnergyBars'
 import { TEAM_ORDER_KINDS, TEAM_ORDERS, TeamControl, TeamOrderValue } from '../../sim/useTeamControl'
 
 export function TeamControlPanel({ tc }: { tc: TeamControl }) {
@@ -62,7 +63,7 @@ export function TeamControlPanel({ tc }: { tc: TeamControl }) {
           {tc.attackAlert && (
             <div className="attack-alert">
               <div>
-                ⚠️ Rival attack{tc.attackAlert.team ? ` (${tc.attackAlert.team})` : ''}
+                ⚠️ {tc.attackAlert.name ?? 'A rival'} attacks{tc.attackAlert.team ? ` (${tc.attackAlert.team})` : ''}
               </div>
               <div className="attack-alert-actions">
                 <select
@@ -105,7 +106,7 @@ export function TeamControlPanel({ tc }: { tc: TeamControl }) {
                     <div className="team-rider-main">
                       <div className="team-rider-name">{r.name}</div>
                       <div className="team-rider-meta">
-                        <span className={groupClassName(tc.riderGroups[r.id])}>{tc.riderGroups[r.id] || 'Unknown'}</span>
+                        <span className={groupClassName(tc.riderGroups[r.id])}>{tc.riderGroups[r.id] || '—'}</span>
                         <span>{telemetry ? `${Math.round(telemetry.speedKph)}kph` : '—'}</span>
                         <span>{telemetry ? `${Math.round(telemetry.powerWatts)}W` : '—'}</span>
                         <span>{telemetry ? `${Math.round(telemetry.effortPct)}%` : '—'}</span>
@@ -113,6 +114,7 @@ export function TeamControlPanel({ tc }: { tc: TeamControl }) {
                         {tc.riderOneShotQueued[r.id] && <span>Attack queued</span>}
                         {tc.isRiderLocked(r.id) && <span>Cooldown…</span>}
                       </div>
+                      <EnergyBars telemetry={telemetry} />
                     </div>
 
                     <div className="team-rider-controls">

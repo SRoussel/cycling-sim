@@ -20,7 +20,8 @@ export function RouteProfileCard({ profile, km }: { profile: RouteProfile | null
         </svg>
         <div className="route-profile-marker" style={{ left: `${markerPct}%` }} />
         <div className="route-profile-info">
-          <span>{markerKm.toFixed(1)} km</span>
+          <span>0 km</span>
+          <span>{markerKm.toFixed(1)} km · {(profile.totalKm - markerKm).toFixed(1)} to go</span>
           <span>{profile.totalKm.toFixed(1)} km</span>
         </div>
       </div>

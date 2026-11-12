@@ -148,7 +148,13 @@ func FormGroups(riders []*RiderState, segment *model.Segment, isTT bool, remaini
 			}
 			previousAction := state.LastActions[rs.Rider.ID]
 			if action == ActionAttack && previousAction != ActionAttack && state.Overrides != nil {
-				state.LogEvent("attack", fmt.Sprintf("rider=%d team=%s", rs.Rider.ID, rs.Rider.Team))
+				// key: a rider the race reacts to (a favourite, a GC
+				// contender or a team leader); the app pauses only for these.
+				key := 0
+				if state.isDangerous(rs) || state.gcContender(rs) || rs.TeamRole == RoleLeader {
+					key = 1
+				}
+				state.LogEvent("attack", fmt.Sprintf("rider=%d; key=%d; name=%s; team=%s", rs.Rider.ID, key, rs.Rider.Name, rs.Rider.Team))
 			}
 			state.LastActions[rs.Rider.ID] = action
 		}

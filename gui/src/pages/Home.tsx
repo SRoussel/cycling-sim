@@ -74,71 +74,49 @@ function Home() {
   return (
     <div className="home page-enter">
       <header className="home-header">
-        <h1>Cycling Race Simulator</h1>
-        <p>Select a race to simulate or run validation tests</p>
+        <h1>Races</h1>
+        <p>Pick a race to direct a team, or to watch it run.</p>
       </header>
 
       {loading ? (
-        <div className="loading">Loading races...</div>
+        <div className="empty-state">Loading races…</div>
       ) : (
-        <>
-          <section className="race-section">
-            <h2>One-Day Classics</h2>
-            <div className="races-grid">
+        <div className="home-cols">
+          <section className="card race-list">
+            <h2>One-day races</h2>
+            <ul>
               {races.map((race) => {
                 const type = getCourseType(race)
                 return (
-                  <Link to={`/race-setup/${race.id}`} key={race.id} className="race-card">
-                    <div className="race-card-header">
+                  <li key={race.id}>
+                    <Link to={`/race-setup/${race.id}`}>
+                      <span className="race-name">{race.name}</span>
                       <span className={`badge ${type}`}>{type}</span>
-                    </div>
-                    <h3>{race.name}</h3>
-                    <div className="race-meta">
-                      <span>{race.distance} km</span>
-                      <span>{race.date}</span>
-                    </div>
-                  </Link>
+                      <span className="race-num">{race.distance} km</span>
+                      <span className="race-date">{race.date}</span>
+                    </Link>
+                  </li>
                 )
               })}
-            </div>
+            </ul>
           </section>
 
-          <section className="race-section">
-            <h2>Stage Races</h2>
-            <div className="races-grid">
+          <section className="card race-list stages">
+            <h2>Stage races</h2>
+            <ul>
               {stageRaces.map((sr) => (
-                <Link
-                  to={`/stage-race/${sr.id}`}
-                  key={sr.id}
-                  className={`race-card stage-race ${getStageRaceBadge(sr.name)}`}
-                >
-                  <div className="race-card-header">
-                    <span className={`badge stage ${getStageRaceBadge(sr.name)}`}>
-                      Stage Race
-                    </span>
-                  </div>
-                  <h3>{sr.name}</h3>
-                  <div className="race-meta">
-                    <span>{sr.stageCount} stages</span>
-                  </div>
-                </Link>
+                <li key={sr.id}>
+                  <Link to={`/stage-race/${sr.id}`}>
+                    <span className="race-name">{sr.name}</span>
+                    <span className={`badge stage ${getStageRaceBadge(sr.name)}`}>{sr.stageCount >= 21 ? 'grand tour' : 'week-long'}</span>
+                    <span className="race-num">{sr.stageCount} stages</span>
+                  </Link>
+                </li>
               ))}
-            </div>
+            </ul>
           </section>
-        </>
-      )}
-
-      <section className="quick-actions card">
-        <h2>Quick Actions</h2>
-        <div className="action-buttons">
-          <Link to="/validation">
-            <button className="primary">Run Validation Tests</button>
-          </Link>
-          <Link to="/settings">
-            <button className="secondary">Settings</button>
-          </Link>
         </div>
-      </section>
+      )}
     </div>
   )
 }

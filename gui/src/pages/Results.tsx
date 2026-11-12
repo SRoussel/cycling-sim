@@ -210,7 +210,7 @@ function Results() {
               <span className="place-gap">{formatGap(results[1].gap)}</span>
             </div>
             <div className="podium-place first">
-              <span className="place-num">1st</span>
+              <span className="place-num">1</span>
               <span className="place-name">{results[0].riderName}</span>
               <span className="place-time">{formatTime(results[0].time)}</span>
             </div>

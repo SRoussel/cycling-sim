@@ -172,7 +172,7 @@ function StageRaceGC() {
               <span className="place-gap">{formatGap(top3[1].totalTime - top3[0].totalTime)}</span>
             </div>
             <div className="podium-place first">
-              <span className="place-num">1st</span>
+              <span className="place-num">1</span>
               <span className="place-name">{top3[0].riderName}</span>
               <span className="place-time">{formatTime(top3[0].totalTime)}</span>
             </div>

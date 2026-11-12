@@ -88,27 +88,6 @@ function Settings() {
       </section>
 
       <section className="card">
-        <h2>Rider Database</h2>
-        <p className="setting-desc">Manage rider attributes, import/export CSV data</p>
-        <div className="setting-actions">
-          <button className="secondary" disabled>Import CSV</button>
-          <button className="secondary" disabled>Export CSV</button>
-          <button className="primary" disabled>Edit Riders</button>
-        </div>
-        <p className="coming-soon">Rider tools are not available yet.</p>
-      </section>
-
-      <section className="card">
-        <h2>Course Database</h2>
-        <p className="setting-desc">Manage race courses and segment definitions</p>
-        <div className="setting-actions">
-          <button className="secondary" disabled>Import Course</button>
-          <button className="primary" disabled>Edit Courses</button>
-        </div>
-        <p className="coming-soon">Course tools are not available yet.</p>
-      </section>
-
-      <section className="card">
         <h2>Simulation Parameters</h2>
         <div className="param-grid">
           <div className="param-item">

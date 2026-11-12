@@ -73,49 +73,14 @@ function StageRaceSetup() {
     <div className="race-setup page-enter">
       <header className="setup-header">
         <h1>{stageRace.name}</h1>
+        <p className="setup-facts">
+          {stageRace.stageCount >= 21 ? 'Grand tour' : 'Week-long stage race'} · {stageRace.stageCount} stages · {stageRace.totalDistanceKm.toFixed(0)} km
+        </p>
       </header>
 
       <div className="setup-grid">
-        <section className="card race-info">
-          <h2>Race Information</h2>
-          <div className="info-grid">
-            <div className="info-item">
-              <span className="info-label">Stages</span>
-              <span className="info-value">{stageRace.stageCount}</span>
-            </div>
-            <div className="info-item">
-              <span className="info-label">Total Distance</span>
-              <span className="info-value">{stageRace.totalDistanceKm.toFixed(0)} km</span>
-            </div>
-            <div className="info-item">
-              <span className="info-label">Type</span>
-              <span className="info-value">
-                {stageRace.stageCount >= 21 ? 'Grand Tour' : 'Stage Race'}
-              </span>
-            </div>
-            <div className="info-item">
-              <span className="info-label">Category</span>
-              <span className="info-value">
-                {stageRace.stageCount >= 21 ? 'World Tour' : 'Pro Series'}
-              </span>
-            </div>
-          </div>
-        </section>
-
-        <section className="card">
-          <h2>About</h2>
-          <p>
-            This {stageRace.stageCount}-stage race will simulate each stage in sequence,
-            accumulating time for the General Classification (GC).
-          </p>
-          <p className="note">
-            Stage races include time bonuses, mountain points, and GC calculations
-            after each stage.
-          </p>
-        </section>
-
         <section className="card simulation-options">
-          <h2>Simulation Options</h2>
+          <h2>How to race it</h2>
           <div className="option-group">
             <label className="checkbox-label">
               <input
@@ -123,9 +88,9 @@ function StageRaceSetup() {
                 checked={interactiveMode}
                 onChange={(e) => setInteractiveMode(e.target.checked)}
               />
-              Interactive mode (control one team)
+              Direct a team
             </label>
-            <span className="option-help">Adds real-time controls for your team during each stage</span>
+            <span className="option-help">Plan each stage, make the calls during it, and chase a GC goal. Off: just watch it run.</span>
           </div>
 
           {interactiveMode && teams.length > 0 && (

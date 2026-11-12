@@ -64,37 +64,17 @@ function RaceSetup() {
   return (
     <div className="race-setup page-enter">
       <header className="setup-header">
-        <h1>Race Setup: {race?.name || raceId}</h1>
-        <p>Configure simulation parameters</p>
+        <h1>{race?.name || raceId}</h1>
+        {race && (
+          <p className="setup-facts">
+            {race.distance} km · {race.date} · {race.temperature}°C · wind {race.windSpeed} km/h
+          </p>
+        )}
       </header>
 
       <div className="setup-grid">
-        <section className="card race-info">
-          <h2>Race Information</h2>
-          {race && (
-            <div className="info-grid">
-              <div className="info-item">
-                <span className="info-label">Distance</span>
-                <span className="info-value">{race.distance} km</span>
-              </div>
-              <div className="info-item">
-                <span className="info-label">Date</span>
-                <span className="info-value">{race.date}</span>
-              </div>
-              <div className="info-item">
-                <span className="info-label">Temperature</span>
-                <span className="info-value">{race.temperature}°C</span>
-              </div>
-              <div className="info-item">
-                <span className="info-label">Wind</span>
-                <span className="info-value">{race.windSpeed} km/h</span>
-              </div>
-            </div>
-          )}
-        </section>
-
         <section className="card simulation-options">
-          <h2>Simulation Options</h2>
+          <h2>How to race it</h2>
           <div className="option-group">
             <label className="checkbox-label">
               <input
@@ -102,9 +82,9 @@ function RaceSetup() {
                 checked={enableIncidents}
                 onChange={(e) => setEnableIncidents(e.target.checked)}
               />
-              Enable incidents (crashes, punctures)
+              Crashes and punctures
             </label>
-            <span className="option-help">Adds randomness with mechanical issues and crashes</span>
+            <span className="option-help">Bad luck can strike any rider</span>
           </div>
 
           <div className="option-group">
@@ -114,9 +94,9 @@ function RaceSetup() {
                 checked={interactiveMode}
                 onChange={(e) => setInteractiveMode(e.target.checked)}
               />
-              Interactive mode (control one team)
+              Direct a team
             </label>
-            <span className="option-help">Adds real-time controls for your team during the race</span>
+            <span className="option-help">Plan the race, make the calls during it, and get a debrief. Off: just watch it run.</span>
           </div>
 
           {interactiveMode && teams.length > 0 && (

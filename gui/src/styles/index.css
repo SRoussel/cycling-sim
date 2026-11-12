@@ -1,5 +1,13 @@
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Source+Serif+4:wght@400;600&display=swap');
 
+/*
+ * The app's design system (shared with the race screen):
+ * - flat panels on a plain background, rows split by hairlines;
+ * - quiet headings, 0.875rem body, tabular numbers;
+ * - orange only for the player's things and primary actions; amber/red only
+ *   for values that need attention; everything else neutral.
+ */
+
 * {
   margin: 0;
   padding: 0;
@@ -8,31 +16,42 @@
 
 :root {
   --color-bg: #0f1216;
-  --color-surface: #171b22;
+  --color-surface: #141920;
+  --color-surface-2: #1a2029;
+  --color-line: rgba(255, 255, 255, 0.06);
   --color-primary: #e86f37;
-  --color-secondary: #243041;
+  --color-secondary: #1a2029;
   --color-text: #f2f4f8;
-  --color-text-muted: #b6c0cc;
-  --color-success: #16a34a;
+  --color-text-soft: #c3cad4;
+  --color-text-muted: #8b95a3;
+  --color-success: #4ade80;
   --color-warning: #fbbf24;
-  --color-danger: #ef4444;
-  --color-cobbles: #3b82f6;
-  --color-climb: #f97316;
-  --color-hilly: #22c55e;
-  --color-tdf: #f4d03f;
-  --color-giro: #f06aa6;
-  --color-vuelta: #e63946;
-  --color-stage: #d9c76a;
-  --shadow-soft: 0 16px 32px rgba(0, 0, 0, 0.35);
+  --color-danger: #f87171;
   --font-numeric: 'Source Serif 4', serif;
 }
 
 body {
   font-family: 'Space Grotesk', 'Segoe UI', system-ui, sans-serif;
-  background: radial-gradient(circle at top left, #1a2330 0%, var(--color-bg) 55%, #0a0c10 100%);
+  background: var(--color-bg);
   color: var(--color-text);
-  line-height: 1.6;
+  line-height: 1.55;
+  font-size: 15px;
   min-height: 100vh;
+}
+
+h1 {
+  font-size: 1.4rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+h2 {
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+a {
+  color: inherit;
 }
 
 .container {
@@ -41,156 +60,179 @@ body {
   padding: 0 1rem;
 }
 
+/* ─── Controls ─────────────────────────────────────── */
+
 button {
   cursor: pointer;
-  border: none;
-  border-radius: 4px;
-  padding: 0.5rem 1rem;
-  font-size: 1rem;
-  transition: all 0.2s;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 0.45rem 0.9rem;
+  font-size: 0.85rem;
+  font-family: inherit;
+  font-weight: 500;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
 }
 
 button:disabled {
-  opacity: 0.55;
+  opacity: 0.5;
   cursor: not-allowed;
 }
 
 button.primary {
   background-color: var(--color-primary);
-  color: white;
+  color: #fff;
 }
 
-button.primary:hover {
+button.primary:hover:not(:disabled) {
   background-color: #d85e29;
-  transform: translateY(-1px);
 }
 
 button.secondary {
-  background-color: var(--color-secondary);
+  background-color: var(--color-surface-2);
+  border-color: var(--color-line);
   color: var(--color-text);
 }
 
-button.secondary:hover {
-  background-color: #2a3b50;
-  transform: translateY(-1px);
+button.secondary:hover:not(:disabled) {
+  border-color: rgba(255, 255, 255, 0.18);
 }
+
+select,
+input[type='text'],
+input[type='number'] {
+  background: var(--color-surface-2);
+  color: var(--color-text);
+  border: 1px solid var(--color-line);
+  border-radius: 6px;
+  padding: 0.35rem 0.5rem;
+  font: inherit;
+  font-size: 0.85rem;
+}
+
+input[type='checkbox'] {
+  accent-color: var(--color-primary);
+}
+
+/* ─── Panels ───────────────────────────────────────── */
 
 .card {
   background-color: var(--color-surface);
-  border-radius: 8px;
-  padding: 1.5rem;
-  margin-bottom: 1rem;
-  border: 1px solid rgba(255, 255, 255, 0.04);
-  box-shadow: var(--shadow-soft);
+  border-radius: 10px;
+  padding: 16px 18px;
+  margin-bottom: 14px;
 }
 
 .card h2 {
-  margin-bottom: 1rem;
-  font-size: 1.25rem;
+  margin-bottom: 10px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-text-soft);
 }
+
+/* ─── Tables ───────────────────────────────────────── */
 
 table {
   width: 100%;
   border-collapse: collapse;
+  font-size: 0.85rem;
 }
 
-th, td {
+th,
+td {
   text-align: left;
-  padding: 0.75rem;
-  border-bottom: 1px solid var(--color-secondary);
+  padding: 7px 8px;
+  border-bottom: 1px solid var(--color-line);
 }
 
-tbody tr:nth-child(even) {
-  background-color: rgba(255, 255, 255, 0.02);
+td {
+  font-variant-numeric: tabular-nums;
 }
 
 th {
   color: var(--color-text-muted);
   font-weight: 500;
-  text-transform: uppercase;
   font-size: 0.75rem;
 }
 
-.badge {
-  display: inline-block;
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  font-weight: 500;
+tbody tr:hover {
+  background-color: rgba(255, 255, 255, 0.02);
 }
+
+/* ─── Labels ───────────────────────────────────────── */
+
+/* Race-type labels: quiet text with a small coloured mark. */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  text-transform: lowercase;
+}
+
+.badge::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 2px;
+  background: var(--color-text-muted);
+}
+
+.badge.cobbles::before { background: #b07a3a; }
+.badge.gravel::before { background: #d6b36a; }
+.badge.climb::before { background: #e86f37; }
+.badge.hilly::before { background: #84cc16; }
+.badge.flat::before,
+.badge.sprint::before { background: #7c8794; }
+.badge.stage.tdf::before { background: #f4d03f; }
+.badge.stage.giro::before { background: #f06aa6; }
+.badge.stage.vuelta::before { background: #e63946; }
+.badge.stage.other::before { background: #c3cad4; }
+
+/* ─── States ───────────────────────────────────────── */
 
 .page-enter {
-  animation: pageFade 0.35s ease-out;
+  animation: pageFade 0.25s ease-out;
 }
 
 @keyframes pageFade {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
 }
 
 .empty-state {
-  padding: 1.5rem;
-  border-radius: 8px;
-  border: 1px dashed rgba(255, 255, 255, 0.18);
-  background: rgba(15, 18, 22, 0.35);
+  padding: 1rem;
   color: var(--color-text-muted);
   text-align: center;
-  font-size: 0.95rem;
+  font-size: 0.875rem;
 }
 
-.badge.cobbles {
-  background-color: var(--color-cobbles);
+.error-message {
+  text-align: center;
+  padding: 3rem 2rem;
+  color: var(--color-text-muted);
 }
 
-.badge.gravel {
-  background-color: #a16207;
-}
-
-.badge.climb {
-  background-color: var(--color-climb);
-}
-
-.badge.sprint {
-  background-color: var(--color-success);
-}
-
-.badge.flat {
-  background-color: var(--color-secondary);
+.error-message h2 {
+  font-size: 1.2rem;
+  margin-bottom: 0.5rem;
   color: var(--color-text);
 }
 
-.badge.hilly {
-  background-color: var(--color-hilly);
-  color: #0b1a0f;
+.error-message p {
+  margin-bottom: 1.25rem;
 }
 
-.badge.stage.tdf {
-  background-color: var(--color-tdf);
-  color: #1a1a1a;
+.stat-val,
+.time-val,
+.gap-val {
+  font-family: var(--font-numeric);
+  font-variant-numeric: tabular-nums;
 }
 
-.badge.stage.giro {
-  background-color: var(--color-giro);
-  color: #1a1a1a;
-}
+/* ─── Scrollbar ────────────────────────────────────── */
 
-.badge.stage.vuelta {
-  background-color: var(--color-vuelta);
-  color: #fff5f5;
-}
-
-.badge.stage.other {
-  background-color: var(--color-stage);
-  color: #2a2414;
-}
-
-/* ─── Scrollbar ─────────────────────────────────────── */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -201,35 +243,10 @@ th {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--color-secondary);
+  background: #263040;
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #2e3d52;
+  background: #33405a;
 }
-
-/* ─── Error / empty states ──────────────────────────── */
-.error-message {
-  text-align: center;
-  padding: 3rem 2rem;
-  color: var(--color-text-muted);
-}
-
-.error-message h2 {
-  font-size: 1.5rem;
-  margin-bottom: 0.75rem;
-  color: var(--color-text);
-}
-
-.error-message p {
-  margin-bottom: 1.5rem;
-}
-
-/* ─── Numeric values (override with font-numeric) ───── */
-.stat-val, .time-val, .gap-val {
-  font-family: var(--font-numeric);
-}
-
-/* ─── Responsive layout padding ─────────────────────── */
-/* Main content responsiveness is handled in Layout.css */

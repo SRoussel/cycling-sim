@@ -167,7 +167,7 @@ function Simulation() {
           results={results}
           team={tc.controlledTeam}
           decisions={tc.calls}
-          onResults={() => (season ? navigate(seasonPage) : navigate(`/results/${raceId}`, { state: { results } }))}
+          onResults={() => (season ? navigate(seasonPage, { state: { justRaced: season.eventId } }) : navigate(`/results/${raceId}`, { state: { results } }))}
           resultsLabel={season ? 'Back to the season →' : undefined}
         />
       ) : undefined}

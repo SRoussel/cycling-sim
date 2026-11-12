@@ -98,7 +98,7 @@ function StageRaceSimulation() {
     const off = EventsOn('interactive_stage_race_complete', (payload: InteractiveStageRaceCompleteEvent) => {
       if (!stageRace || !sessionId || payload.sessionId !== sessionId || payload.stageRaceId !== stageRace.id) return
       if (season) {
-        navigate(`/season/${season.seasonId}`)
+        navigate(`/season/${season.seasonId}`, { state: { justRaced: season.eventId } })
         return
       }
       navigate(`/stage-race-gc/${stageRaceId}`, { state: { gcGoal: payload.goal ?? null, team: tc.controlledTeam } })

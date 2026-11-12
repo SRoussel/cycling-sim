@@ -184,6 +184,14 @@ button.link.danger:hover {
   margin-top: 0;
 }
 
+.race-summary {
+  box-shadow: inset 3px 0 0 var(--color-primary);
+}
+
+.race-summary .event-results {
+  padding: 4px 0 0;
+}
+
 .last-result {
   background: var(--color-surface-2);
   border-radius: 6px;

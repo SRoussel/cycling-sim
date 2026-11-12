@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import * as App from '../../wailsjs/go/main/App'
 import { director, main } from '../../wailsjs/go/models'
 import { Jersey } from '../components/race/Jersey'
@@ -34,6 +34,10 @@ function eventDates(e: main.SeasonEventInfo): string {
 function SeasonHub() {
   const { seasonId } = useParams()
   const id = Number(seasonId)
+  const location = useLocation()
+  // The race just raced (back from the race screen, or just simulated): its
+  // result opens the overview.
+  const [justRaced, setJustRaced] = useState<number>((location.state as { justRaced?: number } | null)?.justRaced ?? 0)
   const [hub, setHub] = useState<main.SeasonHub | null>(null)
   const [tab, setTab] = useState<Tab>('overview')
   const [error, setError] = useState('')
@@ -101,7 +105,7 @@ function SeasonHub() {
         ))}
       </nav>
 
-      {tab === 'overview' && <Overview hub={hub} reload={reload} openTab={setTab} />}
+      {tab === 'overview' && <Overview hub={hub} reload={reload} openTab={setTab} justRaced={justRaced} onRaced={setJustRaced} />}
       {tab === 'calendar' && <Calendar hub={hub} />}
       {tab === 'team' && <Team hub={hub} reload={reload} />}
       {tab === 'standings' && <Standings hub={hub} />}
@@ -110,7 +114,13 @@ function SeasonHub() {
   )
 }
 
-function Overview({ hub, reload, openTab }: { hub: main.SeasonHub; reload: () => Promise<void>; openTab: (t: Tab) => void }) {
+function Overview({ hub, reload, openTab, justRaced, onRaced }: {
+  hub: main.SeasonHub
+  reload: () => Promise<void>
+  openTab: (t: Tab) => void
+  justRaced: number
+  onRaced: (eventId: number) => void
+}) {
   const s = hub.season
   const offseason = s.phase === 'offseason'
   const [busy, setBusy] = useState(false)
@@ -139,7 +149,8 @@ function Overview({ hub, reload, openTab }: { hub: main.SeasonHub; reload: () =>
   return (
     <div className="season-grid">
       <div className="season-main">
-        {hub.next && !offseason && <NextRace hub={hub} reload={reload} />}
+        {justRaced > 0 && <RaceSummary hub={hub} eventId={justRaced} onClose={() => onRaced(0)} />}
+        {hub.next && !offseason && <NextRace hub={hub} reload={reload} onRaced={onRaced} />}
         {hub.yearOver && (
           <section className="card next-race">
             <h2>The {s.year} season is over</h2>
@@ -235,7 +246,7 @@ function ordinal(n: number): string {
 }
 
 /** The next race: pick the squad, then race it live or simulate it. */
-function NextRace({ hub, reload }: { hub: main.SeasonHub; reload: () => Promise<void> }) {
+function NextRace({ hub, reload, onRaced }: { hub: main.SeasonHub; reload: () => Promise<void>; onRaced: (eventId: number) => void }) {
   const navigate = useNavigate()
   const s = hub.season
   const next = hub.next!
@@ -244,7 +255,6 @@ function NextRace({ hub, reload }: { hub: main.SeasonHub; reload: () => Promise<
   const [busy, setBusy] = useState(false)
   const [planning, setPlanning] = useState(false)
   const [plan, setPlan] = useState<PlanValue>({ leaderId: 0, break: 'auto', hardOn: [], attackOn: '' })
-  const [last, setLast] = useState<main.SeasonEventInfo | null>(null)
 
   useEffect(() => {
     let live = true
@@ -271,7 +281,8 @@ function NextRace({ hub, reload }: { hub: main.SeasonHub; reload: () => Promise<
   const simulate = async () => {
     setBusy(true)
     try {
-      setLast(await App.SimulateSeasonEvent(s.id, next.id))
+      await App.SimulateSeasonEvent(s.id, next.id)
+      onRaced(next.id)
       await reload()
     } finally {
       setBusy(false)
@@ -297,13 +308,6 @@ function NextRace({ hub, reload }: { hub: main.SeasonHub; reload: () => Promise<
 
   return (
     <section className="card next-race">
-      {last && (
-        <div className="last-result">
-          <b>{last.name}</b>: {last.podium.map((p, i) => `${i + 1}. ${p}`).join('  ')}
-          {last.mine && <> · <span className="mine-result">us: {last.mine}</span></>}
-          {last.points > 0 && <span className="muted"> · {last.points} pts</span>}
-        </div>
-      )}
       <div className="next-head">
         <div>
           <h2>Next: {next.name}</h2>
@@ -370,6 +374,32 @@ function NextRace({ hub, reload }: { hub: main.SeasonHub; reload: () => Promise<
           </table>
         </>
       )}
+    </section>
+  )
+}
+
+/** A raced event's result: the top ten (or final GC), our riders, stage winners. */
+function RaceSummary({ hub, eventId, onClose }: { hub: main.SeasonHub; eventId: number; onClose: () => void }) {
+  const [rows, setRows] = useState<main.SeasonResultRow[] | null>(null)
+  useEffect(() => {
+    App.GetSeasonEventResults(hub.season.id, eventId).then(setRows)
+  }, [hub.season.id, eventId])
+  const e = hub.events.find((x) => x.id === eventId)
+  if (!e || !rows) return null
+  const finals = rows.filter((r) => r.kind !== 'stage')
+  const top = finals.filter((r) => r.position <= 10)
+  const ours = finals.filter((r) => r.mine && r.position > 10).slice(0, 4)
+  return (
+    <section className="card race-summary">
+      <div className="card-head">
+        <h2>{e.name}{e.days > 1 ? ': final GC' : ''}</h2>
+        <button className="link" onClick={onClose}>Close</button>
+      </div>
+      <p className="muted small">
+        {e.mine ? <>Our best: <span className="mine-result">{e.mine}</span></> : 'No top results for us'}
+        {e.points > 0 && ` · ${e.points} points`}
+      </p>
+      <EventResults rows={[...top, ...ours, ...rows.filter((r) => r.kind === 'stage')]} />
     </section>
   )
 }

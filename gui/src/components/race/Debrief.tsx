@@ -1,7 +1,7 @@
 import { main } from '../../../wailsjs/go/models'
 import { formatGap } from '../../sim/shared'
 import { RaceGoal } from '../../sim/useTeamControl'
-import { teamColor } from '../../sim/teamColors'
+import { Jersey } from './Jersey'
 
 const ordinal = (n: number) => {
   const s = ['th', 'st', 'nd', 'rd']
@@ -66,7 +66,7 @@ export function Debrief({
           if (!r) return null
           return (
             <li key={i} className={`step p${i + 1}${r.team === team ? ' mine' : ''}`}>
-              <span className="who"><i className="team-dot" style={{ background: teamColor(r.team) }} />{r.riderName}</span>
+              <span className="who"><Jersey team={r.team} />{r.riderName}</span>
               <span className="place">{i + 1}</span>
               {i > 0 && r.gap > 0 && <span className="gap">+{formatGap(r.gap)}</span>}
             </li>

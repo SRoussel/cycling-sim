@@ -1145,3 +1145,10 @@
     grid-template-rows: auto auto;
   }
 }
+
+.jersey {
+  display: inline-block;
+  vertical-align: -0.12em;
+  margin-right: 5px;
+  flex-shrink: 0;
+}

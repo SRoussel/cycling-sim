@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { EFFORT_MAX_PCT, EFFORT_MIN_PCT, RaceGroup, RiderTelemetryPoint, formatGap } from '../../sim/shared'
 import { LiveOrder, LiveRider, TEAM_ORDER_KINDS, TEAM_ORDERS, TeamControl, TeamOrderValue } from '../../sim/useTeamControl'
-import { teamColor } from '../../sim/teamColors'
+import { Jersey } from './Jersey'
 
 const ACTION_WORDS: Record<string, string> = {
   hold: 'own judgement',
@@ -70,7 +70,7 @@ export function TeamDock({ tc, groups }: { tc: TeamControl; kmRemaining: number;
   return (
     <section className="panel team">
       <header className="panel-head">
-        <h2><i className="team-dot" style={{ background: teamColor(tc.controlledTeam) }} />{tc.controlledTeam}</h2>
+        <h2><Jersey team={tc.controlledTeam} size={14} />{tc.controlledTeam}</h2>
         <button type="button" className="link" onClick={() => setOrdersOpen((o) => !o)} aria-expanded={ordersOpen}>
           {ordersOpen ? 'Done' : 'Team orders'}
         </button>
@@ -138,7 +138,7 @@ export function TeamDock({ tc, groups }: { tc: TeamControl; kmRemaining: number;
           <span className="gc-label">GC</span>
           {tc.gc.slice(0, 5).map((g) => (
             <span key={g.riderId} className={g.team === tc.controlledTeam ? 'mine' : ''}>
-              <i className="team-dot" style={{ background: teamColor(g.team) }} />
+              <Jersey team={g.team} />
               {g.livePos}. {g.name}
               {g.livePos > 1 && <> +{formatGap(g.liveGap)}</>}
               {g.pos > 0 && g.pos !== g.livePos && <small> ({g.pos})</small>}

@@ -1,7 +1,6 @@
 import { RaceGroup } from '../../sim/shared'
 import { TeamControl } from '../../sim/useTeamControl'
 import { GroupMark } from './ProfileView'
-import { teamColor } from '../../sim/teamColors'
 
 /** A group's dot: the front of the race white, the rest grey (groups with
  * the player's riders get an orange ring where drawn). */
@@ -42,10 +41,11 @@ export function RoadView({ groups, tc, emptyText }: { groups: RaceGroup[]; tc?: 
                   <span className="g-size">{size}</span>
                   <span className="g-gap">{(g.gapS ?? 0) > 0 ? g.gap : ''}</span>
                   <div className="g-riders">
-                    {mine.length > 0 && <span className="g-ours">{mine.map((r) => r.name).join(', ')}</span>}
+                    {mine.map((r) => (
+                      <span key={r.id} className="g-rider g-ours">{r.name}</span>
+                    ))}
                     {shown.map((n, j) => (
-                      <span key={j} className="g-rider">
-                        {tc?.teamByName[n] && <i className="team-dot" style={{ background: teamColor(tc.teamByName[n]) }} title={tc.teamByName[n]} />}
+                      <span key={j} className="g-rider" title={tc?.teamByName[n]}>
                         {n}
                       </span>
                     ))}

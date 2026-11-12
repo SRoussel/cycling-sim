@@ -5,9 +5,8 @@ import { main } from '../../wailsjs/go/models'
 import { EventsOn } from '../../wailsjs/runtime/runtime'
 import { RaceGroup, formatRaceClock, toDisplayGroups } from '../sim/shared'
 import { LiveProgressPayload, useTeamControl } from '../sim/useTeamControl'
-import { EventLog, PlaybackControls, RaceSituationPanel, RouteProfileCard } from '../components/race/RacePanels'
-import { InteractiveHud } from '../components/race/InteractiveHud'
-import { TeamControlPanel } from '../components/race/TeamControlPanel'
+import { RaceDashboard } from '../components/race/RaceDashboard'
+import { RaceTopBar } from '../components/race/RaceTopBar'
 import './Simulation.css'
 import './RaceSetup.css'
 
@@ -126,26 +125,13 @@ function StageRaceSimulation() {
     )
   }
 
-  return (
-    <div className="race-setup">
-      <header className="setup-header">
-        <h1>{stageRace.name}</h1>
-      </header>
+  const stageTotalKm = tc.routeProfile?.totalKm
+    || (stageProgress > 0 ? (tc.routeKm * 100) / stageProgress : 0)
+  const stageKmRemaining = Math.max(0, stageTotalKm - tc.routeKm)
 
-      {interactiveMode && (
-        <div className="sim-header" style={{ marginBottom: '1.5rem' }}>
-          <div />
-          <PlaybackControls
-            paused={tc.paused}
-            speed={tc.speed}
-            disabled={!sessionId}
-            onTogglePause={tc.togglePause}
-            onSpeedChange={tc.changeSpeed}
-          />
-        </div>
-      )}
-
-      {failed && (
+  if (failed) {
+    return (
+      <div className="race-setup">
         <section className="card">
           <h2>Stage Race Halted</h2>
           <p className="empty-state">The stage race stopped. Check logs for details.</p>
@@ -153,46 +139,40 @@ function StageRaceSimulation() {
             <button className="primary">← Back to Setup</button>
           </Link>
         </section>
-      )}
-
-      <section className="card course-progress">
-        <h2>Overall Progress</h2>
-        <div className="progress-bar">
-          <div className="progress-fill" style={{ width: `${progress}%` }}></div>
-          <div className="progress-marker" style={{ left: `${progress}%` }}>{'>>'}</div>
-        </div>
-        <div className="progress-info">
-          <span>{formatRaceClock(overallElapsed)}</span>
-          <span>{Math.round(progress)}%</span>
-          <span>{stageRace.stageCount} stages</span>
-          <span>GC tracking</span>
-        </div>
-      </section>
-
-      <section className="card course-progress">
-        <h2>Stage Progress</h2>
-        <div className="progress-bar">
-          <div className="progress-fill" style={{ width: `${stageProgress}%` }}></div>
-          <div className="progress-marker" style={{ left: `${stageProgress}%` }}>{'>>'}</div>
-        </div>
-        <div className="progress-info">
-          <span>{currentStageName ? currentStageName : 'Preparing stage...'}</span>
-          <span>{formatRaceClock(stageElapsed)}</span>
-          <span>{currentStageNumber ? `Stage ${currentStageNumber}` : 'Stage'}</span>
-          <span>{Math.round(stageProgress)}%</span>
-        </div>
-      </section>
-
-      <RouteProfileCard profile={tc.routeProfile} km={tc.routeKm} />
-
-      {interactiveMode && sessionId && <InteractiveHud tc={tc} groups={groups} />}
-
-      <div className="sim-grid">
-        <RaceSituationPanel groups={groups} emptyText="Stage is running. Live groups will appear here." />
-        <EventLog events={tc.events} emptyText="Waiting for stage events..." />
-        {interactiveMode && <TeamControlPanel tc={tc} />}
       </div>
-    </div>
+    )
+  }
+
+  return (
+    <RaceDashboard
+      tc={tc}
+      groups={groups}
+      interactive={interactiveMode}
+      kmRemaining={stageKmRemaining}
+      emptyText="Stage is running. Live groups will appear here."
+      top={
+        <RaceTopBar
+          title={stageRace.name}
+          subtitle={currentStageNumber ? `Stage ${currentStageNumber}${currentStageName ? ` · ${currentStageName}` : ''}` : 'Preparing stage…'}
+          kmRemaining={stageKmRemaining}
+          kmCovered={tc.routeKm}
+          kmTotal={stageTotalKm}
+          elapsed={stageElapsed}
+          profile={tc.routeProfile}
+          paused={tc.paused}
+          speed={tc.speed}
+          playbackDisabled={!interactiveMode || !sessionId}
+          onTogglePause={tc.togglePause}
+          onSpeedChange={tc.changeSpeed}
+          extra={
+            <div className="dash-stat" title={`Overall ${formatRaceClock(overallElapsed)}`}>
+              <span className="dash-stat-value">{Math.round(progress)}%</span>
+              <span className="dash-stat-label">of {stageRace.stageCount} stages</span>
+            </div>
+          }
+        />
+      }
+    />
   )
 }
 

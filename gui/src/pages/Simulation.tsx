@@ -3,11 +3,10 @@ import { useState, useEffect, useRef } from 'react'
 import * as App from '../../wailsjs/go/main/App'
 import { main } from '../../wailsjs/go/models'
 import { EventsOn } from '../../wailsjs/runtime/runtime'
-import { RaceGroup, formatGap, formatRaceClock, toDisplayGroups } from '../sim/shared'
+import { RaceGroup, formatGap, toDisplayGroups } from '../sim/shared'
 import { LiveProgressPayload, useTeamControl } from '../sim/useTeamControl'
-import { EventLog, PlaybackControls, RaceSituationPanel, RouteProfileCard } from '../components/race/RacePanels'
-import { InteractiveHud } from '../components/race/InteractiveHud'
-import { TeamControlPanel } from '../components/race/TeamControlPanel'
+import { RaceDashboard } from '../components/race/RaceDashboard'
+import { RaceTopBar } from '../components/race/RaceTopBar'
 import './Simulation.css'
 
 interface SimulationProgressEvent extends LiveProgressPayload {
@@ -142,57 +141,34 @@ function Simulation() {
   const controlsDisabled = simulationComplete || (!interactiveMode && liveProgress)
 
   return (
-    <div className="simulation page-enter">
-      <header className="sim-header">
-        <h1>{raceName}</h1>
-        <PlaybackControls
+    <RaceDashboard
+      tc={tc}
+      groups={groups}
+      interactive={interactiveMode}
+      kmRemaining={kmRemaining}
+      emptyText="Simulation running. Results will appear here when finished."
+      top={
+        <RaceTopBar
+          title={raceName}
+          subtitle={currentSegmentName || undefined}
+          kmRemaining={kmRemaining}
+          kmCovered={Math.min(effectiveTotalKm, tc.routeKm || (progress / 100) * effectiveTotalKm)}
+          kmTotal={effectiveTotalKm}
+          elapsed={elapsedTime}
+          profile={tc.routeProfile}
           paused={paused}
           speed={tc.speed}
-          disabled={controlsDisabled}
+          playbackDisabled={controlsDisabled}
           onTogglePause={tc.togglePause}
           onSpeedChange={tc.changeSpeed}
+          extra={simulationComplete && results ? (
+            <button className="primary" onClick={() => navigate(`/results/${raceId}`, { state: { results } })}>
+              View Results →
+            </button>
+          ) : undefined}
         />
-      </header>
-
-      <section className="card course-progress">
-        <div className="course-progress-header">
-          <h2>Race Progress</h2>
-          {currentSegmentName && <span className="segment-badge">{currentSegmentName}</span>}
-          <div className="km-remaining">
-            <span className="km-remaining-value">{kmRemaining.toFixed(1)}</span>
-            <span className="km-remaining-label"> km to go</span>
-          </div>
-        </div>
-        <div className="progress-bar">
-          <div className="progress-fill" style={{ width: `${progress}%` }}></div>
-          <div className="progress-marker" style={{ left: `${progress}%` }}>🚴</div>
-        </div>
-        <div className="progress-info">
-          <span>{tc.routeKm.toFixed(1)} km</span>
-          <span>{formatRaceClock(elapsedTime)}</span>
-          <span>{Math.round(progress)}%</span>
-          <span>{effectiveTotalKm.toFixed(1)} km total</span>
-        </div>
-      </section>
-
-      <RouteProfileCard profile={tc.routeProfile} km={tc.routeKm} />
-
-      {interactiveMode && sessionId && <InteractiveHud tc={tc} groups={groups} />}
-
-      <div className="sim-grid">
-        <RaceSituationPanel groups={groups} emptyText="Simulation running. Results will appear here when finished." />
-        <EventLog events={tc.events} />
-        {interactiveMode && <TeamControlPanel tc={tc} />}
-      </div>
-
-      {simulationComplete && results && (
-        <div className="race-finished">
-          <button className="primary" onClick={() => navigate(`/results/${raceId}`, { state: { results } })}>
-            View Results →
-          </button>
-        </div>
-      )}
-    </div>
+      }
+    />
   )
 }
 

@@ -1,0 +1,507 @@
+/* Live race dashboard: one screen, no page scroll. Each panel scrolls on its own. */
+
+.layout:has(.race-dash) {
+  height: 100vh;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.main-content:has(> .race-dash) {
+  max-width: none;
+  padding: 0.6rem 0.9rem 0.8rem;
+  display: flex;
+  min-height: 0;
+}
+
+.race-dash {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 0.6rem;
+}
+
+.race-dash.interactive {
+  grid-template-columns: minmax(320px, 2fr) minmax(420px, 3fr);
+}
+
+.race-dash > .dash-top {
+  grid-column: 1 / -1;
+}
+
+.dash-panel {
+  background: var(--color-surface);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  padding: 0.6rem 0.75rem;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.dash-panel h2,
+.dash-race .events-panel h2 {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-muted);
+  margin: 0 0 0.4rem;
+}
+
+/* ---------- top bar ---------- */
+
+.dash-top {
+  background: var(--color-surface);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  padding: 0.5rem 0.9rem 0.4rem;
+}
+
+.dash-top-row {
+  display: flex;
+  align-items: center;
+  gap: 1.4rem;
+  flex-wrap: wrap;
+}
+
+.dash-title {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+
+.dash-title h1 {
+  font-size: 1.25rem;
+  margin: 0;
+  white-space: nowrap;
+}
+
+.dash-subtitle {
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dash-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.1;
+}
+
+.dash-stat-value {
+  font-family: var(--font-numeric);
+  font-variant-numeric: tabular-nums;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.dash-km .dash-stat-value {
+  color: var(--color-primary);
+  font-size: 1.6rem;
+}
+
+.dash-stat-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
+}
+
+.dash-top .sim-controls {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.dash-top .sim-controls button {
+  min-width: 6.5rem;
+}
+
+.dash-profile {
+  position: relative;
+  height: 46px;
+  margin-top: 0.35rem;
+}
+
+.dash-profile svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.dash-profile-fill {
+  fill: rgba(182, 192, 204, 0.12);
+}
+
+.dash-profile-done {
+  fill: rgba(232, 111, 55, 0.45);
+}
+
+.dash-profile-line {
+  fill: none;
+  stroke: rgba(242, 244, 248, 0.6);
+  stroke-width: 1.2;
+  vector-effect: non-scaling-stroke;
+}
+
+.dash-profile-bar {
+  position: absolute;
+  inset: 18px 0;
+  background: rgba(182, 192, 204, 0.12);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.dash-profile-bar-fill {
+  height: 100%;
+  background: var(--color-primary);
+}
+
+.dash-profile-marker {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--color-primary);
+  box-shadow: 0 0 6px var(--color-primary);
+  transition: left 0.4s linear;
+}
+
+.dash-profile-scale {
+  position: absolute;
+  inset: auto 0 -2px 0;
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.65rem;
+  color: var(--color-text-muted);
+  pointer-events: none;
+  padding: 0 0.2rem;
+}
+
+/* ---------- left column: road + log ---------- */
+
+.dash-race {
+  min-height: 0;
+  display: grid;
+  grid-template-rows: minmax(0, 3fr) minmax(0, 2fr);
+  gap: 0.6rem;
+}
+
+.dash-race .events-panel {
+  margin: 0;
+  padding: 0.6rem 0.75rem;
+  min-height: 0;
+  overflow-y: auto;
+  background: var(--color-surface);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  box-shadow: none;
+}
+
+.dash-race .events-list {
+  max-height: none;
+  overflow: visible;
+  font-size: 0.82rem;
+}
+
+.road-groups {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.road-group {
+  border-left: 3px solid rgba(182, 192, 204, 0.3);
+  background: rgba(255, 255, 255, 0.025);
+  border-radius: 4px;
+  padding: 0.3rem 0.55rem;
+}
+
+.road-group.has-mine {
+  border-left-color: var(--color-primary);
+  background: rgba(232, 111, 55, 0.08);
+}
+
+.road-group-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+}
+
+.road-group-name {
+  font-weight: 600;
+}
+
+.road-group-size {
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+}
+
+.road-group-gap {
+  margin-left: auto;
+  font-family: var(--font-numeric);
+  font-variant-numeric: tabular-nums;
+}
+
+.road-group-mine {
+  font-size: 0.8rem;
+  color: var(--color-primary);
+}
+
+.road-group-riders {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---------- right column: the team ---------- */
+
+.team-dock {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.team-dock > * {
+  flex-shrink: 0;
+}
+
+.dock-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.dock-head h2 {
+  margin: 0;
+}
+
+.dock-pause {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.dock-alert {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  padding: 0.4rem 0.55rem;
+  border-radius: 6px;
+  background: rgba(251, 191, 36, 0.12);
+  border: 1px solid rgba(251, 191, 36, 0.4);
+  font-size: 0.85rem;
+}
+
+.dock-alert span {
+  flex: 1;
+  min-width: 12rem;
+}
+
+.dock-orders {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 0.35rem 0.6rem;
+}
+
+.dock-order {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+}
+
+.team-dock select {
+  background: var(--color-secondary);
+  color: var(--color-text);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  padding: 0.2rem 0.35rem;
+  font-size: 0.8rem;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.dock-riders {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+  align-content: start;
+  align-items: start;
+  gap: 0.4rem;
+}
+
+.dock-rider {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+  padding: 0.35rem 0.5rem 0.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.dock-rider-top {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.dock-rider-name {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dock-rider-group {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.dock-rider-tel {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  margin-left: auto;
+}
+
+.team-dock button {
+  font-size: 0.78rem;
+  padding: 0.2rem 0.5rem;
+}
+
+.team-dock .dock-attack {
+  flex-shrink: 0;
+  background: rgba(232, 111, 55, 0.18);
+  color: var(--color-text);
+  border: 1px solid rgba(232, 111, 55, 0.55);
+}
+
+.team-dock .dock-attack:hover:not(:disabled) {
+  background: var(--color-primary);
+}
+
+.dock-rider-cmds {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.dock-modes {
+  display: flex;
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
+}
+
+.team-dock .dock-modes button {
+  border-radius: 0;
+  background: transparent;
+  color: var(--color-text-muted);
+  padding: 0.15rem 0.5rem;
+}
+
+.team-dock .dock-modes button + button {
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.team-dock .dock-modes button.on {
+  background: var(--color-primary);
+  color: white;
+}
+
+.dock-effort {
+  flex: 1;
+  min-width: 60px;
+}
+
+.dock-effort-value {
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  width: 2.6rem;
+  text-align: right;
+}
+
+.dock-rider-finale {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.dock-rider-finale select {
+  flex: 1;
+  min-width: 0;
+}
+
+.dock-train {
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+}
+
+.dock-train summary {
+  cursor: pointer;
+}
+
+.dock-train ol {
+  margin: 0.3rem 0 0;
+  padding-left: 1.4rem;
+}
+
+.dock-train li span {
+  display: inline-flex;
+  gap: 0.25rem;
+  margin-right: 0.5rem;
+}
+
+.dock-hint {
+  margin: 0.25rem 0;
+  font-size: 0.75rem;
+}
+
+@media (max-width: 900px) {
+  .layout:has(.race-dash) {
+    height: auto;
+    overflow: visible;
+  }
+  .race-dash.interactive {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .dash-race {
+    grid-template-rows: auto auto;
+  }
+}
+
+/* The HUD's compact bars sit in a row; here the card is a column. */
+.dock-rider .energy-bars.compact {
+  flex: none;
+  min-width: 0;
+  gap: 0.1rem;
+}
+
+.dash-race .events-list li {
+  padding: 0.25rem 0;
+  font-size: 0.82rem;
+}

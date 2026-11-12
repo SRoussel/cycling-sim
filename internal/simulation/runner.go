@@ -751,22 +751,15 @@ func interpolateProgressGroups(previous []ProgressGroup, current []ProgressGroup
 		prevByName[group.Name] = group
 	}
 
+	// Only the gap eases between updates; who is in a group is always the
+	// current state (showing the previous members mislabelled groups whose
+	// membership changed, e.g. a 1-rider "Lead" listing the old bunch).
 	out := make([]ProgressGroup, len(current))
 	for i, group := range current {
 		startGap := group.GapSeconds
-		displayRiders := group.Riders
 		if prev, ok := prevByName[group.Name]; ok {
 			startGap = prev.GapSeconds
-			if frac < 1.0 && len(prev.Riders) > 0 {
-				displayRiders = prev.Riders
-			}
-		} else if i < len(previous) {
-			startGap = previous[i].GapSeconds
-			if frac < 1.0 && len(previous[i].Riders) > 0 {
-				displayRiders = previous[i].Riders
-			}
 		}
-
 		gap := startGap + (group.GapSeconds-startGap)*frac
 		if gap < 0 {
 			gap = 0
@@ -775,7 +768,7 @@ func interpolateProgressGroups(previous []ProgressGroup, current []ProgressGroup
 		out[i] = ProgressGroup{
 			Name:       group.Name,
 			GapSeconds: gap,
-			Riders:     displayRiders,
+			Riders:     group.Riders,
 			Size:       group.Size,
 		}
 	}

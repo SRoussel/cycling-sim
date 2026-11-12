@@ -148,6 +148,10 @@ th {
   background-color: var(--color-cobbles);
 }
 
+.badge.gravel {
+  background-color: #a16207;
+}
+
 .badge.climb {
   background-color: var(--color-climb);
 }

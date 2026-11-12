@@ -8,7 +8,15 @@ type SurfaceType string
 const (
 	SurfaceRoad    SurfaceType = "road"
 	SurfaceCobbles SurfaceType = "cobbles"
+	SurfaceGravel  SurfaceType = "gravel" // strade bianche: unpaved, ridden like cobbles for now
 )
+
+// Unpaved reports cobbles or gravel: rough sectors with their own rolling
+// resistance (by stars), less drafting and handling costs. The engine treats
+// both alike for now; the surface tells the player which it is.
+func (s SurfaceType) Unpaved() bool {
+	return s == SurfaceCobbles || s == SurfaceGravel
+}
 
 // Course represents a race course composed of segments.
 type Course struct {
@@ -67,8 +75,8 @@ func (s *Segment) Validate() error {
 	if s.GradientPct < -25 || s.GradientPct > 30 {
 		return fmt.Errorf("gradient must be between -25%% and 30%%, got %.1f%%", s.GradientPct)
 	}
-	if s.SurfaceType != SurfaceRoad && s.SurfaceType != SurfaceCobbles {
-		return fmt.Errorf("surface type must be 'road' or 'cobbles', got %q", s.SurfaceType)
+	if s.SurfaceType != SurfaceRoad && !s.SurfaceType.Unpaved() {
+		return fmt.Errorf("surface type must be 'road', 'cobbles' or 'gravel', got %q", s.SurfaceType)
 	}
 	return nil
 }

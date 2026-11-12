@@ -2,7 +2,6 @@ package main
 
 import (
 	"cycling_sim/internal/database"
-	"cycling_sim/internal/model"
 	"fmt"
 	"os"
 	"sort"
@@ -56,7 +55,7 @@ func main() {
 		fmt.Printf("\n=== %s (CourseID=%d, Segs=%d) ===\n", info.name, info.id, len(segs))
 		for i, s := range segs {
 			surface := "road"
-			if s.SurfaceType == model.SurfaceCobbles {
+			if s.SurfaceType.Unpaved() {
 				surface = "cobble"
 			}
 			fmt.Printf("  [%d] %-35s  dist=%.1fkm  grad=%.1f%%  surf=%s\n",

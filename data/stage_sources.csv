@@ -2,15 +2,17 @@
 # stage mod (e.g. the "WorldDB" Steam Workshop mod). Used by `cycling-sim import-stages <dir>`,
 # which writes derived segments to data/local/course_profiles.json (not committed).
 # Years were chosen to match the reference results (2023 hold-out, 2024 validation)
-# where a file exists; Note says when the route year differs.
+# where a file exists; Note says when the route year differs. An optional 4th column
+# gives the sectors' surface: stage files don't say, so "gravel" marks strade bianche
+# (default cobbles).
 Course,File,Note
 Milan-San Remo,topclas_sanremo_2023.cds,
 Tour of Flanders,topclas_rondevv_2022.cds,2022 route (no 2023/2024 file); same finale
 Paris-Roubaix,topclas_roubaix_2023.cds,
 Liege-Bastogne-Liege,topclas_lbl_2023.cds,
 Il Lombardia,topclas_lombardia_2024.cds,2024 route (Bergamo-Como)
-Strade Bianche,topclas_stradebian_2022.cds,2022 route (184 km like 2023)
-Strade Bianche 2024,topclas_stradebian_2024.cds,
+Strade Bianche,topclas_stradebian_2022.cds,2022 route (184 km like 2023),gravel
+Strade Bianche 2024,topclas_stradebian_2024.cds,,gravel
 Il Lombardia 2023,topclas_lombardia_2021.cds,2021 route (Como-Bergamo like 2023)
 E3 Saxo Classic,topclas_harelbeke_2022.cds,
 Gent-Wevelgem,topclas_gwevelgem_2023.cds,
@@ -44,7 +46,7 @@ Giro 2024 Stage 2: San Francesco al Campo - Santuario di Oropa,top_giro_02_2024.
 Giro 2024 Stage 3: Novara - Fossano,top_giro_03_2024.cds,
 Giro 2024 Stage 4: Acqui Terme - Andora,top_giro_04_2024.cds,
 Giro 2024 Stage 5: Genoa - Lucca,top_giro_05_2024.cds,
-Giro 2024 Stage 6: Viareggio - Rapolano Terme,top_giro_06_2024.cds,
+Giro 2024 Stage 6: Viareggio - Rapolano Terme,top_giro_06_2024.cds,,gravel
 Giro 2024 Stage 7: Foligno - Perugia (ITT),top_giro_07_2024.cds,
 Giro 2024 Stage 8: Spoleto - Prati di Tivo,top_giro_08_2024.cds,
 Giro 2024 Stage 9: Avezzano - Naples,top_giro_09_2024.cds,

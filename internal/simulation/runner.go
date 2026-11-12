@@ -91,26 +91,28 @@ type RouteSector struct {
 	Name     string  `json:"name"`
 	StartKm  float64 `json:"startKm"`
 	LengthKm float64 `json:"lengthKm"`
-	Stars    int     `json:"stars"` // 1-5 (0: unknown)
+	Stars    int     `json:"stars"`   // 1-5 (0: unknown)
+	Surface  string  `json:"surface"` // cobbles or gravel
 }
 
-// routeSectors merges a course's cobbled segments into sectors.
+// routeSectors merges a course's unpaved segments into sectors (cobbles or
+// gravel; a change of surface or name starts a new one).
 func routeSectors(course *model.Course) []RouteSector {
 	var out []RouteSector
 	km := 0.0
 	prevCobbled := false
 	for _, seg := range course.Segments {
-		cobbled := seg.SurfaceType == model.SurfaceCobbles
+		cobbled := seg.SurfaceType.Unpaved()
 		if cobbled {
 			n := len(out)
 			name := sectorName(seg.Name)
-			if prevCobbled && n > 0 && out[n-1].Name == name {
+			if prevCobbled && n > 0 && out[n-1].Name == name && out[n-1].Surface == string(seg.SurfaceType) {
 				out[n-1].LengthKm += seg.DistanceKm
 				if seg.CobbleStars > out[n-1].Stars {
 					out[n-1].Stars = seg.CobbleStars
 				}
 			} else {
-				out = append(out, RouteSector{Name: name, StartKm: km, LengthKm: seg.DistanceKm, Stars: seg.CobbleStars})
+				out = append(out, RouteSector{Name: name, StartKm: km, LengthKm: seg.DistanceKm, Stars: seg.CobbleStars, Surface: string(seg.SurfaceType)})
 			}
 		}
 		prevCobbled = cobbled

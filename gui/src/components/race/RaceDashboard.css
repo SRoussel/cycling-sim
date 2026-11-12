@@ -803,3 +803,15 @@ button.decision-option:hover {
 .decision-card.kind-cobbles {
   border-color: rgba(245, 158, 11, 0.8);
 }
+
+/* gravel: sand, not brick */
+.pv-cobbles.gravel { fill: #d6b36a; }
+.pv-cobbles.gravel.s1 { fill: #d6b36a88; }
+.pv-cobbles.gravel.s2 { fill: #d6b36acc; }
+.pv-cobbles.gravel.s3 { fill: #e0b04f; }
+.pv-sector-names span.gravel { color: #e9d29b; }
+
+.decision-card.kind-gravel {
+  border-color: rgba(214, 179, 106, 0.85);
+  background: linear-gradient(135deg, rgba(214, 179, 106, 0.16), rgba(214, 179, 106, 0.05));
+}

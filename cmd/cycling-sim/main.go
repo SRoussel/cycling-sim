@@ -650,7 +650,7 @@ func cmdImportStages(db *database.DB, dir string) {
 		}
 		cob := 0.0
 		for _, s := range segs {
-			if s.SurfaceType == model.SurfaceCobbles {
+			if s.SurfaceType.Unpaved() {
 				cob += s.DistanceKm
 			}
 		}

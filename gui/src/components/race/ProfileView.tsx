@@ -30,6 +30,7 @@ export interface Climb {
   avgPct: number
   name?: string
   stars?: number
+  surface?: string
 }
 
 /**
@@ -73,6 +74,7 @@ export function findClimbs(profile: RouteProfile | null): Climb[] {
         best = o
         c.name = sec.name
         c.stars = sec.stars
+        c.surface = sec.surface
       }
     }
   }
@@ -178,7 +180,7 @@ export function ProfileView({
             y={H - 7}
             width={Math.max(2, x(Math.min(toKm, sec.startKm + sec.lengthKm)) - x(Math.max(fromKm, sec.startKm)))}
             height={7}
-            className={`pv-cobbles s${Math.min(5, Math.max(1, sec.stars || 3))}`}
+            className={`pv-cobbles${sec.surface === 'gravel' ? ' gravel' : ''} s${Math.min(5, Math.max(1, sec.stars || 3))}`}
           />
         ))}
         <rect x={0} y={0} width={x(Math.max(fromKm, Math.min(km, toKm)))} height={H} className="pv-done" />
@@ -192,7 +194,7 @@ export function ProfileView({
       {showSectorNames && (
         <div className="pv-sector-names">
           {labelled.map(({ sec, left }) => (
-            <span key={sec.startKm} style={{ left: `${left}%` }} title={`${sec.name}: ${sec.lengthKm.toFixed(1)} km, ${sec.stars}★`}>
+            <span key={sec.startKm} className={sec.surface === 'gravel' ? 'gravel' : ''} style={{ left: `${left}%` }} title={`${sec.name}: ${sec.lengthKm.toFixed(1)} km of ${sec.surface === 'gravel' ? 'gravel' : 'cobbles'}, ${sec.stars}★`}>
               {sec.name} {stars(sec.stars)}
             </span>
           ))}

@@ -15,7 +15,7 @@ func ApplyIncidents(riders []*RiderState, segment *model.Segment, rng *rand.Rand
 	if segment.IsTechnical {
 		baseProbability = 0.008
 	}
-	if segment.SurfaceType == model.SurfaceCobbles {
+	if segment.SurfaceType.Unpaved() {
 		baseProbability = 0.015
 	}
 	if segment.GradientPct < -3.0 {
@@ -28,7 +28,7 @@ func ApplyIncidents(riders []*RiderState, segment *model.Segment, rng *rand.Rand
 		}
 
 		probability := baseProbability
-		if segment.SurfaceType == model.SurfaceCobbles || segment.IsTechnical || segment.GradientPct < -3.0 {
+		if segment.SurfaceType.Unpaved() || segment.IsTechnical || segment.GradientPct < -3.0 {
 			handlingMod := 1.0 + float64(70-rs.Rider.Handling)*0.01
 			if handlingMod < 0.6 {
 				handlingMod = 0.6
@@ -52,10 +52,10 @@ func ApplyIncidents(riders []*RiderState, segment *model.Segment, rng *rand.Rand
 		} else {
 			// Crash: chance it ends race (DNF) depends on handling and terrain
 			dnfChance := 0.08
-			if segment.SurfaceType == model.SurfaceCobbles || segment.IsTechnical || segment.GradientPct < -3.0 {
+			if segment.SurfaceType.Unpaved() || segment.IsTechnical || segment.GradientPct < -3.0 {
 				dnfChance = 0.15
 			}
-			if segment.SurfaceType == model.SurfaceCobbles {
+			if segment.SurfaceType.Unpaved() {
 				dnfChance = 0.18
 			}
 			if rs.Rider.Handling < 65 {

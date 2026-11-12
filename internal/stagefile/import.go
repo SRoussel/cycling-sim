@@ -16,6 +16,9 @@ type Source struct {
 	Course string
 	File   string
 	Note   string
+	// Surface of the file's sectors: "cobbles" (default) or "gravel". Stage
+	// files don't say what a sector is made of.
+	Surface model.SurfaceType
 }
 
 // LoadSources reads the course → stage file mapping (Course,File[,Note];
@@ -45,6 +48,10 @@ func LoadSources(path string) ([]Source, error) {
 		if len(row) > 2 {
 			s.Note = strings.TrimSpace(row[2])
 		}
+		s.Surface = model.SurfaceCobbles
+		if len(row) > 3 && strings.EqualFold(strings.TrimSpace(row[3]), string(model.SurfaceGravel)) {
+			s.Surface = model.SurfaceGravel
+		}
 		out = append(out, s)
 	}
 	return out, nil
@@ -63,7 +70,8 @@ type SegmentJSON struct {
 	Name        string  `json:"name"`
 	DistanceKm  float64 `json:"km"`
 	GradientPct float64 `json:"gradient"`
-	Cobbles     bool    `json:"cobbles,omitempty"`
+	Cobbles     bool    `json:"cobbles,omitempty"` // an unpaved sector (cobbles, or gravel with Gravel)
+	Gravel      bool    `json:"gravel,omitempty"`
 	Stars       int     `json:"stars,omitempty"` // sector difficulty, 1-5
 }
 
@@ -74,6 +82,9 @@ func (p Profile) ModelSegments() []model.Segment {
 		surface := model.SurfaceRoad
 		if s.Cobbles {
 			surface = model.SurfaceCobbles
+			if s.Gravel {
+				surface = model.SurfaceGravel
+			}
 		}
 		out[i] = model.Segment{SegmentOrder: i + 1, Name: s.Name, DistanceKm: s.DistanceKm,
 			GradientPct: s.GradientPct, SurfaceType: surface, IsTechnical: s.Cobbles, CobbleStars: s.Stars}
@@ -105,7 +116,8 @@ func Build(dir string, sources []Source, distanceKm map[string]float64) ([]Profi
 		p := Profile{Course: s.Course, Stage: st.Name, File: s.File}
 		for _, sg := range segs {
 			p.Segments = append(p.Segments, SegmentJSON{Name: sg.Name, DistanceKm: sg.DistanceKm,
-				GradientPct: sg.GradientPct, Cobbles: sg.SurfaceType == model.SurfaceCobbles, Stars: sg.CobbleStars})
+				GradientPct: sg.GradientPct, Cobbles: sg.SurfaceType.Unpaved(), Gravel: sg.SurfaceType.Unpaved() && s.Surface == model.SurfaceGravel,
+				Stars: sg.CobbleStars})
 		}
 		out = append(out, p)
 	}

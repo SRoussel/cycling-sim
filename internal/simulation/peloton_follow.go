@@ -72,7 +72,7 @@ func riderCdAFactor(rs *RiderState, g *Group, seg *model.Segment) float64 {
 // draftFor returns the CdA multiplier for a rider at a position in a group.
 func draftFor(position int, surface model.SurfaceType) float64 {
 	d := DraftFactor(position)
-	if surface == model.SurfaceCobbles {
+	if surface.Unpaved() {
 		d = 1 - (1-d)*cobbleDraftRetention
 	}
 	return d

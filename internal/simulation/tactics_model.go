@@ -280,7 +280,7 @@ func DecideAction(rs *RiderState, state *RaceState, hasLeader bool, rng *rand.Ra
 	// This block only fires when gradient < 3.5 (never on real mountains).
 	// ------------------------------------------------------------------
 	if state != nil && state.IsStageRace && rs.TeamRole == RoleLeader && state.Segment != nil {
-		if state.Segment.SurfaceType != model.SurfaceCobbles && climbOf(state.Segment) < terrainRolling {
+		if !state.Segment.SurfaceType.Unpaved() && climbOf(state.Segment) < terrainRolling {
 			if !state.HasBreakaway || (!state.BreakawayHasDangerous && state.Phase != PhaseFinal) {
 				if state.Phase != PhaseFinal || rng.Float64() < 0.85 {
 					return ActionConserve
@@ -315,7 +315,7 @@ func DecideAction(rs *RiderState, state *RaceState, hasLeader bool, rng *rand.Ra
 			return ActionChase
 		}
 		if rs.TeamRole == RoleLeader {
-			if state.Segment != nil && state.Segment.SurfaceType != model.SurfaceCobbles && climbOf(state.Segment) < terrainRolling && state.Phase != PhaseFinal {
+			if state.Segment != nil && !state.Segment.SurfaceType.Unpaved() && climbOf(state.Segment) < terrainRolling && state.Phase != PhaseFinal {
 				return ActionConserve
 			}
 		}
@@ -354,7 +354,7 @@ func ApplyEventModifiers(params TacticsParams, state *RaceState) TacticsParams {
 		return params
 	}
 	segment := state.Segment
-	if segment.SurfaceType == model.SurfaceCobbles || segment.IsTechnical {
+	if segment.SurfaceType.Unpaved() || segment.IsTechnical {
 		params.AttackAggression *= 1.15
 		state.logCondition("cobbles", "technical sector")
 	}

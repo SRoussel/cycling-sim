@@ -55,7 +55,7 @@ func forceRolling(totalMassKg float64, gradientPct float64, surface model.Surfac
 	angle := math.Atan(gradientPct / 100.0)
 	c := crr
 
-	if surface == model.SurfaceCobbles {
+	if surface.Unpaved() {
 		// Apply handling-based rolling resistance on cobbles
 		c = crrCobbles * roughness * HandlingFactor(handling)
 	}
@@ -257,7 +257,7 @@ func EffectivePower(rider *model.Rider, basePower float64, segment *model.Segmen
 		factor = 1 + (ModifierFactor(rider.ClimbingAbility)-1)*w
 	}
 	power := basePower * factor * AltitudePowerFactor(segment.ElevationM)
-	if !isTT && segment.SurfaceType == model.SurfaceCobbles {
+	if !isTT && segment.SurfaceType.Unpaved() {
 		// Reduce effective power for poor handlers on cobbles.
 		handlingFactor := 1.0 + float64(rider.Handling-70)*0.006
 		if handlingFactor < 0.7 {

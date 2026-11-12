@@ -195,7 +195,7 @@ func simulateStep(riders []*RiderState, segment *model.Segment, isTT bool, dista
 		state.Segment = segment
 		state.Climb = climbOf(segment)
 		// Sprint trains only really matter on flat/rolling finishes.
-		state.SprintChaseActive = state.Phase == PhaseFinal && state.Rival.SprintTeamsChasing && state.Climb < terrainDrag && segment.SurfaceType != model.SurfaceCobbles
+		state.SprintChaseActive = state.Phase == PhaseFinal && state.Rival.SprintTeamsChasing && state.Climb < terrainDrag && !segment.SurfaceType.Unpaved()
 		if state.SprintChaseActive && !state.LastSprintChase {
 			state.LogEvent("sprint-chase", "sprinter teams drive the chase")
 		}
@@ -304,7 +304,7 @@ func simulateStep(riders []*RiderState, segment *model.Segment, isTT bool, dista
 				actualPower = 0
 			}
 
-			rs.WPrime.UpdateWithHandling(actualPower, rs.thresholdIntOn(segment), segTime, rs.Rider.Handling, segment.SurfaceType == model.SurfaceCobbles)
+			rs.WPrime.UpdateWithHandling(actualPower, rs.thresholdIntOn(segment), segTime, rs.Rider.Handling, segment.SurfaceType.Unpaved())
 			rs.addWork(actualPower, segTime)
 			if !isTT {
 				accordionCost(rs, len(group.Riders), groupSpeed)

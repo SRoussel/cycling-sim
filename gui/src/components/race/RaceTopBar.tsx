@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { RouteProfile, clamp01, formatRaceClock } from '../../sim/shared'
+import { RouteProfile, clamp01, formatRaceClock, sectorIcon, sectorNoun } from '../../sim/shared'
 import { ProfileView, findClimbs, stars } from './ProfileView'
 import { PlaybackControls } from './RacePanels'
 
@@ -109,11 +109,11 @@ function RouteStrip({ profile, km, kmTotal }: { profile: RouteProfile | null; km
           <span className="route-next">
             {onSector ? (
               <span className="route-cobbles on">
-                🪨 {onSector.name} {stars(onSector.stars)}: {(onSector.startKm + onSector.lengthKm - km).toFixed(1)} km of cobbles left
+                {sectorIcon(onSector.surface)} {onSector.name} {stars(onSector.stars)}: {(onSector.startKm + onSector.lengthKm - km).toFixed(1)} km of {sectorNoun(onSector.surface)} left
               </span>
             ) : nextSector && nextSector.startKm - km <= 30 ? (
               <span className="route-cobbles">
-                🪨 {nextSector.name} {stars(nextSector.stars)} in {(nextSector.startKm - km).toFixed(1)} km ({nextSector.lengthKm.toFixed(1)} km)
+                {sectorIcon(nextSector.surface)} {nextSector.name} {stars(nextSector.stars)} in {(nextSector.startKm - km).toFixed(1)} km ({nextSector.lengthKm.toFixed(1)} km of {sectorNoun(nextSector.surface)})
               </span>
             ) : null}
             {current ? (
@@ -164,12 +164,12 @@ function RouteStrip({ profile, km, kmTotal }: { profile: RouteProfile | null; km
             {sectors.length > 0 && (
               <table className="route-climbs">
                 <thead>
-                  <tr><th>Cobbled sector</th><th>km to go</th><th>Length</th><th>Difficulty</th></tr>
+                  <tr><th>{sectors.every((s) => s.surface === 'gravel') ? 'Gravel sector' : sectors.some((s) => s.surface === 'gravel') ? 'Sector' : 'Cobbled sector'}</th><th>km to go</th><th>Length</th><th>Difficulty</th></tr>
                 </thead>
                 <tbody>
                   {sectors.map((sec) => (
                     <tr key={sec.startKm} className={sec.startKm + sec.lengthKm < km ? 'done' : ''}>
-                      <td>{sec.name}</td>
+                      <td>{sectorIcon(sec.surface)} {sec.name}</td>
                       <td>{(total - sec.startKm).toFixed(1)}</td>
                       <td>{sec.lengthKm.toFixed(1)} km</td>
                       <td className="stars">{stars(sec.stars)}</td>

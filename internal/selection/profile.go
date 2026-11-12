@@ -32,7 +32,7 @@ func AnalyzeCourse(course *model.Course, raceType model.RaceType) CourseProfile 
 		if seg.GradientPct > 4.0 {
 			climbKm += seg.DistanceKm
 		}
-		if seg.SurfaceType == model.SurfaceCobbles {
+		if seg.SurfaceType.Unpaved() {
 			cobblesKm += seg.DistanceKm
 		}
 	}

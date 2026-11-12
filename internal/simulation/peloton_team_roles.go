@@ -208,7 +208,7 @@ func decisiveTime(rs *RiderState, segments []model.Segment) float64 {
 	t, hard := 0.0, false
 	for i := range segments {
 		seg := &segments[i]
-		if seg.SurfaceType != model.SurfaceCobbles && climbOf(seg) < terrainClimb {
+		if !seg.SurfaceType.Unpaved() && climbOf(seg) < terrainClimb {
 			continue
 		}
 		hard = true

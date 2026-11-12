@@ -84,7 +84,7 @@ func SimulateTT(config RaceConfig) []model.RaceResult {
 
 			segTime := SegmentTime(speed, seg.DistanceKm)
 			rs.TotalTime += segTime
-			rs.WPrime.UpdateWithHandling(power, rs.EffectiveFTP, segTime, rs.Rider.Handling, seg.SurfaceType == model.SurfaceCobbles)
+			rs.WPrime.UpdateWithHandling(power, rs.EffectiveFTP, segTime, rs.Rider.Handling, seg.SurfaceType.Unpaved())
 		}
 	}
 

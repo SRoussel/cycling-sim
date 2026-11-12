@@ -166,7 +166,7 @@ func stageDifficulty(course *model.Course, raceType model.RaceType) float64 {
 		if seg.GradientPct > 0 {
 			totalClimbM += seg.DistanceKm * 1000.0 * seg.GradientPct / 100.0
 		}
-		if seg.SurfaceType == model.SurfaceCobbles {
+		if seg.SurfaceType.Unpaved() {
 			cobblesKm += seg.DistanceKm
 		}
 	}

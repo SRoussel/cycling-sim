@@ -18,7 +18,11 @@ export interface RouteSector {
   startKm: number
   lengthKm: number
   stars: number
+  surface?: 'cobbles' | 'gravel' | string
 }
+
+export const sectorIcon = (surface?: string) => (surface === 'gravel' ? '💨' : '🪨')
+export const sectorNoun = (surface?: string) => (surface === 'gravel' ? 'gravel' : 'cobbles')
 
 export interface RouteProfile {
   totalKm: number

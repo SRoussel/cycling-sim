@@ -103,7 +103,11 @@ func TestSegmentValidation(t *testing.T) {
 	}
 
 	s.GradientPct = 5
-	s.SurfaceType = "gravel"
+	s.SurfaceType = SurfaceGravel
+	if err := s.Validate(); err != nil {
+		t.Errorf("gravel is a surface: %v", err)
+	}
+	s.SurfaceType = "ice"
 	if err := s.Validate(); err == nil {
 		t.Error("invalid surface type should fail")
 	}

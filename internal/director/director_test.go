@@ -266,3 +266,22 @@ func TestCobbledClimbIsNamed(t *testing.T) {
 		t.Errorf("a cobbled climb is the climb's moment, not a sector's")
 	}
 }
+
+func TestLongGravelSectorWithARiseInIt(t *testing.T) {
+	d := New("Us")
+	// Monte Sante Marie: 10 km of 3★ gravel from km 133 (82 to go) with a
+	// 1.4 km rise inside it.
+	d.SetRoute(&simulation.RouteProfile{TotalKm: 215,
+		Points:  []simulation.ProfilePoint{{Km: 0}, {Km: 136}, {Km: 137.4, Elev: 80}, {Km: 215}},
+		Sectors: []simulation.RouteSector{{Name: "Monte Sante Marie", StartKm: 133, LengthKm: 10, Stars: 3, Surface: "gravel"}}})
+	if !d.decisiveSectors[133] {
+		t.Fatalf("Monte Sante Marie should be decisive: %v", d.decisiveSectors)
+	}
+	if len(d.decisive) != 0 {
+		t.Errorf("the rise inside it belongs to the sector's moment: %v", d.decisive)
+	}
+	m := d.Next(race(85, [][]int64{append([]int64{1, 2, 3, 10}, bunch(11, 40)...)}, []float64{0}))
+	if m == nil || m.Title != "💨 Monte Sante Marie in 3.0 km" || m.Kind != "gravel" {
+		t.Fatalf("want the gravel moment, got %+v", m)
+	}
+}

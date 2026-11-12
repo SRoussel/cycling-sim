@@ -28,7 +28,7 @@ func classifyStageProfile(course *model.Course, raceType model.RaceType) stagePr
 	hasCobbles := false
 	totalClimbM := 0.0
 	for _, seg := range course.Segments {
-		if seg.SurfaceType == model.SurfaceCobbles {
+		if seg.SurfaceType.Unpaved() {
 			hasCobbles = true
 		}
 		if seg.GradientPct > 3 {

@@ -32,7 +32,8 @@ function Home() {
   const getCourseType = (race: main.RaceInfo): string => {
     // Map course names to types (the API provides this via courseName analysis)
     const name = race.name.toLowerCase()
-    if (name.includes('roubaix') || name.includes('flanders') || name.includes('strade') || name.includes('e3')) {
+    if (name.includes('strade')) return 'gravel'
+    if (name.includes('roubaix') || name.includes('flanders') || name.includes('e3')) {
       return 'cobbles'
     }
     if (name.includes('liege') || name.includes('lombardia') || name.includes('fleche')) {

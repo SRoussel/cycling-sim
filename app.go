@@ -782,11 +782,14 @@ func (a *App) makeStageRaceProgressCallback(stageRaceID int64, stageCount int, s
 }
 
 func classifyCourse(c model.Course) string {
-	hasCobbles := false
+	hasCobbles, hasGravel := false, false
 	totalClimbing := 0.0
 	for _, seg := range c.Segments {
-		if seg.SurfaceType == model.SurfaceCobbles {
+		switch seg.SurfaceType {
+		case model.SurfaceCobbles:
 			hasCobbles = true
+		case model.SurfaceGravel:
+			hasGravel = true
 		}
 		if seg.GradientPct > 3 {
 			totalClimbing += seg.DistanceKm * seg.GradientPct / 100
@@ -795,6 +798,9 @@ func classifyCourse(c model.Course) string {
 
 	if hasCobbles {
 		return "cobbles"
+	}
+	if hasGravel {
+		return "gravel"
 	}
 	if totalClimbing > 3000 {
 		return "climb"

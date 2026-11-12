@@ -120,7 +120,7 @@ func (s *RaceState) pressPays(rs *RiderState, seg *model.Segment) bool {
 	if !s.escapeEligible(rs) || s.IsStageRace || !s.isDangerous(rs) {
 		return false
 	}
-	if seg.SurfaceType != model.SurfaceCobbles && climbOf(seg) < terrainClimb {
+	if !seg.SurfaceType.Unpaved() && climbOf(seg) < terrainClimb {
 		return false
 	}
 	var finisher *RiderState
@@ -254,7 +254,7 @@ func (s *RaceState) sprintLoserAttacks(rs *RiderState, seg *model.Segment) bool 
 	if !s.escapeEligible(rs) || s.IsStageRace {
 		return false
 	}
-	if seg.SurfaceType != model.SurfaceCobbles && climbOf(seg) < terrainClimb {
+	if !seg.SurfaceType.Unpaved() && climbOf(seg) < terrainClimb {
 		return false
 	}
 	mine := FatiguedSprintPower(rs)

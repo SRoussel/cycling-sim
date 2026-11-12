@@ -69,8 +69,9 @@ type Climb struct {
 	LengthKm float64
 	GainM    float64
 	AvgPct   float64
-	Name     string // from a cobbled sector on it (the Flemish bergs), else ""
-	Stars    int    // cobbled: the sector's stars
+	Name     string // from a cobbled or gravel sector on it (the Flemish bergs), else ""
+	Stars    int    // the sector's stars
+	Surface  string // the sector's surface (cobbles, gravel), "" for a paved climb
 }
 
 // label names the climb for the player.
@@ -147,8 +148,21 @@ func (d *Director) SetRoute(profile *simulation.RouteProfile) {
 	d.climbs = FindClimbs(profile.Points)
 	d.sectors = profile.Sectors
 	nameClimbs(d.climbs, d.sectors)
-	d.decisive = decisiveSet(d.climbs, d.totalKm)
 	d.decisiveSectors = decisiveSectorSet(d.sectors, d.climbs, d.totalKm)
+	// A climb mostly inside a decisive sector is part of that sector's moment.
+	var open []Climb
+	for _, c := range d.climbs {
+		inside := false
+		for _, sec := range d.sectors {
+			if d.decisiveSectors[sec.StartKm] && overlap(c.StartKm, c.LengthKm, sec.StartKm, sec.LengthKm) >= 0.5*c.LengthKm {
+				inside = true
+			}
+		}
+		if !inside {
+			open = append(open, c)
+		}
+	}
+	d.decisive = decisiveSet(open, d.totalKm)
 }
 
 // overlap is the length two stretches of road share.
@@ -163,14 +177,28 @@ func nameClimbs(climbs []Climb, sectors []simulation.RouteSector) {
 		best := 0.0
 		for _, sec := range sectors {
 			if o := overlap(c.StartKm, c.LengthKm, sec.StartKm, sec.LengthKm); o > best && o >= 0.3*sec.LengthKm {
-				best, c.Name, c.Stars = o, sec.Name, sec.Stars
+				best, c.Name, c.Stars, c.Surface = o, sec.Name, sec.Stars, sec.Surface
 			}
 		}
 	}
 }
 
+// sectorScore: length × stars² for cobbles; gravel is rated 1-3★ where
+// cobbles reach 5★, so length × (stars+1)² (Monte Sante Marie, 10 km 3★: 160).
 func sectorScore(s simulation.RouteSector) float64 {
-	return s.LengthKm * float64(s.Stars*s.Stars)
+	st := float64(s.Stars)
+	if s.Surface == "gravel" {
+		st++
+	}
+	return s.LengthKm * st * st
+}
+
+// sectorWords returns the surface's noun and icon.
+func sectorWords(surface string) (noun, icon string) {
+	if surface == "gravel" {
+		return "gravel", "💨"
+	}
+	return "cobbles", "🪨"
 }
 
 // decisiveSectorSet picks the flat cobbled sectors worth a decision: in the
@@ -182,7 +210,9 @@ func decisiveSectorSet(sectors []simulation.RouteSector, climbs []Climb, totalKm
 	for _, sec := range sectors {
 		onClimb := false
 		for _, c := range climbs {
-			if overlap(c.StartKm, c.LengthKm, sec.StartKm, sec.LengthKm) > 0 {
+			// A cobbled berg is the climb's moment; a long sector with a
+			// short rise in it (Monte Sante Marie) stays a sector.
+			if overlap(c.StartKm, c.LengthKm, sec.StartKm, sec.LengthKm) >= 0.5*sec.LengthKm {
 				onClimb = true
 			}
 		}
@@ -192,7 +222,7 @@ func decisiveSectorSet(sectors []simulation.RouteSector, climbs []Climb, totalKm
 	}
 	out := map[float64]bool{}
 	for i := len(cands) - 1; i >= 0; i-- {
-		if cands[i].Stars >= 4 {
+		if sectorScore(cands[i]) >= 2*sectorMinScore { // the last hard one (Carrefour de l'Arbre: 50)
 			out[cands[i].StartKm] = true
 			break
 		}
@@ -400,6 +430,8 @@ func (w *view) groupLabel(gi int) string {
 		return "the peloton"
 	case gi == 0:
 		return "the front group"
+	case len(w.Road[gi].IDs) == 1:
+		return "a group of his own"
 	default:
 		return fmt.Sprintf("a group of %d", len(w.Road[gi].IDs))
 	}
@@ -581,9 +613,11 @@ func (d *Director) climbContext(km float64) string {
 	for _, sec := range d.sectors {
 		switch {
 		case pos >= sec.StartKm && pos < sec.StartKm+sec.LengthKm:
-			return fmt.Sprintf(", on the cobbles of %s (%d★)", sec.Name, sec.Stars)
+			noun, _ := sectorWords(sec.Surface)
+			return fmt.Sprintf(", on the %s of %s (%d★)", noun, sec.Name, sec.Stars)
 		case sec.StartKm-pos > 0 && sec.StartKm-pos <= 1:
-			return fmt.Sprintf(", just before %s (%d★ cobbles)", sec.Name, sec.Stars)
+			noun, _ := sectorWords(sec.Surface)
+			return fmt.Sprintf(", just before %s (%d★ %s)", sec.Name, sec.Stars, noun)
 		}
 	}
 	return ""
@@ -813,7 +847,9 @@ func (d *Director) keyClimb(w *view) *Moment {
 			title = fmt.Sprintf("⛰ On %s: %.1f km to the top", c.label(), km-top)
 		}
 		cobbled := ""
-		if c.Stars > 0 {
+		if c.Surface == "gravel" {
+			cobbled = fmt.Sprintf(", gravel (%d★)", c.Stars)
+		} else if c.Stars > 0 {
 			cobbled = fmt.Sprintf(", cobbled (%d★)", c.Stars)
 		}
 		m := &Moment{
@@ -875,23 +911,24 @@ func (d *Director) cobbles(w *view) *Moment {
 		}
 		d.fired[key] = true
 		end := d.totalKm - sec.StartKm - sec.LengthKm
-		title := fmt.Sprintf("🪨 %s in %.1f km", sec.Name, toStart)
+		noun, icon := sectorWords(sec.Surface)
+		title := fmt.Sprintf("%s %s in %.1f km", icon, sec.Name, toStart)
 		if toStart < 0.3 && toStart > 0 {
-			title = fmt.Sprintf("🪨 Into %s now", sec.Name)
+			title = fmt.Sprintf("%s Into %s now", icon, sec.Name)
 		}
 		if toStart <= 0 {
-			title = fmt.Sprintf("🪨 On %s: %.1f km of cobbles left", sec.Name, km-end)
+			title = fmt.Sprintf("%s On %s: %.1f km of %s left", icon, sec.Name, km-end, noun)
 		}
 		m := &Moment{
-			Kind:  "cobbles",
+			Kind:  noun,
 			Title: title,
-			Text: fmt.Sprintf("%.1f km of %d★ cobbles, ending %.1f km from the finish. Ours in %s: %s; %d teammates to help.",
-				sec.LengthKm, sec.Stars, end, w.groupLabel(pg), joinAnd(climbWhere(w, inRace, pg)), len(w.helpers(pg, 0))),
+			Text: fmt.Sprintf("%.1f km of %d★ %s, ending %.1f km from the finish. Ours in %s: %s; %d teammates to help.",
+				sec.LengthKm, sec.Stars, noun, end, w.groupLabel(pg), joinAnd(climbWhere(w, inRace, pg)), len(w.helpers(pg, 0))),
 		}
 		into := math.Max(0, toStart) + sec.LengthKm
 		if len(w.helpers(pg, 0)) > 0 {
 			m.Options = append(m.Options, Option{ID: "front", Label: "Team leads into the sector",
-				Help:   "Teammates ride the front onto the cobbles and through them: our leaders sit in the front and the group thins behind.",
+				Help:   fmt.Sprintf("Teammates ride the front onto the %s and through them: our leaders sit in the front and the group thins behind.", noun),
 				Orders: []OrderChange{{Kind: "pace", Value: "yes", ForKm: into}}})
 		}
 		// Attack a third of the way in: past the fight for the entrance.
@@ -902,11 +939,11 @@ func (d *Director) cobbles(w *view) *Moment {
 				continue
 			}
 			attackers++
-			m.Options = append(m.Options, Option{ID: fmt.Sprintf("attack-%d", id), Label: fmt.Sprintf("%s attacks on the cobbles", w.name(id)),
-				Help:     fmt.Sprintf("Go hard a third of the way into %s: the cobbles hurt those on the wheel too.", sec.Name),
+			m.Options = append(m.Options, Option{ID: fmt.Sprintf("attack-%d", id), Label: fmt.Sprintf("%s attacks on the %s", w.name(id), noun),
+				Help:     fmt.Sprintf("Go hard a third of the way into %s: the %s hurt those on the wheel too.", sec.Name, noun),
 				Commands: []Command{{RiderID: id, Action: "attack", Mode: "oneshot", AtKmRemaining: math.Min(km, at)}}})
 		}
-		m.Options = append(m.Options, Option{ID: "sit", Label: "Sit in and follow", Help: "Save the reserve; follow the wheels over the cobbles."})
+		m.Options = append(m.Options, Option{ID: "sit", Label: "Sit in and follow", Help: fmt.Sprintf("Save the reserve; follow the wheels over the %s.", noun)})
 		return m
 	}
 	return nil
@@ -956,6 +993,20 @@ func (d *Director) breakaway(w *view) *Moment {
 		}
 		d.fired[key] = true
 		rb := w.Riders[r]
+		if len(ahead) == 1 {
+			return &Moment{
+				Kind:  "break",
+				Title: fmt.Sprintf("🏃 %s is clear alone", rb.Name),
+				Text:  fmt.Sprintf("%s is %s ahead of %s with %.0f km to go, reserve %.0f%%, legs %.0f%%.", rb.Name, fmtGap(gap), w.groupLabel(w.main), km, rb.WPrimePct, rb.LegsPct),
+				Options: []Option{
+					{ID: "commit", Label: "Commit: ride to the line", Help: "He rides his limit alone: a long way, but nobody to share the work with the chase either.",
+						Commands: []Command{{RiderID: r, Action: "chase", Mode: "persistent"}}},
+					{ID: "wait", Label: "Sit up and wait for the group", Help: "Save his legs for later; the group will catch him.",
+						Commands: []Command{{RiderID: r, Action: "conserve", Mode: "persistent", ForKm: 5}}},
+					{ID: "auto", Label: "Let him decide", Help: "He judges it himself."},
+				},
+			}
+		}
 		return &Moment{
 			Kind:  "break",
 			Title: fmt.Sprintf("🏃 %s is in the break", rb.Name),

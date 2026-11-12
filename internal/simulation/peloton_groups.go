@@ -408,7 +408,7 @@ func drivingTeams(riders []*RiderState, segment *model.Segment, state *RaceState
 		// than the group's fastest finisher (the same judgement as pressing):
 		// on a sector the draft protects the finisher this time, but not
 		// over the whole race.
-		hard := segment.SurfaceType == model.SurfaceCobbles || climbOf(segment) >= terrainClimb
+		hard := segment.SurfaceType.Unpaved() || climbOf(segment) >= terrainClimb
 		wearDown := !state.IsStageRace && hard && state.isDangerous(rs) &&
 			state.timeToLine([]*RiderState{rs}) < state.timeToLine([]*RiderState{finisher})
 		if wearDown || state.tempoDrops(rs, finisher, segment, finisherFTP) {

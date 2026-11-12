@@ -56,13 +56,21 @@ func IntensityForPhase(p RacePhase) float64 {
 const lineShelterPosition = 5
 
 // groupDraft returns the CdA multiplier for a position in a group, given its
-// formation.
+// formation. Crosswind only costs a strung-out group: a bunch riding a
+// tempo fans out across the road and shelters in the wind, and echelons cut
+// riders off into the gutter when the front rides hard (Nov 2026: applying
+// it at any pace cost the whole bunch ~55 W for hours in an 18-20 km/h wind,
+// ~7200 kJ in Flanders and Roubaix against a real 5500-6500).
 func groupDraft(position int, linedOut bool, seg *model.Segment, speed float64) float64 {
 	p := position
 	if linedOut && p > lineShelterPosition {
 		p = lineShelterPosition
 	}
-	return crosswindDraft(draftFor(p, seg.SurfaceType), position, seg, speed)
+	d := draftFor(p, seg.SurfaceType)
+	if !linedOut {
+		return d
+	}
+	return crosswindDraft(d, position, seg, speed)
 }
 
 // riderCdAFactor is the CdA multiplier a group member actually rides at:

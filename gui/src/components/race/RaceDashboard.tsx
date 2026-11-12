@@ -38,7 +38,7 @@ export function RaceDashboard({
         <EventLog events={events} emptyText="Waiting for the race…" />
         {footer}
       </div>
-      {interactive && <TeamDock tc={tc} kmRemaining={kmRemaining} />}
+      {interactive && <TeamDock tc={tc} kmRemaining={kmRemaining} groups={groups} />}
     </div>
   )
 }

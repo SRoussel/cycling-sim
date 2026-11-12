@@ -1,6 +1,8 @@
 import { EFFORT_MAX_PCT, EFFORT_MIN_PCT } from '../../sim/shared'
 import { TEAM_ORDER_KINDS, TEAM_ORDERS, TeamControl, TeamOrderValue } from '../../sim/useTeamControl'
 import { EnergyBars } from './EnergyBars'
+import { RaceGroup } from '../../sim/shared'
+import { groupColor } from './RoadView'
 
 const MODES: Array<{ value: string; label: string; title: string }> = [
   { value: 'hold', label: 'AI', title: 'Let the rider race on his own judgement' },
@@ -10,7 +12,7 @@ const MODES: Array<{ value: string; label: string; title: string }> = [
 ]
 
 /** The player's team: orders, then every rider with energy and one-click commands. */
-export function TeamDock({ tc, kmRemaining }: { tc: TeamControl; kmRemaining: number }) {
+export function TeamDock({ tc, kmRemaining, groups }: { tc: TeamControl; kmRemaining: number; groups: RaceGroup[] }) {
   const finale = kmRemaining <= 10
   if (!tc.sessionId) {
     return <section className="dash-panel team-dock"><div className="empty-state">Starting interactive session…</div></section>
@@ -64,8 +66,9 @@ export function TeamDock({ tc, kmRemaining }: { tc: TeamControl; kmRemaining: nu
         })}
       </div>
 
+      {/* Fixed order (the roster), so a rider's card never moves under the cursor. */}
       <ul className="dock-riders">
-        {tc.sortedTeamRiders.map((r) => {
+        {tc.teamRiders.map((r) => {
           const tel = tc.telemetryForRider(r.id)
           const mode = tc.riderPersistentActions[r.id] || 'hold'
           const locked = tc.isRiderLocked(r.id)
@@ -74,7 +77,7 @@ export function TeamDock({ tc, kmRemaining }: { tc: TeamControl; kmRemaining: nu
             <li key={r.id} className="dock-rider">
               <div className="dock-rider-top">
                 <span className="dock-rider-name">{r.name}</span>
-                <span className="dock-rider-group">{tc.riderGroups[r.id] || '—'}</span>
+                <span className="dock-rider-group" style={{ '--gc': groupColor(groups, tc.riderGroups[r.id]) } as React.CSSProperties}>{tc.riderGroups[r.id] || '—'}</span>
                 {tel && (
                   <span className="dock-rider-tel">{Math.round(tel.speedKph)} km/h · {Math.round(tel.powerWatts)} W</span>
                 )}

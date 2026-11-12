@@ -725,7 +725,7 @@ func buildProgressData(states []*RiderState, segment *model.Segment) ([]Progress
 			groups = append(groups, ProgressGroup{
 				Name:       name,
 				GapSeconds: group[0].TotalTime - leaderTime,
-				Riders:     riderNames(group, 5),
+				Riders:     riderNames(group, groupNamesShown(len(group))),
 				Size:       len(group),
 			})
 		}
@@ -794,6 +794,15 @@ func groupName(index int, groupSize int) string {
 	default:
 		return fmt.Sprintf("Group %d", index+1)
 	}
+}
+
+// groupNamesShown is how many names a progress group lists: everyone in a
+// group the player can read at a glance, the first few of a big bunch.
+func groupNamesShown(size int) int {
+	if size <= 30 {
+		return size
+	}
+	return 5
 }
 
 func riderNames(group []*RiderState, limit int) []string {

@@ -121,33 +121,6 @@
   min-width: 6.5rem;
 }
 
-.dash-profile {
-  position: relative;
-  height: 46px;
-  margin-top: 0.35rem;
-}
-
-.dash-profile svg {
-  width: 100%;
-  height: 100%;
-  display: block;
-}
-
-.dash-profile-fill {
-  fill: rgba(182, 192, 204, 0.12);
-}
-
-.dash-profile-done {
-  fill: rgba(232, 111, 55, 0.45);
-}
-
-.dash-profile-line {
-  fill: none;
-  stroke: rgba(242, 244, 248, 0.6);
-  stroke-width: 1.2;
-  vector-effect: non-scaling-stroke;
-}
-
 .dash-profile-bar {
   position: absolute;
   inset: 18px 0;
@@ -159,28 +132,6 @@
 .dash-profile-bar-fill {
   height: 100%;
   background: var(--color-primary);
-}
-
-.dash-profile-marker {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 2px;
-  margin-left: -1px;
-  background: var(--color-primary);
-  box-shadow: 0 0 6px var(--color-primary);
-  transition: left 0.4s linear;
-}
-
-.dash-profile-scale {
-  position: absolute;
-  inset: auto 0 -2px 0;
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.65rem;
-  color: var(--color-text-muted);
-  pointer-events: none;
-  padding: 0 0.2rem;
 }
 
 /* ---------- left column: road + log ---------- */
@@ -504,4 +455,211 @@
 .dash-race .events-list li {
   padding: 0.25rem 0;
   font-size: 0.82rem;
+}
+
+/* ---------- route: zoom + whole course ---------- */
+
+.route-strip {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(160px, 1fr);
+  gap: 0.75rem;
+  margin-top: 0.35rem;
+  align-items: end;
+}
+
+.route-zoom-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+}
+
+.route-zoom-title {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.68rem;
+}
+
+.route-climb.on {
+  color: var(--color-climb);
+  font-weight: 600;
+}
+
+.pv {
+  position: relative;
+  padding-bottom: 14px;
+}
+
+.pv svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.pv.zoom { height: 84px; }
+.pv.mini { height: 48px; }
+.pv.large { height: 260px; }
+
+.pv-g0 { fill: rgba(182, 192, 204, 0.22); }
+.pv-g1 { fill: rgba(132, 204, 22, 0.45); }
+.pv-g2 { fill: rgba(250, 204, 21, 0.6); }
+.pv-g3 { fill: rgba(249, 115, 22, 0.75); }
+.pv-g4 { fill: rgba(239, 68, 68, 0.85); }
+
+.pv-line {
+  fill: none;
+  stroke: rgba(242, 244, 248, 0.75);
+  stroke-width: 1.2;
+  vector-effect: non-scaling-stroke;
+}
+
+.pv-tick {
+  stroke: rgba(242, 244, 248, 0.14);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.pv-done {
+  fill: rgba(15, 18, 22, 0.55);
+}
+
+.pv-marker {
+  position: absolute;
+  top: 0;
+  bottom: 14px;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--color-primary);
+  box-shadow: 0 0 6px var(--color-primary);
+  transition: left 0.4s linear;
+}
+
+.pv-labels {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 14px;
+  font-size: 0.66rem;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.pv-labels span {
+  position: absolute;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.pv-elev {
+  position: absolute;
+  top: 2px;
+  left: 4px;
+  font-size: 0.62rem;
+  color: var(--color-text-muted);
+  pointer-events: none;
+}
+
+.dash-top button.route-mini {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  padding: 0.25rem 0.35rem 0;
+  text-align: left;
+  color: var(--color-text-muted);
+}
+
+.dash-top button.route-mini:hover {
+  border-color: var(--color-primary);
+}
+
+.route-mini-hint {
+  display: block;
+  font-size: 0.66rem;
+  text-align: right;
+  margin-top: -2px;
+}
+
+.route-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(5, 7, 10, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 2rem;
+}
+
+.route-modal-body {
+  background: var(--color-surface);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+  width: min(1200px, 100%);
+  max-height: 100%;
+  overflow-y: auto;
+}
+
+.route-modal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.route-modal-head h2 {
+  font-size: 1rem;
+  margin: 0;
+}
+
+.route-climbs {
+  width: 100%;
+  margin-top: 0.75rem;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.route-climbs th,
+.route-climbs td {
+  text-align: left;
+  padding: 0.2rem 0.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.route-climbs tr.done {
+  opacity: 0.4;
+}
+
+/* ---------- group colours ---------- */
+
+.road-group {
+  border-left-color: var(--gc, rgba(182, 192, 204, 0.3));
+}
+
+.road-group.has-mine {
+  border-left-color: var(--gc);
+}
+
+.road-group-dot {
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+  background: var(--gc);
+  align-self: center;
+  flex-shrink: 0;
+}
+
+.road-group-riders.full {
+  white-space: normal;
+}
+
+.dock-rider-group {
+  border: 1px solid var(--gc);
+  color: var(--color-text);
+  background: color-mix(in srgb, var(--gc) 22%, transparent);
+  border-radius: 999px;
+  padding: 0 0.45rem;
 }

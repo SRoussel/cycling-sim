@@ -53,8 +53,10 @@ func ageChange(age int) float64 {
 	return -0.035
 }
 
-// retireChance: the chance a rider stops at the end of a year at an age.
-func retireChance(age int, freeAgent bool) float64 {
+// retireChance: the chance a rider stops at the end of a year at an age;
+// a free agent the market rates low (value under 1) is likelier to stop,
+// a good one finds a team.
+func retireChance(age int, freeAgent bool, value float64) float64 {
 	p := 0.0
 	switch {
 	case age >= 38:
@@ -73,7 +75,7 @@ func retireChance(age int, freeAgent bool) float64 {
 		p = 0.04
 	}
 	if freeAgent && age >= 28 {
-		p += 0.35
+		p += 0.35 * math.Max(0, math.Min(1, 1-value))
 	}
 	return math.Min(0.95, p)
 }
@@ -172,7 +174,7 @@ func EndYear(db *database.DB, s *model.Season) ([]model.NewsItem, error) {
 			continue
 		}
 		underContract := sr.Team != ""
-		chance := retireChance(sr.Age, !underContract)
+		chance := retireChance(sr.Age, !underContract, values[sr.ID])
 		if underContract && sr.Age < 37 {
 			chance *= 0.3 // most riders see their contract out
 		}
@@ -322,7 +324,30 @@ func StartYear(db *database.DB, s *model.Season) ([]model.NewsItem, error) {
 	sort.SliceStable(fas, func(a, b int) bool { return values[srs[fas[a]].ID] > values[srs[fas[b]].ID] })
 	var news []model.NewsItem
 	date := s.Date
+	// The player's team never starts a year short: before the other teams
+	// sign anyone, it takes the cheapest free agents up to 22 riders.
+	if roster[s.Team] < 22 {
+		var left []int
+		for _, i := range fas {
+			if srs[i].FreeAgent() {
+				left = append(left, i)
+			}
+		}
+		sort.SliceStable(left, func(a, b int) bool { return srs[left[a]].Salary < srs[left[b]].Salary })
+		for _, i := range left {
+			if roster[s.Team] >= 22 {
+				break
+			}
+			sr := &srs[i]
+			sr.Team, sr.Salary, sr.ContractEnd = s.Team, SalaryFor(values[sr.ID], sr.Age), s.Year
+			roster[s.Team]++
+			news = append(news, model.NewsItem{SeasonID: s.ID, Year: s.Year, Date: date, Mine: true, Text: fmt.Sprintf("%s joins %s on a one-year contract to fill the roster.", sr.Name, s.Team)})
+		}
+	}
 	for _, i := range fas {
+		if !srs[i].FreeAgent() {
+			continue // taken by the player's team
+		}
 		best, bestScore := "", 0.0
 		for team, n := range roster {
 			if team == s.Team || n >= RosterTarget {
@@ -340,26 +365,6 @@ func StartYear(db *database.DB, s *model.Season) ([]model.NewsItem, error) {
 		roster[best]++
 		if values[sr.ID] > 1 {
 			news = append(news, model.NewsItem{SeasonID: s.ID, Year: s.Year, Date: date, Text: fmt.Sprintf("%s signs for %s.", sr.Name, best)})
-		}
-	}
-	// The player's team never starts a year short: it takes the cheapest free
-	// agents up to 22 riders.
-	if roster[s.Team] < 22 {
-		var left []int
-		for _, i := range fas {
-			if srs[i].FreeAgent() {
-				left = append(left, i)
-			}
-		}
-		sort.SliceStable(left, func(a, b int) bool { return srs[left[a]].Salary < srs[left[b]].Salary })
-		for _, i := range left {
-			if roster[s.Team] >= 22 {
-				break
-			}
-			sr := &srs[i]
-			sr.Team, sr.Salary, sr.ContractEnd = s.Team, SalaryFor(values[sr.ID], sr.Age), s.Year
-			roster[s.Team]++
-			news = append(news, model.NewsItem{SeasonID: s.ID, Year: s.Year, Date: date, Mine: true, Text: fmt.Sprintf("%s joins %s on a one-year contract to fill the roster.", sr.Name, s.Team)})
 		}
 	}
 	if err := db.SaveSeasonRiders(s.ID, srs); err != nil {

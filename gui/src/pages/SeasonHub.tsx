@@ -10,7 +10,7 @@ import './Season.css'
 type Tab = 'overview' | 'calendar' | 'team' | 'standings' | 'contracts'
 
 /** Thousand euro → "€1.2M" / "€450k". */
-export function money(k: number): string {
+function money(k: number): string {
   return k >= 1000 ? `€${(k / 1000).toFixed(1)}M` : `€${k}k`
 }
 
@@ -38,6 +38,12 @@ function SeasonHub() {
   const [tab, setTab] = useState<Tab>('overview')
   const [error, setError] = useState('')
 
+  // Another season: start from its overview.
+  useEffect(() => {
+    setTab('overview')
+    setHub(null)
+  }, [id])
+
   const reload = useCallback(async () => {
     try {
       setHub(await App.GetSeasonHub(id))
@@ -63,7 +69,7 @@ function SeasonHub() {
   const offseason = s.phase === 'offseason'
 
   return (
-    <div className="season page-enter">
+    <div className="season page-enter" key={id}>
       <header className="season-head">
         <div>
           <h1><Jersey team={s.team} size={20} /> {s.name}</h1>
@@ -410,7 +416,7 @@ function Calendar({ hub }: { hub: main.SeasonHub }) {
   }
   return (
     <section className="card">
-      <h2>{hub.season.phase === 'offseason' ? `${hub.season.year} calendar` : `${hub.season.year} calendar`}</h2>
+      <h2>{hub.season.phase === 'offseason' ? `${hub.season.year - 1} calendar` : `${hub.season.year} calendar`}</h2>
       <ul className="calendar">
         {hub.events.map((e) => (
           <li key={e.id} className={`${e.done ? 'done' : ''}${hub.next?.id === e.id ? ' next' : ''}`}>

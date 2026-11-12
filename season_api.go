@@ -257,8 +257,14 @@ func (a *App) GetSeasonHub(id int64) (SeasonHub, error) {
 		}
 		hub.Confidence = season.BoardConfidence(ps)
 	}
-	events, _ := a.db.ListSeasonEvents(s.ID, s.Year)
-	results, _ := a.db.ListSeasonResults(s.ID, s.Year, 0)
+	// In the off-season the calendar is the year just raced (the next one
+	// is drawn up when the year starts).
+	shownYear := s.Year
+	if s.Phase == model.PhaseOffseason {
+		shownYear--
+	}
+	events, _ := a.db.ListSeasonEvents(s.ID, shownYear)
+	results, _ := a.db.ListSeasonResults(s.ID, shownYear, 0)
 	byEvent := map[int64][]model.SeasonResult{}
 	for _, r := range results {
 		byEvent[r.EventID] = append(byEvent[r.EventID], r)
@@ -282,7 +288,7 @@ func (a *App) GetSeasonHub(id int64) (SeasonHub, error) {
 			info.Mine = fmt.Sprintf("%s, %s", ordinal(best.Position), byID[best.RiderID].Name)
 		}
 		hub.Events = append(hub.Events, info)
-		if !e.Done && hub.Next == nil {
+		if !e.Done && hub.Next == nil && s.Phase == model.PhaseRacing {
 			next := info
 			hub.Next = &next
 		}

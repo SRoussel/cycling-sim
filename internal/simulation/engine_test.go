@@ -87,10 +87,18 @@ func TestFlatRaceBunchFinish(t *testing.T) {
 		t.Fatalf("expected 5 results, got %d", len(results))
 	}
 
-	// In a flat race, the time gaps should be small (< 30 seconds for the group)
+	// A flat race ends in a bunch: (nearly) everyone together. One rider
+	// who emptied himself may lose time (fuel), so judge the group, not
+	// the last man: 4 of 5 within 30 s.
+	together := 0
+	for _, r := range results {
+		if r.TimeGapSeconds <= 30 {
+			together++
+		}
+	}
 	maxGap := results[len(results)-1].TimeGapSeconds
-	if maxGap > 30.0 {
-		t.Errorf("flat race max gap = %.1f seconds, expected < 30 (bunch finish)", maxGap)
+	if together < 4 {
+		t.Errorf("flat race: %d of 5 within 30 s of the winner, expected a bunch finish", together)
 	}
 	t.Logf("Flat race: winner time=%.0fs, max gap=%.1fs", results[0].FinishTimeSeconds, maxGap)
 	for _, r := range results {

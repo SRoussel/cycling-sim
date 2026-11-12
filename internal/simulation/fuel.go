@@ -21,12 +21,10 @@ const (
 	fuelLowShare       = 0.30 // below this share of the store, threshold falls
 	fuelEmptyFactor    = 0.70 // threshold at an empty store (fat alone)
 
-	// fuelLimitsThreshold: off until races cost realistic energy. With it on,
-	// almost the whole field bonks in Flanders and Roubaix (median fuel ~10%
-	// at 60 km to go; Milan-San Remo is fine) because the sim's riders do
-	// ~20-30% too much work in the cobbled classics (~7200 kJ vs a real
-	// 5500-6500). Fuel is tracked either way.
-	fuelLimitsThreshold = false
+	// fuelLimitsThreshold: on since races cost realistic energy (crosswind
+	// fix + bunch surges). Before them, almost the whole field bonked in
+	// Flanders and Roubaix (~7200 kJ of work against a real 5500-6500).
+	fuelLimitsThreshold = true
 )
 
 // carbShare is the share of energy from carbohydrate at an intensity

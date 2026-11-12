@@ -158,6 +158,7 @@ type SimulationProgress struct {
 	Events         []string                                 `json:"events"`
 	Moment         *director.Moment                         `json:"moment,omitempty"`
 	Goal           *director.Goal                           `json:"goal,omitempty"`
+	Team           *LiveTeam                                `json:"team,omitempty"`
 }
 
 // StageRaceProgress is emitted during a stage race simulation.
@@ -189,6 +190,7 @@ type StageRaceProgress struct {
 	GC []GCLine `json:"gc,omitempty"`
 	// StagePlan: the race is paused for the player's plan of this stage.
 	StagePlan *StagePlanRequest `json:"stagePlan,omitempty"`
+	Team      *LiveTeam         `json:"team,omitempty"`
 }
 
 // GCLine is a rider's place on GC, before the stage and live.
@@ -200,6 +202,14 @@ type GCLine struct {
 	Gap     float64 `json:"gap"`
 	LivePos int     `json:"livePos"`
 	LiveGap float64 `json:"liveGap"`
+}
+
+// liveOf is the session's live team state (nil without a session).
+func liveOf(sess *interactiveSession) *LiveTeam {
+	if sess == nil {
+		return nil
+	}
+	return sess.Live()
 }
 
 // withNotes adds the session's race-plan lines to a frame's events.
@@ -770,6 +780,7 @@ func (a *App) makeRaceProgressCallback(raceID int64, sess *interactiveSession) f
 			Events:         withNotes(snapshot.Events, sess),
 			Moment:         moment,
 			Goal:           goal,
+			Team:           liveOf(sess),
 		})
 		if sess != nil {
 			sess.Pace()
@@ -837,6 +848,7 @@ func (a *App) makeStageRaceProgressCallback(stageRaceID int64, stageCount int, s
 			GCGoal:          gcGoal,
 			GC:              gc,
 			StagePlan:       stagePlan,
+			Team:            liveOf(sess),
 		})
 		if sess != nil {
 			sess.Pace()

@@ -26,6 +26,8 @@ type Command struct {
 	ForKm         float64
 	AtKmRemaining float64
 	Note          string // logged when a scheduled command fires
+	Source        string // who gave it: decision or plan (set by the session)
+	Why           string // what it's for, shown on the team panel
 }
 
 // OrderChange sets a team order (see SetTeamOrder) for ForKm (0: for good).

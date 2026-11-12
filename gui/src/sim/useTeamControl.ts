@@ -37,6 +37,7 @@ export interface LiveProgressPayload {
   gcGoal?: RaceGoal
   gc?: GCLine[]
   stagePlan?: StagePlanRequest
+  team?: LiveTeam
   groups?: Array<{ name: string; gap: number; size?: number }>
   kmTotal?: number
   kmCovered?: number
@@ -67,6 +68,24 @@ export interface RaceGoal {
   riderName: string
   target: number
   text: string
+}
+
+/** Who set a team order or rider command (internal: interactive_live.go). */
+export interface LiveOrder {
+  value: TeamOrderValue
+  source?: 'you' | 'plan' | 'decision' | string
+  note?: string
+  kmLeft?: number
+}
+export interface LiveRider {
+  action: string
+  source: string
+  note?: string
+  kmLeft?: number
+}
+export interface LiveTeam {
+  orders: Record<string, LiveOrder>
+  riders: Record<number, LiveRider>
 }
 
 /** The race waits for the player's plan of the coming stage. */
@@ -135,6 +154,9 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
   const [gcGoal, setGcGoal] = useState<RaceGoal | null>(null)
   const [gc, setGc] = useState<GCLine[]>([])
   const [stagePlan, setStagePlan] = useState<StagePlanRequest | null>(null)
+  // The team's orders and rider commands as the race applies them: the
+  // panel shows this, whoever set them (you, the plan, a decision).
+  const [live, setLive] = useState<LiveTeam | null>(null)
   // togglePause is defined before the stage plan's submit: read both by ref.
   const stagePlanRef = useRef<StagePlanRequest | null>(null)
   stagePlanRef.current = stagePlan
@@ -212,6 +234,7 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
     setGcGoal(null)
     setGc([])
     setStagePlan(null)
+    setLive(null)
     radioRef.current = newRadioState()
     const label = await App.ResolveMoment(sessionId!, m.id, optionId)
     setPaused(false)
@@ -373,8 +396,8 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
   // ── Progress ingestion ────────────────────────────────────
   // Event listeners are subscribed once per session, so they read changing
   // values through this ref instead of a stale closure.
-  const latest = useRef({ paused, sessionId, skipFrom, teamRiders })
-  latest.current = { paused, sessionId, skipFrom, teamRiders }
+  const latest = useRef({ paused, sessionId, skipFrom, teamRiders, controlledTeam })
+  latest.current = { paused, sessionId, skipFrom, teamRiders, controlledTeam }
 
   /** Returns true when the payload belongs to a different session. */
   const isForeignSession = (payloadSessionId?: string) =>
@@ -385,6 +408,20 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
     if (payload.goal && interactiveMode) setGoal((g) => (g?.text === payload.goal!.text ? g : payload.goal!)) // a new one each stage
     if (payload.gcGoal && interactiveMode) setGcGoal((g) => g ?? payload.gcGoal!)
     if (payload.gc && payload.gc.length > 0) setGc(payload.gc)
+    if (payload.team && interactiveMode) {
+      const t = payload.team
+      setLive(t)
+      setTeamOrders((prev) => {
+        const next = { ...prev }
+        for (const k of TEAM_ORDER_KINDS) if (t.orders[k]) next[k] = t.orders[k].value
+        return next
+      })
+      setRiderPersistentActions(() => {
+        const next: Record<number, string> = {}
+        for (const r of latest.current.teamRiders) next[r.id] = t.riders[r.id]?.action ?? 'hold'
+        return next
+      })
+    }
     if (payload.stagePlan && interactiveMode) {
       setStagePlan(payload.stagePlan)
       setPaused(true)
@@ -426,7 +463,15 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
       setFollowMap(payload.teamState.followMap || {})
     }
     if (payload.events && payload.events.length > 0) {
-      appendEvents(payload.events.filter(isNewAttack).map(formatEventLine))
+      // In a directed race the log keeps the attacks that matter: favourites,
+      // contenders and leaders (key), and our own riders.
+      const team = latest.current.controlledTeam
+      const relevant = (line: string) => {
+        if (!interactiveMode) return true
+        const a = parseAttackEvent(line)
+        return !a || a.key || a.team === team
+      }
+      appendEvents(payload.events.filter(isNewAttack).filter(relevant).map(formatEventLine))
     }
     if (payload.moment && interactiveMode) {
       // The session paused itself at this moment.
@@ -554,6 +599,7 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
     gc,
     stagePlan,
     submitStagePlan,
+    live,
     decisionLevel,
     setDecisionLevel,
     skipping: skipFrom !== null,
@@ -616,7 +662,7 @@ export const TEAM_ORDER_KINDS: TeamOrderKind[] = ['chase', 'break', 'pace', 'pro
 
 export const TEAM_ORDERS: Record<TeamOrderKind, OrderSpec> = {
   chase: {
-    label: 'Chasing',
+    label: 'Chase breaks',
     options: {
       auto: { label: 'Team decides', help: 'Your domestiques chase when the team has a reason to: a sprint, a leader to protect, a stage to win.' },
       yes: { label: 'Chase', help: 'Your domestiques ride to bring the groups ahead back before the finish.' },
@@ -624,42 +670,43 @@ export const TEAM_ORDERS: Record<TeamOrderKind, OrderSpec> = {
     },
   },
   break: {
-    label: 'Breakaway',
+    label: 'Riders in the break',
     options: {
-      auto: { label: 'Riders decide', help: 'Riders the team can spare today may go with moves.' },
+      auto: { label: 'Team decides', help: 'Riders the team can spare today may go with moves.' },
       yes: { label: 'Get in the break', help: 'Your two strongest domestiques attack until one of them is up the road (not in the finale).' },
-      no: { label: 'Stay together', help: "Your domestiques don't go in breaks; leaders still attack when it pays." },
+      no: { label: 'Nobody in breaks', help: "Your domestiques don't go in breaks; leaders still attack when it pays." },
     },
   },
   pace: {
-    label: 'Pace',
+    label: 'Set the pace',
     options: {
       auto: { label: 'Team decides', help: 'Your domestiques set the pace when a hard tempo would drop the fast finishers.' },
-      yes: { label: 'Set the pace', help: 'Your domestiques ride a tempo for your leader at the front of their group.' },
+      yes: { label: 'Drive the group', help: 'Your domestiques ride a hard tempo at the front for your leader.' },
       no: { label: 'Sit in', help: 'Your domestiques never drive the group.' },
     },
   },
   protect: {
-    label: 'Leader',
+    label: 'Wait for a dropped leader',
     options: {
       auto: { label: 'Team decides', help: "Domestiques shelter the leader in their group, but nobody waits if the leader is dropped." },
-      yes: { label: 'Protect', help: 'If your leader is dropped, domestiques up the road wait and those with them pace them back to the bunch.' },
+      yes: { label: 'Wait and pace back', help: 'If your leader is dropped, domestiques up the road wait and those with them pace them back to the bunch.' },
+      no: { label: 'Nobody waits', help: 'Riders up the road race for themselves if the leader is dropped.' },
     },
   },
   leadout: {
-    label: 'Lead-out',
+    label: 'Sprint lead-out',
     options: {
       auto: { label: 'Team decides', help: 'Domestiques ride for your leader or sprinter and empty themselves in the last 3 km.' },
-      yes: { label: 'Sprint train', help: 'From 8 km out your riders follow the Sprint Train order below; the last one sprints.' },
-      no: { label: 'No lead-out', help: 'Every rider races the finale for their own result.' },
+      yes: { label: 'Sprint train', help: 'From 8 km out your riders follow the train order below; the last one sprints.' },
+      no: { label: 'Every man for himself', help: 'Every rider races the finale for his own result.' },
     },
   },
   ambition: {
-    label: 'Goal',
+    label: 'Ride for the stage',
     stageRaceOnly: true,
     options: {
       auto: { label: 'Team decides', help: 'Each morning the team decides whether to hunt the stage, defending your GC place either way.' },
-      yes: { label: 'Stage win', help: "Your team brings the break back so your leader can race for the stage." },
+      yes: { label: 'Hunt the stage', help: "Your team brings the break back so your leader can race for the stage." },
       no: { label: 'GC only', help: "No hunting the stage and no chasing for your sprinter: everything for the GC." },
     },
   },

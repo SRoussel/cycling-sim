@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { RouteProfile, clamp01, formatRaceClock, sectorIcon, sectorNoun } from '../../sim/shared'
 import { ProfileView, findClimbs, stars } from './ProfileView'
+import { DecisionLevel } from '../../sim/useTeamControl'
 import { PlaybackControls } from './RacePanels'
 
 /**
@@ -24,6 +25,8 @@ export function RaceTopBar({
   onSkip,
   skipping,
   goal,
+  decisionLevel,
+  onDecisionLevel,
 }: {
   title: string
   subtitle?: string
@@ -41,6 +44,8 @@ export function RaceTopBar({
   onSkip?: () => void
   skipping?: boolean
   goal?: string
+  decisionLevel?: DecisionLevel
+  onDecisionLevel?: (level: DecisionLevel) => void
 }) {
   const total = profile?.totalKm || kmTotal
   return (
@@ -60,6 +65,16 @@ export function RaceTopBar({
           <span className="dash-stat-label">race time</span>
         </div>
         {extra}
+        {decisionLevel && onDecisionLevel && (
+          <label className="dash-stopfor" title="When the race stops to ask you: at every decision, only the moments that decide the race, or never">
+            <span>Stop for</span>
+            <select value={decisionLevel} onChange={(e) => onDecisionLevel(e.target.value as DecisionLevel)}>
+              <option value="all">every decision</option>
+              <option value="key">key moments</option>
+              <option value="off">nothing</option>
+            </select>
+          </label>
+        )}
         {onSkip && (
           <button className={`dash-skip${skipping ? ' on' : ''}`} onClick={onSkip} disabled={playbackDisabled}
             title="Fast-forward until the next decision moment">

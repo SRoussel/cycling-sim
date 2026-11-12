@@ -144,3 +144,40 @@ func TestStagePlanAskedOncePerStageAndCleared(t *testing.T) {
 		t.Fatal("with decisions off the race doesn't stop for plans")
 	}
 }
+
+func TestLiveReportsWhoSetWhat(t *testing.T) {
+	s := newInteractiveSession("Us")
+	s.Observe(nil, nil, 50, 0)
+	s.director.pending = &director.Moment{ID: "m1", Title: "⚡ Pogačar attacks!", Options: []director.Option{{ID: "f",
+		Commands: []director.Command{{RiderID: 3, Action: "chase", Mode: "persistent", ForKm: 3}},
+		Orders:   []director.OrderChange{{Kind: "pace", Value: "yes", ForKm: 4}}}}}
+	if _, err := s.Resolve("m1", "f"); err != nil {
+		t.Fatal(err)
+	}
+	s.SetTeamOrder("chase", simulation.OrderNo)
+	s.SetRiderCommand(4, simulation.ActionConserve, "persistent")
+	live := s.Live()
+	if o := live.Orders["pace"]; o.Value != "yes" || o.Source != "decision" || o.Note != "Pogačar attacks!" || o.KmLeft != 4 {
+		t.Errorf("pace: %+v", o)
+	}
+	if o := live.Orders["chase"]; o.Value != "no" || o.Source != "you" {
+		t.Errorf("chase: %+v", o)
+	}
+	if o := live.Orders["break"]; o.Value != "auto" || o.Source != "" {
+		t.Errorf("break: %+v", o)
+	}
+	if r := live.Riders[3]; r.Action != "chase" || r.Source != "decision" || r.KmLeft != 3 {
+		t.Errorf("rider 3: %+v", r)
+	}
+	if r := live.Riders[4]; r.Action != "conserve" || r.Source != "you" || r.KmLeft != 0 {
+		t.Errorf("rider 4: %+v", r)
+	}
+	s.Observe(nil, nil, 45, 0)
+	live = s.Live()
+	if _, ok := live.Riders[3]; ok {
+		t.Error("the decision's 3 km chase is over")
+	}
+	if o := live.Orders["pace"]; o.Value != "auto" || o.Source != "" {
+		t.Errorf("the decision's pace order handed back: %+v", o)
+	}
+}

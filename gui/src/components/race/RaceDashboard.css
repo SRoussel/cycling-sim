@@ -1004,3 +1004,105 @@ button.decision-option:hover {
   gap: 0.5rem;
   margin-top: 0.6rem;
 }
+
+/* ---------- coherent team panel (live orders, rider status) ---------- */
+
+.dock-order.set select {
+  border-color: rgba(232, 111, 55, 0.7);
+}
+
+.dock-order-why {
+  font-size: 0.68rem;
+  color: var(--color-primary);
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.dock-order .dock-train {
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 0.75rem;
+}
+
+.dock-rider.commanded {
+  border-color: rgba(232, 111, 55, 0.45);
+}
+
+.dock-rider-status {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  font-size: 0.76rem;
+  color: var(--color-text-muted);
+  min-width: 0;
+}
+
+.dock-status {
+  white-space: nowrap;
+}
+
+.dock-status.chase,
+.dock-status.attack {
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+.dock-status.conserve {
+  color: #93c5fd;
+  font-weight: 600;
+}
+
+.dock-status-why {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.team-dock button.dock-manual-toggle {
+  margin-left: auto;
+  background: transparent;
+  color: var(--color-text-muted);
+  padding: 0 0.2rem;
+  font-size: 0.72rem;
+}
+
+.dock-manual {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding-top: 0.3rem;
+  border-top: 1px dashed rgba(255, 255, 255, 0.08);
+}
+
+.dock-effort-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.dock-order-field {
+  display: flex;
+  flex-direction: column;
+}
+
+.dash-stopfor {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
+}
+
+.dash-stopfor select {
+  background: var(--color-secondary);
+  color: var(--color-text);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  padding: 0.25rem 0.35rem;
+  font-size: 0.8rem;
+  text-transform: none;
+  letter-spacing: 0;
+}

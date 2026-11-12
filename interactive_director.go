@@ -115,6 +115,7 @@ func (s *interactiveSession) tickLocked() {
 		if d.km <= t.untilKm {
 			if s.overrides[t.cmd.RiderID] == actionOf(t.cmd.Action) {
 				delete(s.overrides, t.cmd.RiderID) // back to the rider's judgement
+				s.markRiderLocked(t.cmd.RiderID, "", "")
 			}
 		} else {
 			timed = append(timed, t)
@@ -125,6 +126,7 @@ func (s *interactiveSession) tickLocked() {
 	for _, o := range d.orders {
 		if d.km <= o.untilKm {
 			s.setTeamOrderLocked(o.kind, simulation.OrderAuto)
+			s.markOrderLocked(o.kind, simulation.OrderAuto, "", "")
 		} else {
 			orders = append(orders, o)
 		}
@@ -164,13 +166,16 @@ func (s *interactiveSession) applyCommandLocked(c director.Command) {
 	switch {
 	case act == simulation.ActionHold:
 		delete(s.overrides, c.RiderID)
+		s.markRiderLocked(c.RiderID, "", "")
 	case c.Mode == "oneshot":
 		s.oneShot[c.RiderID] = act
 	default:
 		s.overrides[c.RiderID] = act
+		d.timed = dropTimed(d.timed, c.RiderID)
 		if c.ForKm > 0 {
 			d.timed = append(d.timed, timedCommand{cmd: c, untilKm: d.km - c.ForKm})
 		}
+		s.markRiderLocked(c.RiderID, c.Source, c.Why)
 	}
 }
 
@@ -214,11 +219,14 @@ func (s *interactiveSession) Resolve(momentID, optionID string) (string, error) 
 	if !ok {
 		return "", fmt.Errorf("moment %s has no option %q", momentID, optionID)
 	}
+	why := momentWhy(d.pending.Title)
 	for _, c := range opt.Commands {
+		c.Source, c.Why = "decision", why
 		s.applyCommandLocked(c)
 	}
 	for _, o := range opt.Orders {
 		s.setTeamOrderLocked(o.Kind, orderOf(o.Value))
+		s.markOrderLocked(o.Kind, orderOf(o.Value), "decision", why)
 		d.orders = removeOrder(d.orders, o.Kind)
 		if o.ForKm > 0 {
 			d.orders = append(d.orders, timedOrder{kind: o.Kind, untilKm: d.km - o.ForKm})
@@ -237,4 +245,14 @@ func removeOrder(orders []timedOrder, kind string) []timedOrder {
 		}
 	}
 	return out
+}
+
+// momentWhy is a moment's title without its icon ("Pogačar attacks!").
+func momentWhy(title string) string {
+	for i, r := range title {
+		if r == ' ' {
+			return title[i+1:]
+		}
+	}
+	return title
 }

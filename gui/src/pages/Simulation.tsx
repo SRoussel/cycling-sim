@@ -167,7 +167,7 @@ function Simulation() {
       top={
         <RaceTopBar
           title={raceName}
-          subtitle={currentSegmentName || undefined}
+          subtitle={interactiveMode ? undefined : currentSegmentName || undefined}
           kmRemaining={kmRemaining}
           kmCovered={Math.min(effectiveTotalKm, tc.routeKm || (progress / 100) * effectiveTotalKm)}
           kmTotal={effectiveTotalKm}
@@ -179,9 +179,11 @@ function Simulation() {
           onTogglePause={tc.togglePause}
           onSpeedChange={tc.changeSpeed}
           onSkip={interactiveMode ? tc.skipToDecision : undefined}
+          decisionLevel={interactiveMode ? tc.decisionLevel : undefined}
+          onDecisionLevel={tc.setDecisionLevel}
           goal={tc.goal?.text}
           skipping={tc.skipping}
-          extra={simulationComplete && results ? (
+          extra={simulationComplete && results && !interactiveMode ? (
             <button className="primary" onClick={() => navigate(`/results/${raceId}`, { state: { results } })}>
               View Results →
             </button>

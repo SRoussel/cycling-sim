@@ -25,6 +25,7 @@ type scheduledOrder struct {
 	order simulation.Order
 	forKm float64
 	note  string // logged when it starts
+	why   string // shown on the team panel
 }
 
 // noteLocked queues a line for the race log ("plan: ... | km=..").
@@ -49,14 +50,15 @@ func (s *interactiveSession) SetPlan(plan RacePlan, points []director.PlanPoint)
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.plan = plan
+	brk := simulation.OrderAuto // the team decides (and a stage plan resets the last stage's)
 	switch plan.Break {
 	case "yes":
-		s.setTeamOrderLocked("break", simulation.OrderYes)
+		brk = simulation.OrderYes
 	case "no":
-		s.setTeamOrderLocked("break", simulation.OrderNo)
-	default: // the team decides (and a stage plan resets the last stage's)
-		s.setTeamOrderLocked("break", simulation.OrderAuto)
+		brk = simulation.OrderNo
 	}
+	s.setTeamOrderLocked("break", brk)
+	s.markOrderLocked("break", brk, "plan", "race plan")
 	byKey := map[string]director.PlanPoint{}
 	for _, p := range points {
 		byKey[p.Key] = p
@@ -65,7 +67,7 @@ func (s *interactiveSession) SetPlan(plan RacePlan, points []director.PlanPoint)
 		if p, ok := byKey[k]; ok {
 			s.director.scheduledOrders = append(s.director.scheduledOrders,
 				scheduledOrder{atKm: p.HardFromKm(), kind: "pace", order: simulation.OrderYes, forKm: p.HardForKm(),
-					note: fmt.Sprintf("Team to the front for %s, as planned", planName(p))})
+					note: fmt.Sprintf("Team to the front for %s, as planned", planName(p)), why: planName(p)})
 		}
 	}
 	if p, ok := byKey[plan.AttackOn]; ok {
@@ -103,7 +105,7 @@ func (s *interactiveSession) resolvePlanLocked(view *simulation.RaceView) {
 		return
 	}
 	d.scheduled = append(d.scheduled, director.Command{RiderID: rider, Action: "attack", Mode: "oneshot", AtKmRemaining: d.planAttackKm,
-		Note: fmt.Sprintf("%s attacks on %s, as planned", view.Riders[rider].Name, d.planAttackName)})
+		Note: fmt.Sprintf("%s attacks on %s, as planned", view.Riders[rider].Name, d.planAttackName), Source: "plan", Why: d.planAttackName})
 	d.planAttackKm = 0
 }
 
@@ -117,6 +119,7 @@ func (s *interactiveSession) tickPlanLocked() {
 				s.noteLocked(o.note)
 			}
 			s.setTeamOrderLocked(o.kind, o.order)
+			s.markOrderLocked(o.kind, o.order, "plan", o.why)
 			d.orders = removeOrder(d.orders, o.kind)
 			d.orders = append(d.orders, timedOrder{kind: o.kind, untilKm: d.km - o.forKm})
 		} else {

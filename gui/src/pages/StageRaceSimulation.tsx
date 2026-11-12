@@ -169,6 +169,8 @@ function StageRaceSimulation() {
           onSpeedChange={tc.changeSpeed}
           goal={[tc.gcGoal?.text, tc.goal ? `Today: ${tc.goal.text}` : ''].filter(Boolean).join(' · ') || undefined}
           onSkip={interactiveMode ? tc.skipToDecision : undefined}
+          decisionLevel={interactiveMode ? tc.decisionLevel : undefined}
+          onDecisionLevel={tc.setDecisionLevel}
           skipping={tc.skipping}
           extra={
             <div className="dash-stat" title={`Overall ${formatRaceClock(overallElapsed)}`}>

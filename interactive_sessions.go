@@ -24,6 +24,8 @@ type interactiveSession struct {
 
 	director directorState
 	plan     RacePlan
+	orderSrc map[string]setBy // who set each team order (see interactive_live.go)
+	riderSrc map[int64]setBy
 
 	paused  bool
 	speed   float64
@@ -201,6 +203,7 @@ func (s *interactiveSession) SetRiderCommand(riderID int64, action simulation.Ac
 	// "hold" means: let AI decide (clear persistent override).
 	if action == simulation.ActionHold {
 		delete(s.overrides, riderID)
+		s.markRiderLocked(riderID, "", "")
 		return
 	}
 
@@ -210,6 +213,18 @@ func (s *interactiveSession) SetRiderCommand(riderID int64, action simulation.Ac
 	}
 
 	s.overrides[riderID] = action
+	s.markRiderLocked(riderID, "you", "")
+	s.director.timed = dropTimed(s.director.timed, riderID) // his own order: no timer
+}
+
+func dropTimed(ts []timedCommand, riderID int64) []timedCommand {
+	out := ts[:0]
+	for _, t := range ts {
+		if t.cmd.RiderID != riderID {
+			out = append(out, t)
+		}
+	}
+	return out
 }
 
 func (s *interactiveSession) SetRiderEffort(riderID int64, effortMultiplier float64) {
@@ -314,7 +329,9 @@ func (s *interactiveSession) SetTeamOrder(kind string, order simulation.Order) b
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.director.orders = removeOrder(s.director.orders, kind) // the player's order stands
-	return s.setTeamOrderLocked(kind, order)
+	ok := s.setTeamOrderLocked(kind, order)
+	s.markOrderLocked(kind, order, "you", "")
+	return ok
 }
 
 func (s *interactiveSession) setTeamOrderLocked(kind string, order simulation.Order) bool {

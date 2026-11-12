@@ -1,63 +1,51 @@
-import { EFFORT_MAX_PCT, EFFORT_MIN_PCT } from '../../sim/shared'
-import { DecisionLevel, TEAM_ORDER_KINDS, TEAM_ORDERS, TeamControl, TeamOrderValue } from '../../sim/useTeamControl'
+import { useState } from 'react'
+import { EFFORT_MAX_PCT, EFFORT_MIN_PCT, RaceGroup, formatGap } from '../../sim/shared'
+import { LiveOrder, LiveRider, TEAM_ORDER_KINDS, TEAM_ORDERS, TeamControl, TeamOrderValue } from '../../sim/useTeamControl'
 import { EnergyBars, LegsBadge } from './EnergyBars'
-import { RaceGroup, formatGap } from '../../sim/shared'
 import { groupColor } from './RoadView'
 
+const ACTION_WORDS: Record<string, string> = {
+  hold: 'Racing on his own judgement',
+  conserve: 'Saving energy',
+  chase: 'Chasing',
+  attack: 'Attacking',
+}
+
 const MODES: Array<{ value: string; label: string; title: string }> = [
-  { value: 'hold', label: 'AI', title: 'Let the rider race on his own judgement' },
+  { value: 'hold', label: 'Own judgement', title: 'Let the rider race on his own judgement' },
   { value: 'conserve', label: 'Save', title: 'Sit in and save energy' },
   { value: 'chase', label: 'Chase', title: 'Ride at the front to close gaps' },
-  { value: 'attack', label: 'Go', title: 'Keep attacking' },
+  { value: 'attack', label: 'Keep attacking', title: 'Attack whenever he can' },
 ]
 
-/** The player's team: orders, then every rider with energy and one-click commands. */
-export function TeamDock({ tc, kmRemaining, groups }: { tc: TeamControl; kmRemaining: number; groups: RaceGroup[] }) {
-  const finale = kmRemaining <= 10
+/** "decision: Pogačar attacks!, 2.1 km left" — who set it, why, for how long. */
+function provenance(x: LiveOrder | LiveRider | undefined): string {
+  if (!x || !x.source) return ''
+  const who = x.source === 'you' ? 'you' : x.source === 'plan' ? 'plan' : 'decision'
+  const why = x.note ? `: ${x.note}` : ''
+  const left = x.kmLeft && x.kmLeft > 0 ? `, ${x.kmLeft.toFixed(1)} km left` : ''
+  return `${who}${why}${left}`
+}
+
+/**
+ * The player's team as the race applies it. Team orders show their live
+ * value and who set it (you, the plan or a decision); each rider shows his
+ * state and what he's doing, with manual control folded away.
+ */
+export function TeamDock({ tc, groups }: { tc: TeamControl; kmRemaining: number; groups: RaceGroup[] }) {
+  const [manual, setManual] = useState<Record<number, boolean>>({})
   if (!tc.sessionId) {
     return <section className="dash-panel team-dock"><div className="empty-state">Starting interactive session…</div></section>
   }
+  const kinds = TEAM_ORDER_KINDS.filter((kind) => tc.stageRace || !TEAM_ORDERS[kind].stageRaceOnly)
   return (
     <section className="dash-panel team-dock">
       <div className="dock-head">
         <h2>{tc.controlledTeam}</h2>
-        <label className="dock-pause" title="Pause at key moments (attacks, breaks, a dropped leader, decisive climbs, the finale) and ask what to do">
-          Stop for
-          <select value={tc.decisionLevel} onChange={(e) => tc.setDecisionLevel(e.target.value as DecisionLevel)}>
-            <option value="all">every decision</option>
-            <option value="key">key moments</option>
-            <option value="off">nothing</option>
-          </select>
-        </label>
       </div>
-
-      <div className="dock-orders">
-        {TEAM_ORDER_KINDS.filter((kind) => tc.stageRace || !TEAM_ORDERS[kind].stageRaceOnly).map((kind) => {
-          const spec = TEAM_ORDERS[kind]
-          const current = tc.teamOrders[kind]
-          return (
-            <label key={kind} className="dock-order" title={spec.options[current]?.help}>
-              <span>{spec.label}</span>
-              <select value={current} onChange={(e) => tc.handleTeamOrder(kind, e.target.value as TeamOrderValue)}>
-                {(['auto', 'yes', 'no'] as TeamOrderValue[])
-                  .filter((v) => spec.options[v])
-                  .map((v) => (
-                    <option key={v} value={v}>{spec.options[v]!.label}</option>
-                  ))}
-              </select>
-            </label>
-          )
-        })}
-      </div>
-
-      <p className="dock-legend">
-        <b>Reserve</b>: the punch for attacks and surges; refills when riding easier.{' '}
-        <b>Effort</b>: power now vs what he can sustain; over 100% burns reserve.{' '}
-        <b>Legs</b>: what's left for the day; only falls.
-      </p>
 
       {tc.gc.length > 0 && (
-        <div className="dock-gc" title="Live GC: the classification if the stage ended now (before the stage in brackets)">
+        <div className="dock-gc" title="Live GC: the classification if the stage ended now (place before the stage in brackets)">
           <span className="dock-gc-label">GC live</span>
           {tc.gc.slice(0, 5).map((g) => (
             <span key={g.riderId} className={`dock-gc-entry${g.team === tc.controlledTeam ? ' mine' : ''}`}>
@@ -69,15 +57,60 @@ export function TeamDock({ tc, kmRemaining, groups }: { tc: TeamControl; kmRemai
         </div>
       )}
 
+      <div className="dock-orders">
+        {kinds.map((kind) => {
+          const spec = TEAM_ORDERS[kind]
+          const current = tc.teamOrders[kind]
+          const why = provenance(tc.live?.orders[kind])
+          return (
+            <div key={kind} className={`dock-order${why ? ' set' : ''}`} title={spec.options[current]?.help}>
+              <label className="dock-order-field">
+              <span>{spec.label}</span>
+              <select value={current} onChange={(e) => tc.handleTeamOrder(kind, e.target.value as TeamOrderValue)}>
+                {(['auto', 'yes', 'no'] as TeamOrderValue[])
+                  .filter((v) => spec.options[v])
+                  .map((v) => (
+                    <option key={v} value={v}>{spec.options[v]!.label}</option>
+                  ))}
+              </select>
+              </label>
+              {why && <small className="dock-order-why">{why}</small>}
+              {kind === 'leadout' && current === 'yes' && (
+                <details className="dock-train">
+                  <summary>
+                    Train order <span className={`sprint-phase ${tc.sprintPhaseLabel}`}>{tc.sprintPhaseLabel}</span>
+                  </summary>
+                  <ol>
+                    {tc.normalizedSprintOrder.map((id, idx) => (
+                      <li key={id}>
+                        <span>{tc.teamRiderByID[id]?.name || `Rider ${id}`}</span>
+                        <span>
+                          <button type="button" onClick={() => tc.moveSprintTrainRider(id, -1)} disabled={idx === 0}>↑</button>
+                          <button type="button" onClick={() => tc.moveSprintTrainRider(id, 1)} disabled={idx === tc.normalizedSprintOrder.length - 1}>↓</button>
+                        </span>
+                      </li>
+                    ))}
+                  </ol>
+                  <small>From the front; the last rider sprints.</small>
+                </details>
+              )}
+            </div>
+          )
+        })}
+      </div>
+
       {/* Fixed order (the roster), so a rider's card never moves under the cursor. */}
       <ul className="dock-riders">
         {tc.teamRiders.map((r) => {
           const tel = tc.telemetryForRider(r.id)
           const mode = tc.riderPersistentActions[r.id] || 'hold'
+          const liveCmd = tc.live?.riders[r.id]
           const locked = tc.isRiderLocked(r.id)
           const effort = tc.effortTargetForRider(r.id, tel)
+          const open = manual[r.id] ?? false
+          const why = provenance(liveCmd)
           return (
-            <li key={r.id} className="dock-rider">
+            <li key={r.id} className={`dock-rider${liveCmd ? ' commanded' : ''}`}>
               <div className="dock-rider-top">
                 <span className="dock-rider-name" title={tel ? `${r.name}: ${Math.round(tel.speedKph)} km/h, ${Math.round(tel.powerWatts)} W` : r.name}>{r.name}</span>
                 <LegsBadge telemetry={tel} />
@@ -91,68 +124,60 @@ export function TeamDock({ tc, kmRemaining, groups }: { tc: TeamControl; kmRemai
                 >⚡ Attack</button>
               </div>
               <EnergyBars telemetry={tel} compact />
-              <div className="dock-rider-cmds">
-                <div className="dock-modes" role="radiogroup" aria-label={`${r.name} mode`}>
-                  {MODES.map((m) => (
-                    <button
-                      key={m.value}
-                      role="radio"
-                      aria-checked={mode === m.value}
-                      className={mode === m.value ? 'on' : ''}
-                      onClick={() => tc.handleTacticChange(r.id, m.value)}
-                      disabled={locked}
-                      title={m.title}
-                    >{m.label}</button>
-                  ))}
-                </div>
-                <input
-                  type="range"
-                  className="dock-effort"
-                  min={EFFORT_MIN_PCT}
-                  max={EFFORT_MAX_PCT}
-                  step={1}
-                  value={effort}
-                  onChange={(e) => tc.handleEffortChange(r.id, Number(e.target.value))}
-                  title="Effort"
-                />
-                <span className="dock-effort-value">{effort}%</span>
+              <div className="dock-rider-status">
+                <span className={`dock-status ${mode}`}>{ACTION_WORDS[mode] ?? mode}</span>
+                {why && <span className="dock-status-why">({why})</span>}
+                <button type="button" className="dock-manual-toggle" onClick={() => setManual((m) => ({ ...m, [r.id]: !open }))} aria-expanded={open}>
+                  {open ? 'Manual ▾' : 'Manual ▸'}
+                </button>
               </div>
-              {finale && (
-                <div className="dock-rider-finale">
-                  <select
-                    value={tc.followMap[r.id] ?? ''}
-                    onChange={(e) => tc.handleFollowChange(r.id, e.target.value === '' ? null : Number(e.target.value))}
-                  >
-                    <option value="">Follow: none</option>
-                    {tc.normalizedSprintOrder.filter((id) => id !== r.id).map((id) => (
-                      <option key={id} value={id}>Follow {tc.teamRiderByID[id]?.name || `Rider ${id}`}</option>
+              {open && (
+                <div className="dock-manual">
+                  <div className="dock-modes" role="radiogroup" aria-label={`${r.name} mode`}>
+                    {MODES.map((m) => (
+                      <button
+                        key={m.value}
+                        role="radio"
+                        aria-checked={mode === m.value}
+                        className={mode === m.value ? 'on' : ''}
+                        onClick={() => tc.handleTacticChange(r.id, m.value)}
+                        disabled={locked}
+                        title={m.title}
+                      >{m.label}</button>
                     ))}
-                  </select>
-                  <button className="secondary" onClick={() => tc.handleLaunchSprint(r.id)}>Launch sprint</button>
+                  </div>
+                  <label className="dock-effort-row" title="Scales how hard he rides whatever he's doing (100% = normal)">
+                    <span>Effort</span>
+                    <input
+                      type="range"
+                      className="dock-effort"
+                      min={EFFORT_MIN_PCT}
+                      max={EFFORT_MAX_PCT}
+                      step={1}
+                      value={effort}
+                      onChange={(e) => tc.handleEffortChange(r.id, Number(e.target.value))}
+                    />
+                    <span className="dock-effort-value">{effort}%</span>
+                  </label>
+                  <div className="dock-rider-finale">
+                    <select
+                      value={tc.followMap[r.id] ?? ''}
+                      onChange={(e) => tc.handleFollowChange(r.id, e.target.value === '' ? null : Number(e.target.value))}
+                      title="In the sprint, follow a teammate's wheel"
+                    >
+                      <option value="">Sprint: follow nobody</option>
+                      {tc.normalizedSprintOrder.filter((id) => id !== r.id).map((id) => (
+                        <option key={id} value={id}>Sprint: follow {tc.teamRiderByID[id]?.name || `Rider ${id}`}</option>
+                      ))}
+                    </select>
+                    <button className="secondary" onClick={() => tc.handleLaunchSprint(r.id)}>Launch sprint</button>
+                  </div>
                 </div>
               )}
             </li>
           )
         })}
       </ul>
-
-      <details className="dock-train">
-        <summary>
-          Sprint train <span className={`sprint-phase ${tc.sprintPhaseLabel}`}>{tc.sprintPhaseLabel}</span>
-        </summary>
-        <p className="dock-hint">Order from the front; the last rider sprints. Runs when Lead-out is set to Sprint train.</p>
-        <ol>
-          {tc.normalizedSprintOrder.map((id, idx) => (
-            <li key={id}>
-              <span>{tc.teamRiderByID[id]?.name || `Rider ${id}`}</span>
-              <span>
-                <button onClick={() => tc.moveSprintTrainRider(id, -1)} disabled={idx === 0}>↑</button>
-                <button onClick={() => tc.moveSprintTrainRider(id, 1)} disabled={idx === tc.normalizedSprintOrder.length - 1}>↓</button>
-              </span>
-            </li>
-          ))}
-        </ol>
-      </details>
     </section>
   )
 }

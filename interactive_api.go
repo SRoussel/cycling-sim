@@ -293,6 +293,14 @@ func (a *App) SetTeamOrder(sessionID string, kind string, value string) {
 	sess.SetTeamOrder(kind, order)
 }
 
+// SetStagePlan sets the player's plan for the coming stage of a stage race
+// and starts the stage.
+func (a *App) SetStagePlan(sessionID string, plan RacePlan) {
+	if s := a.getSession(sessionID); s != nil {
+		s.SetStagePlan(plan)
+	}
+}
+
 // PreviewRacePlan lists the decisive climbs and sectors of a race's course,
 // the places a race plan can target.
 func (a *App) PreviewRacePlan(raceID int64) []director.PlanPoint {

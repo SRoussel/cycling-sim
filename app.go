@@ -187,6 +187,8 @@ type StageRaceProgress struct {
 	// GC: the race leader and the player's riders, live (on the true
 	// end-of-segment frames only).
 	GC []GCLine `json:"gc,omitempty"`
+	// StagePlan: the race is paused for the player's plan of this stage.
+	StagePlan *StagePlanRequest `json:"stagePlan,omitempty"`
 }
 
 // GCLine is a rider's place on GC, before the stage and live.
@@ -800,11 +802,15 @@ func (a *App) makeStageRaceProgressCallback(stageRaceID int64, stageCount int, s
 		var moment *director.Moment
 		var goal, gcGoal *director.Goal
 		var gc []GCLine
+		var stagePlan *StagePlanRequest
 		if sess != nil {
 			moment = sess.Observe(snapshot.Race, snapshot.RouteProfile, snapshot.StageKmTotal-snapshot.StageKmCovered, snapshot.StageNumber)
 			goal, _ = sess.Goal()
 			gcGoal = sess.GCGoal()
 			gc = gcLines(snapshot.Race, sess.controlledTeam)
+			if snapshot.StageStart && !snapshot.TimeTrial {
+				stagePlan = sess.RequestStagePlan(snapshot.StageNumber, snapshot.StageName, director.PlanPoints(snapshot.RouteProfile))
+			}
 		}
 		runtime.EventsEmit(a.ctx, "stage_race_progress", StageRaceProgress{
 			SessionID:       sessionID,
@@ -830,6 +836,7 @@ func (a *App) makeStageRaceProgressCallback(stageRaceID int64, stageCount int, s
 			Goal:            goal,
 			GCGoal:          gcGoal,
 			GC:              gc,
+			StagePlan:       stagePlan,
 		})
 		if sess != nil {
 			sess.Pace()

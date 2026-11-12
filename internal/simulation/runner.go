@@ -74,6 +74,10 @@ type StageProgressSnapshot struct {
 	TeamState        *TeamState
 	Events           []string
 	Race             *RaceView
+	// StageStart marks the update before a stage is raced (the moment to
+	// plan it); TimeTrial says the stage is one.
+	StageStart bool
+	TimeTrial  bool
 }
 
 func clampPercent(v float64) float64 {
@@ -521,6 +525,8 @@ func SimulateStageRaceWithProgress(stageRace *model.StageRace, stages []StageCon
 				RouteProfile:     stageProfile,
 				TeamState:        nil,
 				Events:           []string{fmt.Sprintf("Stage %d start", stage.StageNumber)},
+				StageStart:       true,
+				TimeTrial:        stage.Race != nil && stage.Race.RaceType == model.RaceTypeTT,
 			})
 		}
 

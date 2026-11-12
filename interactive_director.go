@@ -38,6 +38,8 @@ type directorState struct {
 	planAttackKm    float64
 	planAttackName  string
 	notes           []string // race-plan lines for the log
+	planAsked       int      // the stage whose plan was asked for
+	stagePoints     []director.PlanPoint
 }
 
 // SetDecisionLevel sets how often the race stops for a decision: "off",
@@ -67,6 +69,9 @@ func (s *interactiveSession) Observe(view *simulation.RaceView, profile *simulat
 	if stage != d.stage || profile != nil {
 		if stage != d.stage {
 			d.scheduled, d.timed, d.orders, d.pending = nil, nil, nil, nil
+			// The last stage's plan is done: a new one is asked for.
+			d.scheduledOrders, d.planAttackKm = nil, 0
+			s.plan = RacePlan{}
 		}
 		d.stage = stage
 		if profile != nil {

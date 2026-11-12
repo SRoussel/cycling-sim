@@ -4,7 +4,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { RadioState, newRadioState, radioMessages } from './radio'
 import * as App from '../../wailsjs/go/main/App'
-import { main } from '../../wailsjs/go/models'
+import { director, main } from '../../wailsjs/go/models'
 import {
   ACCEPT_PULSE_MS,
   COMMAND_COOLDOWN_MS,
@@ -36,6 +36,7 @@ export interface LiveProgressPayload {
   goal?: RaceGoal
   gcGoal?: RaceGoal
   gc?: GCLine[]
+  stagePlan?: StagePlanRequest
   groups?: Array<{ name: string; gap: number; size?: number }>
   kmTotal?: number
   kmCovered?: number
@@ -66,6 +67,13 @@ export interface RaceGoal {
   riderName: string
   target: number
   text: string
+}
+
+/** The race waits for the player's plan of the coming stage. */
+export interface StagePlanRequest {
+  stage: number
+  name: string
+  points: director.PlanPoint[]
 }
 
 /** A rider's place on GC before the stage (pos 0: none yet) and live. */
@@ -126,6 +134,11 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
   const [goal, setGoal] = useState<RaceGoal | null>(null)
   const [gcGoal, setGcGoal] = useState<RaceGoal | null>(null)
   const [gc, setGc] = useState<GCLine[]>([])
+  const [stagePlan, setStagePlan] = useState<StagePlanRequest | null>(null)
+  // togglePause is defined before the stage plan's submit: read both by ref.
+  const stagePlanRef = useRef<StagePlanRequest | null>(null)
+  stagePlanRef.current = stagePlan
+  const submitStagePlanRef = useRef<((p: { leaderId: number; break: string; hardOn: string[]; attackOn: string }) => Promise<void>) | null>(null)
 
   // ── Decision moments ──────────────────────────────────────
   const [moment, setMoment] = useState<Moment | null>(null)
@@ -141,6 +154,10 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
   const [skipFrom, setSkipFrom] = useState<number | null>(null)
 
   const togglePause = () => {
+    if (paused && stagePlanRef.current) {
+      // Play on an open stage plan: the team decides.
+      return submitStagePlanRef.current?.({ leaderId: 0, break: 'auto', hardOn: [], attackOn: '' })
+    }
     if (paused && moment) setMoment(null) // resuming dismisses the decision
     return setBackendPaused(!paused)
   }
@@ -168,6 +185,25 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
     }
     if (active) void App.SetDecisionLevel(sessionId!, level)
   }
+  /** Send the coming stage's plan (empty: the team decides) and start it. */
+  const submitStagePlan = async (plan: { leaderId: number; break: string; hardOn: string[]; attackOn: string }) => {
+    if (!active || !stagePlan) return
+    const req = stagePlan
+    setStagePlan(null)
+    await App.SetStagePlan(sessionId!, main.RacePlan.createFrom(plan))
+    setPaused(false)
+    setTeamOrders((prev) => ({ ...prev, break: plan.break as TeamOrderValue }))
+    const bits = [
+      plan.leaderId ? `ride for ${riderName(plan.leaderId)}` : '',
+      plan.break === 'yes' ? 'a rider in the break' : plan.break === 'no' ? 'nobody in the break' : '',
+      plan.hardOn.length ? `hard on ${plan.hardOn.length} point${plan.hardOn.length > 1 ? 's' : ''}` : '',
+      plan.attackOn ? 'a planned attack' : '',
+    ].filter(Boolean)
+    appendEvents([`📋 Stage ${req.stage} plan: ${bits.length ? bits.join(', ') : 'the team decides'}`])
+  }
+
+  submitStagePlanRef.current = submitStagePlan
+
   const resolveMoment = async (optionId: string) => {
     if (!active || !moment) return
     const m = moment
@@ -175,6 +211,7 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
     setGoal(null)
     setGcGoal(null)
     setGc([])
+    setStagePlan(null)
     radioRef.current = newRadioState()
     const label = await App.ResolveMoment(sessionId!, m.id, optionId)
     setPaused(false)
@@ -348,6 +385,16 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
     if (payload.goal && interactiveMode) setGoal((g) => (g?.text === payload.goal!.text ? g : payload.goal!)) // a new one each stage
     if (payload.gcGoal && interactiveMode) setGcGoal((g) => g ?? payload.gcGoal!)
     if (payload.gc && payload.gc.length > 0) setGc(payload.gc)
+    if (payload.stagePlan && interactiveMode) {
+      setStagePlan(payload.stagePlan)
+      setPaused(true)
+      const cur = latest.current
+      if (cur.skipFrom !== null && cur.sessionId) {
+        setSpeed(cur.skipFrom)
+        setSkipFrom(null)
+        void App.SetInteractiveSpeed(cur.sessionId, cur.skipFrom)
+      }
+    }
     if (interactiveMode) {
       const total = payload.stageKmTotal ?? payload.kmTotal ?? 0
       const done = payload.stageKm ?? payload.kmCovered ?? 0
@@ -505,6 +552,8 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
     goal,
     gcGoal,
     gc,
+    stagePlan,
+    submitStagePlan,
     decisionLevel,
     setDecisionLevel,
     skipping: skipFrom !== null,

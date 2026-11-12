@@ -113,3 +113,34 @@ func TestRacePlanSchedulesHardSectionAndAttack(t *testing.T) {
 		t.Fatal("only the player's team")
 	}
 }
+
+func TestStagePlanAskedOncePerStageAndCleared(t *testing.T) {
+	s := newInteractiveSession("Us")
+	s.SetDecisionLevel("all")
+	pts := []director.PlanPoint{{Key: "c1", Kind: "climb", StartKm: 150, LengthKm: 8, ToGoKm: 10}}
+	s.Observe(nil, &simulation.RouteProfile{TotalKm: 160}, 160, 2)
+	if r := s.RequestStagePlan(2, "Stage 2", pts); r == nil || !s.paused {
+		t.Fatal("the race waits for the stage plan")
+	}
+	if r := s.RequestStagePlan(2, "Stage 2", pts); r != nil {
+		t.Fatal("asked once per stage")
+	}
+	s.SetStagePlan(RacePlan{LeaderID: 5, HardOn: []string{"c1"}})
+	if s.paused {
+		t.Fatal("planning starts the stage")
+	}
+	if id, ok := s.LeaderChoice("Us"); !ok || id != 5 {
+		t.Fatal("the stage's leader")
+	}
+	s.Observe(nil, &simulation.RouteProfile{TotalKm: 180}, 180, 3) // next stage
+	if _, ok := s.LeaderChoice("Us"); ok {
+		t.Fatal("a stage's plan ends with the stage")
+	}
+	if len(s.director.scheduledOrders) != 0 {
+		t.Fatal("the last stage's hard sections are cleared")
+	}
+	s.SetDecisionLevel("off")
+	if r := s.RequestStagePlan(3, "Stage 3", pts); r != nil {
+		t.Fatal("with decisions off the race doesn't stop for plans")
+	}
+}

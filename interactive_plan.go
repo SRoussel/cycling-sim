@@ -54,6 +54,8 @@ func (s *interactiveSession) SetPlan(plan RacePlan, points []director.PlanPoint)
 		s.setTeamOrderLocked("break", simulation.OrderYes)
 	case "no":
 		s.setTeamOrderLocked("break", simulation.OrderNo)
+	default: // the team decides (and a stage plan resets the last stage's)
+		s.setTeamOrderLocked("break", simulation.OrderAuto)
 	}
 	byKey := map[string]director.PlanPoint{}
 	for _, p := range points {
@@ -130,4 +132,40 @@ func planName(p director.PlanPoint) string {
 		return p.Label[:i]
 	}
 	return p.Label
+}
+
+// StagePlanRequest asks the player to plan a stage before it is raced: the
+// stage's decisive climbs and sectors to plan around.
+type StagePlanRequest struct {
+	Stage  int                  `json:"stage"`
+	Name   string               `json:"name"`
+	Points []director.PlanPoint `json:"points"`
+}
+
+// RequestStagePlan pauses before a stage for the player's plan (once per
+// stage, and not when decisions are off). It returns the request to send.
+func (s *interactiveSession) RequestStagePlan(stage int, name string, points []director.PlanPoint) *StagePlanRequest {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if !s.director.enabled || s.director.planAsked == stage {
+		return nil
+	}
+	s.director.planAsked = stage
+	if points == nil {
+		points = []director.PlanPoint{} // JSON [], not null
+	}
+	s.director.stagePoints = points
+	s.paused = true
+	return &StagePlanRequest{Stage: stage, Name: name, Points: points}
+}
+
+// SetStagePlan applies the player's plan for the coming stage and starts it.
+func (s *interactiveSession) SetStagePlan(plan RacePlan) {
+	s.mu.Lock()
+	points := s.director.stagePoints
+	s.mu.Unlock()
+	s.SetPlan(plan, points)
+	s.mu.Lock()
+	s.paused = false
+	s.mu.Unlock()
 }

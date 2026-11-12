@@ -2,6 +2,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import * as App from '../../wailsjs/go/main/App'
 import { director, main } from '../../wailsjs/go/models'
+import { PlanForm } from '../components/race/PlanForm'
 import './RaceSetup.css'
 
 function RaceSetup() {
@@ -32,7 +33,7 @@ function RaceSetup() {
         if (found) {
           const preview = await App.PreviewRaceStartList(found.id)
           setStartList(preview || [])
-          setPlanPoints((await App.PreviewRacePlan(found.id)) || [])
+          setPlanPoints((await App.PreviewRacePlan(found.id)) ?? [])
           if (!controlledTeam && preview && preview.length > 0) {
             setControlledTeam(preview[0].team)
           }
@@ -145,51 +146,17 @@ function RaceSetup() {
           <section className="card race-plan">
             <h2>Race plan</h2>
             <p className="option-help">Your team follows the plan unless you change course during the race. Leave anything to the team.</p>
-            <div className="plan-grid">
-              <label>
-                <span>Ride for</span>
-                <select value={planLeader} onChange={(e) => setPlanLeader(Number(e.target.value))}>
-                  <option value={0}>Team decides</option>
-                  {startList.filter((r) => r.team === controlledTeam).map((r) => (
-                    <option key={r.id} value={r.id}>{r.name} ({wkg(r).toFixed(1)} W/kg, {r.ftp} W)</option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                <span>The break</span>
-                <select value={planBreak} onChange={(e) => setPlanBreak(e.target.value)}>
-                  <option value="auto">Team decides</option>
-                  <option value="yes">Put a rider in the break</option>
-                  <option value="no">Nobody in the break</option>
-                </select>
-              </label>
-              <label>
-                <span>Leader attacks on</span>
-                <select value={planAttack} onChange={(e) => setPlanAttack(e.target.value)} disabled={planPoints.length === 0}>
-                  <option value="">Wherever he sees fit</option>
-                  {planPoints.map((p) => (
-                    <option key={p.key} value={p.key}>{p.label}</option>
-                  ))}
-                </select>
-              </label>
-            </div>
-            {planPoints.length > 0 ? (
-              <fieldset className="plan-hard">
-                <legend>Make it hard on (the team drives into and over it)</legend>
-                {planPoints.map((p) => (
-                  <label key={p.key} className="checkbox-label">
-                    <input
-                      type="checkbox"
-                      checked={planHard.includes(p.key)}
-                      onChange={(e) => setPlanHard((h) => (e.target.checked ? [...h, p.key] : h.filter((k) => k !== p.key)))}
-                    />
-                    {p.kind === 'climb' ? '⛰' : p.kind === 'gravel' ? '💨' : '🪨'} {p.label}
-                  </label>
-                ))}
-              </fieldset>
-            ) : (
-              <p className="option-help">No decisive climbs or sectors on this course: it's one for the sprinters.</p>
-            )}
+            <PlanForm
+              riders={startList.filter((r) => r.team === controlledTeam)}
+              points={planPoints}
+              value={{ leaderId: planLeader, break: planBreak, hardOn: planHard, attackOn: planAttack }}
+              onChange={(v) => {
+                setPlanLeader(v.leaderId)
+                setPlanBreak(v.break)
+                setPlanHard(v.hardOn)
+                setPlanAttack(v.attackOn)
+              }}
+            />
           </section>
         )}
 

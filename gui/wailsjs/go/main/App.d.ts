@@ -63,6 +63,8 @@ export function SetRiderFollow(arg1:string,arg2:number,arg3:number):Promise<void
 
 export function SetSprintTrainOrder(arg1:string,arg2:Array<number>):Promise<void>;
 
+export function SetStagePlan(arg1:string,arg2:main.RacePlan):Promise<void>;
+
 export function SetTeamOrder(arg1:string,arg2:string,arg3:string):Promise<void>;
 
 export function StartInteractiveSimulation(arg1:number,arg2:boolean,arg3:string,arg4:main.RacePlan):Promise<main.InteractiveSessionInfo>;

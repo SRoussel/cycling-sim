@@ -7,6 +7,7 @@ import { RaceGroup, formatRaceClock, toDisplayGroups } from '../sim/shared'
 import { LiveProgressPayload, RaceGoal, useTeamControl } from '../sim/useTeamControl'
 import { RaceDashboard } from '../components/race/RaceDashboard'
 import { RaceTopBar } from '../components/race/RaceTopBar'
+import { StagePlanCard } from '../components/race/StagePlanCard'
 import './Simulation.css'
 import './RaceSetup.css'
 
@@ -151,6 +152,7 @@ function StageRaceSimulation() {
       interactive={interactiveMode}
       kmRemaining={stageKmRemaining}
       emptyText="Stage is running. Live groups will appear here."
+      banner={interactiveMode && tc.stagePlan ? <StagePlanCard tc={tc} /> : undefined}
       top={
         <RaceTopBar
           title={stageRace.name}

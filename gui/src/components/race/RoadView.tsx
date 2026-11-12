@@ -17,43 +17,47 @@ export function groupColor(groups: RaceGroup[], name: string | undefined): strin
  */
 export function RoadView({ groups, tc, emptyText }: { groups: RaceGroup[]; tc?: TeamControl; emptyText: string }) {
   return (
-    <section className="dash-panel road-view">
-      <h2>On the road</h2>
-      {groups.length > 1 && <GapGraphic groups={groups} tc={tc} />}
+    <section className="panel road">
+      <header className="panel-head">
+        <h2>On the road</h2>
+        {groups.length > 1 && <span className="panel-meta">{groups.length} groups</span>}
+      </header>
       {groups.length === 0 ? (
         <div className="empty-state">{emptyText}</div>
       ) : (
-        <ol className="road-groups">
-          {groups.map((g, i) => {
-            const mine = tc ? tc.teamRiders.filter((r) => tc.riderGroups[r.id] === g.name) : []
-            const mineNames = new Set(mine.map((r) => r.name))
-            const others = g.riders.filter((n) => !mineNames.has(n))
-            const size = g.size ?? g.riders.length
-            return (
-              <li key={i} className={`road-group${mine.length > 0 ? ' has-mine' : ''}`} style={{ '--gc': GROUP_COLORS[i % GROUP_COLORS.length] } as React.CSSProperties}>
-                <div className="road-group-head">
-                  <span className="road-group-dot" />
-                  <span className="road-group-name">{g.name}</span>
-                  <span className="road-group-size">{size} {size === 1 ? 'rider' : 'riders'}</span>
-                  <span className="road-group-gap">{g.gap}</span>
-                </div>
-                {mine.length > 0 && (
-                  <div className="road-group-mine">★ {mine.map((r) => r.name).join(', ')}</div>
-                )}
-                {others.length > 0 && (
-                  <div className={`road-group-riders${size <= 30 ? ' full' : ''}`}>
-                    {others.map((n, j) => (
-                      <span key={j} className="road-rider">
-                        {tc && tc.teamByName[n] && <i className="team-dot" style={{ background: teamColor(tc.teamByName[n]) }} title={tc.teamByName[n]} />}
-                        {n}{j < others.length - 1 ? ', ' : ''}
+        <>
+          {groups.length > 1 && <GapGraphic groups={groups} tc={tc} />}
+          <ol className="groups">
+            {groups.map((g, i) => {
+              const mine = tc ? tc.teamRiders.filter((r) => tc.riderGroups[r.id] === g.name) : []
+              const mineNames = new Set(mine.map((r) => r.name))
+              const size = g.size ?? g.riders.length
+              // Names other than ours: the backend lists everyone in small
+              // groups, the first few (and "+N more") in big ones.
+              const named = g.riders.filter((n) => !mineNames.has(n) && !/^\+\d+ more$/.test(n))
+              const shown = named.slice(0, 6)
+              const rest = size - mine.length - shown.length
+              return (
+                <li key={i} className={mine.length > 0 ? 'mine' : ''}>
+                  <span className="g-dot" style={{ background: GROUP_COLORS[i % GROUP_COLORS.length] }} />
+                  <span className="g-name">{g.name}</span>
+                  <span className="g-size">{size}</span>
+                  <span className="g-gap">{(g.gapS ?? 0) > 0 ? g.gap : ''}</span>
+                  <div className="g-riders">
+                    {mine.length > 0 && <span className="g-ours">{mine.map((r) => r.name).join(', ')}</span>}
+                    {shown.map((n, j) => (
+                      <span key={j} className="g-rider">
+                        {tc?.teamByName[n] && <i className="team-dot" style={{ background: teamColor(tc.teamByName[n]) }} title={tc.teamByName[n]} />}
+                        {n}
                       </span>
                     ))}
+                    {rest > 0 && <span className="g-more">+{rest}</span>}
                   </div>
-                )}
-              </li>
-            )
-          })}
-        </ol>
+                </li>
+              )
+            })}
+          </ol>
+        </>
       )}
     </section>
   )

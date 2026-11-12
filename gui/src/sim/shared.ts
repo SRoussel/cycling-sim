@@ -127,7 +127,7 @@ function splitEvent(line: string): { type: string; reason: string; km: number | 
 /** Attack events: "attack: rider=581; key=1; name=Tadej Pogačar; team=UAE Team Emirates". */
 export function parseAttackEvent(
   line: string,
-): { riderId: number | null; team: string | null; name: string | null; key: boolean } | null {
+): { riderId: number | null; team: string | null; name: string | null; key: boolean; fav: boolean } | null {
   const ev = splitEvent(line)
   if (ev.type !== 'attack') return null
   const fields: Record<string, string> = {}
@@ -140,6 +140,7 @@ export function parseAttackEvent(
     team: fields.team ?? null,
     name: fields.name ?? null,
     key: fields.key === '1',
+    fav: fields.fav === '1',
   }
 }
 

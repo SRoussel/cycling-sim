@@ -476,13 +476,16 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
       setFollowMap(payload.teamState.followMap || {})
     }
     if (payload.events && payload.events.length > 0) {
-      // In a directed race the log keeps the attacks that matter: favourites,
-      // contenders and leaders (key), and our own riders.
+      // In a directed race the feed keeps what the player acts on: the race
+      // favourites' attacks and our own riders' (not every leader's), and
+      // none of the route lines the top bar already shows.
       const team = latest.current.controlledTeam
       const relevant = (line: string) => {
         if (!interactiveMode) return true
+        const kind = line.slice(0, line.indexOf(':')).trim()
+        if (kind === 'cobbles' || kind === 'summit' || kind === 'final') return false
         const a = parseAttackEvent(line)
-        return !a || a.key || a.team === team
+        return !a || a.fav || a.team === team
       }
       appendEvents(payload.events.filter(isNewAttack).filter(relevant).map(formatEventLine))
     }

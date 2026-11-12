@@ -154,7 +154,11 @@ func FormGroups(riders []*RiderState, segment *model.Segment, isTT bool, remaini
 				if state.isDangerous(rs) || state.gcContender(rs) || rs.TeamRole == RoleLeader {
 					key = 1
 				}
-				state.LogEvent("attack", fmt.Sprintf("rider=%d; key=%d; name=%s; team=%s", rs.Rider.ID, key, rs.Rider.Name, rs.Rider.Team))
+				fav := 0 // one of the race favourites (the feed lists only these and the player's riders)
+				if state.isDangerous(rs) {
+					fav = 1
+				}
+				state.LogEvent("attack", fmt.Sprintf("rider=%d; key=%d; fav=%d; name=%s; team=%s", rs.Rider.ID, key, fav, rs.Rider.Name, rs.Rider.Team))
 				last := &state.Events[len(state.Events)-1]
 				last.RiderID, last.Key = rs.Rider.ID, key == 1
 			}

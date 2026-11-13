@@ -260,8 +260,9 @@ func followSplit(rps []riderPower, segment *model.Segment, firstID int, cooperat
 			// A rider follows a wheel up to their threshold whatever tempo
 			// they meant to ride (W' and work are charged from the power
 			// actually needed at the group's speed, see simulateStep).
-			capacity := math.Max(rp.power, EffectivePower(r, rp.state.CurrentFTP(), segment, false))
-			available := capacity + rp.state.WPrime.AvailablePowerAboveFTP(segTime)
+			thr := EffectivePower(r, rp.state.CurrentFTP(), segment, false)
+			capacity := math.Max(rp.power, thr)
+			available := rp.state.maxPowerFor(thr, capacity, segTime)
 			needs := func(cdaFactor float64) float64 {
 				return segmentPower(speed, r.TotalMassKg(), r.CdA*cdaFactor, segment, r.Handling)
 			}

@@ -9,7 +9,8 @@ import (
 // PowerCurve is a rider's fresh maximal power (W) for each duration (s) as
 // the race model sees it, on flat roads: threshold (CP) plus the anaerobic
 // reserve W' spent evenly over the effort (Morton's two-parameter model,
-// CP + W'/t), capped by his peak sprint; over long efforts threshold and W'
+// CP + W'/t), capped by the short-effort ceiling (powerCeiling: the sprint
+// fading towards maximal aerobic power); over long efforts threshold and W'
 // fade with the work done (DurabilityFactor, Endurance), solved as a fixed
 // point. Terrain abilities (climbing, time trial, cobbles), seasonal form
 // and fuel aren't applied.
@@ -33,7 +34,7 @@ func PowerCurve(r *model.Rider, seconds []float64) []float64 {
 			p = next
 		}
 		if sprint > 0 {
-			p = math.Min(p, sprint)
+			p = math.Min(p, math.Max(cp, powerCeiling(cp, sprint, punchGap(r), t)))
 		}
 		out[i] = p
 	}

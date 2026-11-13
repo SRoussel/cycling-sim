@@ -655,7 +655,7 @@ func (s *RaceState) tempoDrops(leader, finisher *RiderState, segment *model.Segm
 	}
 	if len(s.Course) == 0 {
 		need, _, v := needOn(segment)
-		avail := finisherFTP + finisher.WPrime.AvailablePowerAboveFTP(SegmentTime(v, segment.DistanceKm))
+		avail := finisher.maxPowerFor(finisherFTP, finisherFTP, SegmentTime(v, segment.DistanceKm))
 		return need >= avail*(1-driveMargin)
 	}
 	w := finisher.WPrime.WPrimeCurrent

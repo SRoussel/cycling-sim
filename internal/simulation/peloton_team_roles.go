@@ -214,7 +214,7 @@ func decisiveTime(rs *RiderState, segments []model.Segment) float64 {
 		hard = true
 		thr := EffectivePower(r, rs.CurrentFTP(), seg, false)
 		v := segmentSpeed(thr, r.TotalMassKg(), r.CdA, seg, r.Handling)
-		p := thr + rs.WPrime.AvailablePowerAboveFTP(SegmentTime(v, seg.DistanceKm))
+		p := rs.maxPowerFor(thr, thr, SegmentTime(v, seg.DistanceKm))
 		v = math.Min(SpeedCap(r, seg), segmentSpeed(p, r.TotalMassKg(), r.CdA, seg, r.Handling))
 		t += SegmentTime(v, seg.DistanceKm)
 	}

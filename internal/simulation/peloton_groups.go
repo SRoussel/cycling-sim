@@ -497,7 +497,7 @@ func riderEffort(rs *RiderState, action Action, segment *model.Segment, remainin
 	threshold := EffectivePower(r, rs.CurrentFTP(), segment, false)
 	burstOver := func(km float64) float64 {
 		v := segmentSpeed(threshold, r.TotalMassKg(), r.CdA, segment, r.Handling)
-		return threshold + rs.WPrime.AvailablePowerAboveFTP(SegmentTime(v, km))
+		return rs.maxPowerFor(threshold, threshold, SegmentTime(v, km))
 	}
 	phase := PhaseEarly
 	if state != nil {
@@ -822,7 +822,7 @@ func burstPower(rs *RiderState, segment *model.Segment, remainingKm float64) flo
 	r := rs.Rider
 	threshold := EffectivePower(r, rs.CurrentFTP(), segment, false)
 	v := segmentSpeed(threshold, r.TotalMassKg(), r.CdA, segment, r.Handling)
-	return threshold + rs.WPrime.AvailablePowerAboveFTP(SegmentTime(v, remainingKm))
+	return rs.maxPowerFor(threshold, threshold, SegmentTime(v, remainingKm))
 }
 
 // driveSquads picks, for each driving team, the domestiques who ride on the

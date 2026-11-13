@@ -69,12 +69,13 @@ func (s *RaceState) attackPays(rs *RiderState, seg *model.Segment) bool {
 	threshold := EffectivePower(r, rs.CurrentFTP(), seg, false)
 	km := s.attackKm(seg)
 	v0 := segmentSpeed(threshold, r.TotalMassKg(), r.CdA, seg, r.Handling)
-	burst := threshold + rs.WPrime.AvailablePowerAboveFTP(SegmentTime(v0, km))
+	burst := rs.maxPowerFor(threshold, threshold, SegmentTime(v0, km))
 	v := segmentSpeed(burst, r.TotalMassKg(), r.CdA, seg, r.Handling)
 	holds := func(o *RiderState) bool {
 		or := o.Rider
 		need := segmentPower(v, or.TotalMassKg(), or.CdA*groupDraft(2, false, seg, v), seg, or.Handling)
-		avail := EffectivePower(or, o.CurrentFTP(), seg, false) + o.WPrime.AvailablePowerAboveFTP(SegmentTime(v, km))
+		thrO := EffectivePower(or, o.CurrentFTP(), seg, false)
+		avail := o.maxPowerFor(thrO, thrO, SegmentTime(v, km))
 		return need <= avail
 	}
 	own := []*RiderState{rs}

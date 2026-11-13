@@ -28,6 +28,15 @@ import (
 var race2026Course = map[string]string{
 	"Volta a Catalunya":         "Volta a Catalunya 2024",
 	"Tour Auvergne-Rhone-Alpes": "Criterium du Dauphine",
+	"Giro d'Italia":             "Giro d'Italia 2026",
+	"Tirreno-Adriatico":         "Tirreno-Adriatico 2026",
+	"Tour de Romandie":          "Tour de Romandie 2026",
+	"Strade Bianche":            "Strade Bianche 2026",
+	"E3 Saxo Classic":           "E3 Saxo Classic 2026",
+	"Gent-Wevelgem":             "Gent-Wevelgem 2026",
+	"Tour of Flanders":          "Tour of Flanders 2026",
+	"Paris-Roubaix":             "Paris-Roubaix 2026",
+	"La Fleche Wallonne":        "La Fleche Wallonne 2026",
 }
 
 // foldKey matches rider names across sources: accents dropped, case and
@@ -218,5 +227,23 @@ func nameResolver(riders []model.Rider) func(string) (model.Rider, bool) {
 			return model.Rider{}, false
 		}
 		return riders[hit], true
+	}
+}
+
+// StageRaceField is the field of a 2024/2023 reference stage race.
+func StageRaceField(stageRace string, riders []model.Rider) []model.Rider {
+	return stageRaceField(stageRace, riders)
+}
+
+// FieldOf gives a stage race the field of the reference among entries that
+// runs on it (everyone if none does).
+func FieldOf(entries []RealRaceEntry) func(string, []model.Rider) []model.Rider {
+	return func(stageRace string, riders []model.Rider) []model.Rider {
+		for _, e := range entries {
+			if e.InternalName == stageRace {
+				return e.pool(riders)
+			}
+		}
+		return riders
 	}
 }

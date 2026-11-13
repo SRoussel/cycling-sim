@@ -476,6 +476,7 @@ func cmdValidateSets(db *database.DB, n int, crossSeason, season2026 bool) {
 	fmt.Printf("Reference races over %d seed sets (gap error: mean, min-max; real winner's win rate)\n", n)
 	var total float64
 	var results []simulation.SeedSetResult
+	shapeRefs, shapeField := simulation.KnownRealShapes(), simulation.StageRaceField
 	if season2026 {
 		riders, _ := db.ListRiders()
 		oneDay, stage, err := simulation.Load2026References(seed.DataPath("reference_2026.csv"), seed.DataPath("startlists_2026.csv"), riders)
@@ -483,6 +484,7 @@ func cmdValidateSets(db *database.DB, n int, crossSeason, season2026 bool) {
 			fatalf("Error reading the 2026 references: %v\n", err)
 		}
 		results = simulation.RunSeedSetsFor(db, n, oneDay, stage)
+		shapeRefs, shapeField = simulation.KnownRealShapes2026(), simulation.FieldOf(stage)
 	} else {
 		results = simulation.RunSeedSets(db, n, crossSeason)
 	}
@@ -546,7 +548,7 @@ func cmdValidateSets(db *database.DB, n int, crossSeason, season2026 bool) {
 	var detail []string
 	for set := 0; set < n; set++ {
 		simulation.ValidationSeedBase = int64(set) * 1000
-		shapes := simulation.RunShapeValidation(db)
+		shapes := simulation.RunShapeValidationFor(db, shapeRefs, shapeField)
 		for _, a := range simulation.ShapeAverages(shapes) {
 			fmt.Printf("  set %d %-16s (%d) %s\n", set+1, a.Kind, a.Races, a.Summary())
 		}

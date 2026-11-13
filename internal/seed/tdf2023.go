@@ -41,6 +41,9 @@ func realStageRaces() []realStageRace {
 		{Giro2024, "Giro 2024", giro2024Stages()},
 		{Tirreno2024, "Tirreno 2024", tirreno2024Stages()},
 		{Catalunya2024, "Catalunya 2024", catalunya2024Stages()},
+		{Giro2026, "Giro 2026", giro2026Stages()},
+		{Tirreno2026, "Tirreno 2026", tirreno2026Stages()},
+		{Romandie2026, "Romandie 2026", romandie2026Stages()},
 	}
 }
 

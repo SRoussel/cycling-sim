@@ -65,6 +65,39 @@ func KnownRealShapes() []RealShape {
 	}}
 }
 
+// KnownRealShapes2026: the 2026 stage races on their real routes (English
+// Wikipedia stage tables and stage articles, read Nov 2026). Judgement calls
+// where the page doesn't say: Giro stage 5 (Arrieta, "rainy day raid"), 12
+// (Segaert's long-range attack, favourites behind) and 19 (Kuss, while his
+// leader Vingegaard led the race) are breakaways; Romandie stage 1 (Pogačar
+// out-sprinting Lipowitz and two others) is a selection.
+func KnownRealShapes2026() []RealShape {
+	S, B, X, T := OutcomeSprint, OutcomeBreakaway, OutcomeSelection, OutcomeTT
+	return []RealShape{{
+		// Sprints: Magnier (3), Thomas Silva, Narváez, Ballerini, Milan;
+		// Vingegaard's five wins from selections; breaks: Arrieta, Narváez
+		// (8, 11), Segaert, Bettiol, Dversnes, Valgren, Kuss.
+		DisplayName:  "Giro d'Italia 2026 (race shape)",
+		InternalName: "Giro d'Italia 2026",
+		Kind:         ShapeGrandTour,
+		Stages:       []Outcome{S, S, S, S, B, S, X, B, X, T, B, B, B, X, B, X, B, S, B, X, S},
+	}, {
+		// Ganna's ITT; Van der Poel from a group of favourites (2) and a
+		// reduced sprint (4); Valgren from the break; del Toro at Camerino.
+		DisplayName:  "Tirreno-Adriatico 2026 (race shape)",
+		InternalName: "Tirreno-Adriatico 2026",
+		Kind:         ShapeWeekLong,
+		Stages:       []Outcome{T, X, S, S, B, X, S},
+	}, {
+		// Godon's prologue; Pogačar's four wins and Godon's sprint of a
+		// small group (3) all from selections.
+		DisplayName:  "Tour de Romandie 2026 (race shape)",
+		InternalName: "Tour de Romandie 2026",
+		Kind:         ShapeWeekLong,
+		Stages:       []Outcome{T, X, X, X, X, X},
+	}}
+}
+
 // shapeRuns: full stage-race simulations per race-shape check.
 const shapeRuns = 32
 
@@ -81,6 +114,12 @@ type ShapeResult struct {
 // RunShapeValidation simulates each known stage race and classifies how
 // every stage was won.
 func RunShapeValidation(db *database.DB) []ShapeResult {
+	return RunShapeValidationFor(db, KnownRealShapes(), stageRaceField)
+}
+
+// RunShapeValidationFor runs the given shape references, each on the field
+// field(stage race name, riders) gives it.
+func RunShapeValidationFor(db *database.DB, refs []RealShape, field func(string, []model.Rider) []model.Rider) []ShapeResult {
 	if db == nil {
 		return nil
 	}
@@ -93,7 +132,7 @@ func RunShapeValidation(db *database.DB) []ShapeResult {
 		return nil
 	}
 	var out []ShapeResult
-	for _, ref := range KnownRealShapes() {
+	for _, ref := range refs {
 		var sr *model.StageRace
 		for i := range srs {
 			if srs[i].Name == ref.InternalName {
@@ -114,7 +153,7 @@ func RunShapeValidation(db *database.DB) []ShapeResult {
 			stages = append(stages, StageConfig{Race: race, Course: course, StageNumber: st.StageNumber, RestDayBefore: st.RestDayBefore, Prestige: st.Prestige, SeasonalForm: true})
 			infos = append(infos, selection.StageInfo{Course: course, RaceType: race.RaceType})
 		}
-		start := selection.SelectStageRaceStartList(stageRaceField(ref.InternalName, riders), infos, selection.DefaultConfig(model.RaceTypeRoad, true, len(stages)))
+		start := selection.SelectStageRaceStartList(field(ref.InternalName, riders), infos, selection.DefaultConfig(model.RaceTypeRoad, true, len(stages)))
 		runs := parallelRuns(shapeRuns, func(run int) []Outcome {
 			own := make([]StageConfig, len(stages))
 			copy(own, stages)

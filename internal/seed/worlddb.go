@@ -275,6 +275,15 @@ func withWorldDB(riders, train []model.Rider, wdb []wdbRider) []model.Rider {
 		if a := ageIn(x.Birth, x.StartYear); a >= 16 && a <= 50 {
 			riders[i].Age = a
 		}
+		// Real height (riders.csv heights are mostly template values: Tarling
+		// 178 cm for 194), with the drag area rescaled by frontal area
+		// (Heil), as when a layer corrects weight.
+		if h := float64(x.Height); h >= 150 && h <= 210 && h != riders[i].HeightCm {
+			if a0, a1 := frontalArea(riders[i].HeightCm, riders[i].WeightKg), frontalArea(h, riders[i].WeightKg); a0 > 0 && a1 > 0 && riders[i].CdA > 0 {
+				riders[i].CdA = math.Round(riders[i].CdA*a1/a0*1000) / 1000
+			}
+			riders[i].HeightCm = h
+		}
 		if t, ok := trainByName[riders[i].Name]; ok {
 			pairs = append(pairs, pair{x, t})
 		}

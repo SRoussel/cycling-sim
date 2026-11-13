@@ -1,5 +1,6 @@
 import { Outlet, NavLink } from 'react-router-dom'
 import './Layout.css'
+import { RiderProfileHost } from './RiderProfile'
 
 function Layout() {
   return (
@@ -19,6 +20,7 @@ function Layout() {
       <main className="main-content">
         <Outlet />
       </main>
+      <RiderProfileHost />
     </div>
   )
 }

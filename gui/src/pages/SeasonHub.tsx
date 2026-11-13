@@ -3,11 +3,17 @@ import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import * as App from '../../wailsjs/go/main/App'
 import { director, main } from '../../wailsjs/go/models'
 import { Jersey } from '../components/race/Jersey'
+import { RiderLink } from '../components/RiderProfile'
 import { PlanForm, PlanValue } from '../components/race/PlanForm'
 import { formatGap } from '../sim/shared'
 import './Season.css'
 
 type Tab = 'overview' | 'calendar' | 'team' | 'standings' | 'contracts'
+
+/** The season of the page (rider panels compare within its field). */
+function useSeasonId(): number {
+  return Number(useParams().seasonId)
+}
 
 /** Thousand euro → "€1.2M" / "€450k". */
 function money(k: number): string {
@@ -252,6 +258,7 @@ function ordinal(n: number): string {
 
 /** The next race: pick the squad, then race it live or simulate it. */
 function NextRace({ hub, reload, onRaced }: { hub: main.SeasonHub; reload: () => Promise<void>; onRaced: (eventId: number) => void }) {
+  const sid = useSeasonId()
   const navigate = useNavigate()
   const s = hub.season
   const next = hub.next!
@@ -362,7 +369,7 @@ function NextRace({ hub, reload, onRaced }: { hub: main.SeasonHub; reload: () =>
                   <tr key={r.id} className={`${on ? 'picked' : ''}${r.available ? '' : ' unavailable'}`} onClick={() => r.available && toggle(r.id)}>
                     <td><input type="checkbox" checked={on} disabled={!r.available || (!on && picked.length >= squad.size)} readOnly /></td>
                     <td className="rider-cell" title={ratingsTitle(r)}>
-                      <b>{r.name}</b> <span className="muted">{r.age}</span>
+                      <RiderLink id={r.id} name={r.name} seasonId={sid} bold /> <span className="muted">{r.age}</span>
                       {!r.available && <span className="why"> {r.why}</span>}
                     </td>
                     <td className="muted">{r.specialty}</td>
@@ -507,6 +514,7 @@ function EventResults({ rows }: { rows: main.SeasonResultRow[] }) {
 }
 
 function Team({ hub, reload }: { hub: main.SeasonHub; reload: () => Promise<void> }) {
+  const sid = useSeasonId()
   const [roster, setRoster] = useState<main.SeasonRiderInfo[]>([])
   const load = useCallback(async () => setRoster(await App.GetSeasonRoster(hub.season.id)), [hub.season.id])
   useEffect(() => {
@@ -541,7 +549,7 @@ function Team({ hub, reload }: { hub: main.SeasonHub; reload: () => Promise<void
         <tbody>
           {roster.map((r) => (
             <tr key={r.id}>
-              <td><b>{r.name}</b></td>
+              <td><RiderLink id={r.id} name={r.name} seasonId={sid} bold /></td>
               <td>{r.age}</td>
               <td className="muted">{r.specialty}</td>
               <td>{r.ftp} W</td>
@@ -571,6 +579,7 @@ function Team({ hub, reload }: { hub: main.SeasonHub; reload: () => Promise<void
 }
 
 function Standings({ hub }: { hub: main.SeasonHub }) {
+  const sid = useSeasonId()
   return (
     <div className="season-cols">
       <section className="card">
@@ -580,7 +589,7 @@ function Standings({ hub }: { hub: main.SeasonHub }) {
             {hub.riders.map((r) => (
               <tr key={r.riderId} className={r.mine ? 'mine' : ''}>
                 <td className="pos">{r.pos}</td>
-                <td>{r.name}</td>
+                <td><RiderLink id={r.riderId} name={r.name} seasonId={sid} /></td>
                 <td className="muted"><Jersey team={r.team} /> {r.team}</td>
                 <td className="num">{r.points}</td>
                 <td className="num muted">{r.wins} W</td>
@@ -700,11 +709,12 @@ function OfferRow({ r, onOffer, action, showTeam }: {
   action: string
   showTeam?: boolean
 }) {
+  const sid = useSeasonId()
   const [salary, setSalary] = useState(r.ask)
   const [years, setYears] = useState(2)
   return (
     <tr>
-      <td title={ratingsTitle(r)}><b>{r.name}</b></td>
+      <td title={ratingsTitle(r)}><RiderLink id={r.id} name={r.name} seasonId={sid} bold /></td>
       <td>{r.age}</td>
       <td className="muted">{r.specialty}</td>
       {showTeam && <td className="muted">{r.team ? <><Jersey team={r.team} /> {r.team}</> : 'free'}</td>}

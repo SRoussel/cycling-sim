@@ -19,9 +19,13 @@ export function GetMountainsStandings(arg1:number,arg2:number):Promise<Array<mai
 
 export function GetPointsStandings(arg1:number,arg2:number):Promise<Array<main.PointsStanding>>;
 
+export function GetProfileRiders(arg1:number):Promise<Array<main.ProfileRiderRef>>;
+
 export function GetRaceResults(arg1:number):Promise<main.RaceResults>;
 
 export function GetRaces():Promise<Array<main.RaceInfo>>;
+
+export function GetRiderProfile(arg1:number,arg2:number):Promise<main.RiderProfile>;
 
 export function GetRiders():Promise<Array<main.RiderInfo>>;
 

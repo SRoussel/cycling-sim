@@ -1,7 +1,9 @@
 import { useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import { EFFORT_MAX_PCT, EFFORT_MIN_PCT, RaceGroup, RiderTelemetryPoint, formatGap } from '../../sim/shared'
 import { LiveOrder, LiveRider, TEAM_ORDER_KINDS, TEAM_ORDERS, TeamControl, TeamOrderValue } from '../../sim/useTeamControl'
 import { Jersey } from './Jersey'
+import { RiderLink } from '../RiderProfile'
 
 const ACTION_WORDS: Record<string, string> = {
   hold: 'own judgement',
@@ -66,6 +68,8 @@ function Bars({ tel }: { tel: RiderTelemetryPoint | null }) {
 export function TeamDock({ tc, groups }: { tc: TeamControl; kmRemaining: number; groups: RaceGroup[] }) {
   const [ordersOpen, setOrdersOpen] = useState(false)
   const [manual, setManual] = useState<number | null>(null)
+  // In a season race the panel compares within the season's field.
+  const seasonId = (useLocation().state as { season?: { seasonId: number } } | null)?.season?.seasonId ?? 0
   if (!tc.sessionId) {
     return <section className="panel team"><div className="empty-state">Starting…</div></section>
   }
@@ -165,7 +169,7 @@ export function TeamDock({ tc, groups }: { tc: TeamControl; kmRemaining: number;
           return (
             <li key={r.id} className={`crew-row${liveCmd ? ' commanded' : ''}${open ? ' open' : ''}`}>
               <div className="crew-who">
-                <span className="crew-name" title={tel ? `${r.name}: ${Math.round(tel.speedKph)} km/h, ${Math.round(tel.powerWatts)} W` : r.name}>{r.name}</span>
+                <span className="crew-name" title={tel ? `${r.name}: ${Math.round(tel.speedKph)} km/h, ${Math.round(tel.powerWatts)} W` : r.name}><RiderLink id={r.id} name={r.name} seasonId={seasonId} /></span>
                 <span className={`crew-status ${mode}`}>
                   <span className="crew-where">{whereIs(groups, tc.riderGroups[r.id])}</span>
                   {' · '}

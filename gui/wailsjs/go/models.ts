@@ -45,6 +45,38 @@ export namespace main {
 	        this.type = source["type"];
 	    }
 	}
+	export class CurvePoint {
+	    seconds: number;
+	    wkg: number;
+	    watts: number;
+	    wkgP10: number;
+	    wkgP50: number;
+	    wkgP90: number;
+	    wP10: number;
+	    wP50: number;
+	    wP90: number;
+	    pctWkg: number;
+	    pctW: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new CurvePoint(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.seconds = source["seconds"];
+	        this.wkg = source["wkg"];
+	        this.watts = source["watts"];
+	        this.wkgP10 = source["wkgP10"];
+	        this.wkgP50 = source["wkgP50"];
+	        this.wkgP90 = source["wkgP90"];
+	        this.wP10 = source["wP10"];
+	        this.wP50 = source["wP50"];
+	        this.wP90 = source["wP90"];
+	        this.pctWkg = source["pctWkg"];
+	        this.pctW = source["pctW"];
+	    }
+	}
 	export class GCStanding {
 	    position: number;
 	    riderName: string;
@@ -237,6 +269,44 @@ export namespace main {
 	        this.gap = source["gap"];
 	    }
 	}
+	export class ProfileRiderRef {
+	    id: number;
+	    name: string;
+	    team: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ProfileRiderRef(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.name = source["name"];
+	        this.team = source["team"];
+	    }
+	}
+	export class ProfileStat {
+	    key: string;
+	    label: string;
+	    value: number;
+	    pct: number;
+	    about: string;
+	    unit: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ProfileStat(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.key = source["key"];
+	        this.label = source["label"];
+	        this.value = source["value"];
+	        this.pct = source["pct"];
+	        this.about = source["about"];
+	        this.unit = source["unit"];
+	    }
+	}
 	export class RaceInfo {
 	    id: number;
 	    name: string;
@@ -342,6 +412,54 @@ export namespace main {
 		}
 	}
 	
+	export class RiderProfile {
+	    id: number;
+	    name: string;
+	    team: string;
+	    age: number;
+	    specialty: string;
+	    fieldSize: number;
+	    field: string;
+	    curve: CurvePoint[];
+	    physical: ProfileStat[];
+	    ratings: ProfileStat[];
+	
+	    static createFrom(source: any = {}) {
+	        return new RiderProfile(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.name = source["name"];
+	        this.team = source["team"];
+	        this.age = source["age"];
+	        this.specialty = source["specialty"];
+	        this.fieldSize = source["fieldSize"];
+	        this.field = source["field"];
+	        this.curve = this.convertValues(source["curve"], CurvePoint);
+	        this.physical = this.convertValues(source["physical"], ProfileStat);
+	        this.ratings = this.convertValues(source["ratings"], ProfileStat);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
 	export class SeasonEventInfo {
 	    id: number;
 	    kind: string;

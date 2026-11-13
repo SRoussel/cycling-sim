@@ -1,0 +1,369 @@
+/* Rider panel: power curve and ratings against the field (dataviz palette:
+   blue = this rider, aqua = comparison, validated on the dark surface;
+   the field is neutral gray; orange stays for the player's things). */
+.rp-overlay {
+  --rp-rider: #3987e5;
+  --rp-compare: #199e70;
+  --rp-field: #8b95a3;
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(5, 7, 10, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 3vh 16px;
+  overflow-y: auto;
+}
+
+.rp-panel {
+  width: min(880px, 100%);
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: 8px;
+  padding: 1.1rem 1.25rem 1.4rem;
+  font-size: 0.875rem;
+}
+
+.rp-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.rp-head p {
+  margin-top: 0.15rem;
+}
+
+.rp-close {
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  font-size: 1.6rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 0.25rem;
+}
+
+.rp-close:hover {
+  color: var(--color-text);
+}
+
+.rp-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem 1rem;
+  margin: 0.9rem 0 0.4rem;
+}
+
+.rp-compare {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--color-text-soft);
+}
+
+.rp-compare input {
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-line);
+  color: var(--color-text);
+  border-radius: 4px;
+  padding: 0.3rem 0.5rem;
+  min-width: 13rem;
+  font: inherit;
+}
+
+.rp-clear,
+.rp-toggle button {
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-line);
+  color: var(--color-text-soft);
+  border-radius: 4px;
+  padding: 0.3rem 0.65rem;
+  font: inherit;
+  cursor: pointer;
+}
+
+.rp-toggle {
+  margin-left: auto;
+  display: flex;
+}
+
+.rp-toggle button:first-child {
+  border-radius: 4px 0 0 4px;
+}
+
+.rp-toggle button:last-child {
+  border-radius: 0 4px 4px 0;
+  border-left: none;
+}
+
+.rp-toggle button.on {
+  color: var(--color-text);
+  background: #232b36;
+}
+
+.rp-section {
+  border-top: 1px solid var(--color-line);
+  margin-top: 1rem;
+  padding-top: 0.9rem;
+}
+
+.rp-section h2 {
+  margin-bottom: 0.2rem;
+}
+
+.rp-note {
+  font-size: 0.8rem;
+  margin-bottom: 0.5rem;
+}
+
+/* Keys (legend swatches, tooltip and table markers) */
+.key {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.key.line {
+  width: 14px;
+  height: 2px;
+  border-radius: 1px;
+}
+
+.key.line.rider {
+  background: var(--rp-rider);
+}
+
+.key.line.compare {
+  background: var(--rp-compare);
+}
+
+.key.line.median {
+  background: var(--rp-field);
+}
+
+.key.band {
+  width: 14px;
+  height: 10px;
+  border-radius: 2px;
+  background: rgba(139, 149, 163, 0.22);
+}
+
+.rp-legend {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 1.1rem;
+  color: var(--color-text-soft);
+  font-size: 0.8rem;
+  margin-bottom: 0.3rem;
+}
+
+.rp-plot {
+  position: relative;
+}
+
+.rp-plot svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.rp-plot .grid {
+  stroke: rgba(255, 255, 255, 0.06);
+  stroke-width: 1;
+}
+
+.rp-plot .tick {
+  fill: var(--color-text-muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.rp-plot .band {
+  fill: rgba(139, 149, 163, 0.14);
+}
+
+.rp-plot .median {
+  fill: none;
+  stroke: var(--rp-field);
+  stroke-width: 1.5;
+}
+
+.rp-plot .curve {
+  fill: none;
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.rp-plot .curve.rider {
+  stroke: var(--rp-rider);
+}
+
+.rp-plot .curve.compare {
+  stroke: var(--rp-compare);
+}
+
+.rp-plot .crosshair {
+  stroke: rgba(255, 255, 255, 0.25);
+  stroke-width: 1;
+}
+
+.rp-plot .dot {
+  stroke: var(--color-surface);
+  stroke-width: 2;
+}
+
+.rp-plot .dot.rider {
+  fill: var(--rp-rider);
+}
+
+.rp-plot .dot.compare {
+  fill: var(--rp-compare);
+}
+
+.rp-tip {
+  position: absolute;
+  top: 8px;
+  transform: translateX(-50%);
+  pointer-events: none;
+  background: #0b0e12;
+  border: 1px solid var(--color-line);
+  border-radius: 6px;
+  padding: 0.4rem 0.6rem;
+  font-size: 0.78rem;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Percentile strip */
+.rp-strip {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 2px;
+  margin-top: 0.6rem;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.8rem;
+}
+
+.rp-strip caption {
+  text-align: left;
+  font-size: 0.75rem;
+  padding-bottom: 0.15rem;
+}
+
+.rp-strip th {
+  font-weight: 500;
+  color: var(--color-text-muted);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.rp-strip tbody th {
+  text-align: left;
+  color: var(--color-text-soft);
+  padding-right: 0.4rem;
+}
+
+.rp-strip td {
+  text-align: center;
+  padding: 0.25rem 0;
+  border-radius: 3px;
+  color: var(--color-text);
+}
+
+/* Percentile bars */
+.rp-bars {
+  list-style: none;
+  margin-top: 0.4rem;
+}
+
+.rp-bars li {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) 6.5rem;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid var(--color-line);
+}
+
+.rp-bar-label {
+  display: flex;
+  flex-direction: column;
+}
+
+.rp-about {
+  font-size: 0.75rem;
+  line-height: 1.35;
+}
+
+.rp-track {
+  position: relative;
+  height: 8px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.rp-fill {
+  height: 100%;
+  border-radius: 4px;
+  background: var(--rp-rider);
+}
+
+.rp-mark {
+  position: absolute;
+  top: -3px;
+  width: 3px;
+  height: 14px;
+  margin-left: -1.5px;
+  border-radius: 2px;
+  background: var(--rp-compare);
+  box-shadow: 0 0 0 2px var(--color-surface);
+}
+
+.rp-bar-value {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.rp-cmp {
+  font-size: 0.78rem;
+}
+
+/* A rider's name that opens his panel */
+.rider-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+  text-decoration: underline;
+  text-decoration-color: rgba(255, 255, 255, 0.18);
+  text-underline-offset: 3px;
+}
+
+.rider-link.bold {
+  font-weight: 700;
+}
+
+.rider-link:hover {
+  text-decoration-color: currentColor;
+}
+
+@media (max-width: 640px) {
+  .rp-bars li {
+    grid-template-columns: minmax(0, 1fr) 5.5rem;
+  }
+  .rp-track {
+    grid-column: 1 / -1;
+    order: 3;
+  }
+  .rp-toggle {
+    margin-left: 0;
+  }
+}

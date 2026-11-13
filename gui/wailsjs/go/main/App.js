@@ -34,12 +34,20 @@ export function GetPointsStandings(arg1, arg2) {
   return window['go']['main']['App']['GetPointsStandings'](arg1, arg2);
 }
 
+export function GetProfileRiders(arg1) {
+  return window['go']['main']['App']['GetProfileRiders'](arg1);
+}
+
 export function GetRaceResults(arg1) {
   return window['go']['main']['App']['GetRaceResults'](arg1);
 }
 
 export function GetRaces() {
   return window['go']['main']['App']['GetRaces']();
+}
+
+export function GetRiderProfile(arg1, arg2) {
+  return window['go']['main']['App']['GetRiderProfile'](arg1, arg2);
 }
 
 export function GetRiders() {

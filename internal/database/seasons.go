@@ -42,6 +42,8 @@ CREATE TABLE IF NOT EXISTS season_riders (
 	recovery INTEGER NOT NULL,
 	consistency INTEGER NOT NULL,
 	tactical_awareness INTEGER NOT NULL,
+	punch INTEGER NOT NULL DEFAULT 70,
+	repeatability INTEGER NOT NULL DEFAULT 70,
 	contract_end INTEGER NOT NULL,
 	salary INTEGER NOT NULL,
 	morale REAL NOT NULL,
@@ -209,9 +211,9 @@ func (db *DB) SaveSeasonRiders(seasonID int64, riders []model.SeasonRider) error
 	defer tx.Rollback()
 	stmt, err := tx.Prepare(`INSERT OR REPLACE INTO season_riders (season_id, rider_id, name, team, nationality, age,
 		weight_kg, height_cm, ftp_watts, max_sprint_watts, vo2max_watts, cda, climbing_ability, sprint_ability,
-		tt_ability, descending_ability, handling, endurance, recovery, consistency, tactical_awareness,
+		tt_ability, descending_ability, handling, endurance, recovery, consistency, tactical_awareness, punch, repeatability,
 		contract_end, salary, morale, load, race_days, retired, potential, next_team, next_salary, next_contract_end)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
 	if err != nil {
 		return err
 	}
@@ -221,7 +223,7 @@ func (db *DB) SaveSeasonRiders(seasonID int64, riders []model.SeasonRider) error
 		if _, err := stmt.Exec(seasonID, r.ID, r.Name, r.Team, r.Nationality, r.Age, r.WeightKg, r.HeightCm,
 			r.FTPWatts, r.MaxSprintWatts, r.VO2MaxWatts, r.CdA, r.ClimbingAbility, r.SprintAbility, r.TTAbility,
 			r.DescendingAbility, r.Handling, r.Endurance, r.Recovery, r.Consistency, r.TacticalAwareness,
-			sr.ContractEnd, sr.Salary, sr.Morale, sr.Load, sr.RaceDays, boolInt(sr.Retired), sr.Potential,
+			r.PunchRating(), r.RepeatabilityRating(), sr.ContractEnd, sr.Salary, sr.Morale, sr.Load, sr.RaceDays, boolInt(sr.Retired), sr.Potential,
 			sr.NextTeam, sr.NextSalary, sr.NextContractEnd); err != nil {
 			return fmt.Errorf("saving season rider %d: %w", r.ID, err)
 		}
@@ -233,7 +235,7 @@ func (db *DB) SaveSeasonRiders(seasonID int64, riders []model.SeasonRider) error
 func (db *DB) ListSeasonRiders(seasonID int64) ([]model.SeasonRider, error) {
 	rows, err := db.Query(`SELECT rider_id, name, team, nationality, age, weight_kg, height_cm, ftp_watts,
 		max_sprint_watts, vo2max_watts, cda, climbing_ability, sprint_ability, tt_ability, descending_ability,
-		handling, endurance, recovery, consistency, tactical_awareness, contract_end, salary, morale, load,
+		handling, endurance, recovery, consistency, tactical_awareness, punch, repeatability, contract_end, salary, morale, load,
 		race_days, retired, potential, next_team, next_salary, next_contract_end
 		FROM season_riders WHERE season_id = ? ORDER BY rider_id`, seasonID)
 	if err != nil {
@@ -248,7 +250,7 @@ func (db *DB) ListSeasonRiders(seasonID int64) ([]model.SeasonRider, error) {
 		if err := rows.Scan(&r.ID, &r.Name, &r.Team, &r.Nationality, &r.Age, &r.WeightKg, &r.HeightCm,
 			&r.FTPWatts, &r.MaxSprintWatts, &r.VO2MaxWatts, &r.CdA, &r.ClimbingAbility, &r.SprintAbility,
 			&r.TTAbility, &r.DescendingAbility, &r.Handling, &r.Endurance, &r.Recovery, &r.Consistency,
-			&r.TacticalAwareness, &sr.ContractEnd, &sr.Salary, &sr.Morale, &sr.Load, &sr.RaceDays, &retired,
+			&r.TacticalAwareness, &r.Punch, &r.Repeatability, &sr.ContractEnd, &sr.Salary, &sr.Morale, &sr.Load, &sr.RaceDays, &retired,
 			&sr.Potential, &sr.NextTeam, &sr.NextSalary, &sr.NextContractEnd); err != nil {
 			return nil, err
 		}
@@ -404,6 +406,8 @@ func (db *DB) ListSeasonEntries(seasonID int64) (map[int64][]int64, error) {
 
 // seasonMigrations add columns to season tables made by older builds.
 var seasonMigrations = []string{
+	`ALTER TABLE season_riders ADD COLUMN punch INTEGER NOT NULL DEFAULT 70`,
+	`ALTER TABLE season_riders ADD COLUMN repeatability INTEGER NOT NULL DEFAULT 70`,
 	`ALTER TABLE seasons ADD COLUMN phase TEXT NOT NULL DEFAULT 'racing'`,
 	`ALTER TABLE seasons ADD COLUMN budget INTEGER NOT NULL DEFAULT 0`,
 	`ALTER TABLE season_riders ADD COLUMN potential REAL NOT NULL DEFAULT 1`,

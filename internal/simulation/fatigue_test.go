@@ -78,17 +78,33 @@ func TestWPrimeFollowsPeakPower(t *testing.T) {
 	}
 }
 
-func TestRecoveryAffectsReconRate(t *testing.T) {
+func TestRepeatabilityAffectsReconRate(t *testing.T) {
 	slowRec := testRider()
-	slowRec.Recovery = 50
+	slowRec.Repeatability = 50
 	fastRec := testRider()
-	fastRec.Recovery = 90
+	fastRec.Repeatability = 90
 
 	wSlow := NewWPrimeState(slowRec)
 	wFast := NewWPrimeState(fastRec)
 
 	if wFast.ReconRate <= wSlow.ReconRate {
-		t.Errorf("high recovery should reconstitute faster: %.4f vs %.4f", wFast.ReconRate, wSlow.ReconRate)
+		t.Errorf("high repeatability should reconstitute faster: %.4f vs %.4f", wFast.ReconRate, wSlow.ReconRate)
+	}
+	// Recovery is between days: it doesn't change W' reconstitution.
+	daily := testRider()
+	daily.Recovery = 95
+	if NewWPrimeState(daily).ReconRate != NewWPrimeState(testRider()).ReconRate {
+		t.Error("recovery (between days) should not change W' reconstitution")
+	}
+}
+
+func TestPunchRaisesWPrime(t *testing.T) {
+	diesel := testRider()
+	diesel.Punch = 50
+	punchy := testRider()
+	punchy.Punch = 90
+	if NewWPrimeState(punchy).WPrimeMax <= NewWPrimeState(diesel).WPrimeMax*1.1 {
+		t.Error("a punchy rider should carry clearly more W' than a diesel with the same threshold")
 	}
 }
 

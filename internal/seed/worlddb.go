@@ -335,14 +335,17 @@ func withWorldDB(riders, train []model.Rider, wdb []wdbRider) []model.Rider {
 // riders (dozens share the same endurance/recovery/handling bundle), each
 // with the WorldDB attribute that orders the field on the same quality.
 var rankedRatings = []struct {
-	charac int // index into wdbRider.Charac (see ImportWorldDB's attribute list)
-	get    func(*model.Rider) *int
+	charac  int // index into wdbRider.Charac (see ImportWorldDB's attribute list)
+	charac2 int // a second attribute summed with the first (-1: none)
+	get     func(*model.Rider) *int
 }{
-	{10, func(r *model.Rider) *int { return &r.Endurance }},         // endurance: fading over a long race
-	{12, func(r *model.Rider) *int { return &r.Recovery }},          // recuperation
-	{5, func(r *model.Rider) *int { return &r.Handling }},           // cobble: rough surfaces
-	{4, func(r *model.Rider) *int { return &r.DescendingAbility }},  // downhilling
-	{13, func(r *model.Rider) *int { return &r.TacticalAwareness }}, // baroudeur: going in breaks
+	{10, -1, func(r *model.Rider) *int { return &r.Endurance }},         // endurance: fading over a long race
+	{12, -1, func(r *model.Rider) *int { return &r.Recovery }},          // recuperation: between days
+	{5, -1, func(r *model.Rider) *int { return &r.Handling }},           // cobble: rough surfaces
+	{4, -1, func(r *model.Rider) *int { return &r.DescendingAbility }},  // downhilling
+	{13, -1, func(r *model.Rider) *int { return &r.TacticalAwareness }}, // baroudeur: going in breaks
+	{3, 9, func(r *model.Rider) *int { return &r.Punch }},               // hill + acceleration: short climbs
+	{11, -1, func(r *model.Rider) *int { return &r.Repeatability }},     // resistance: repeated efforts in a race
 }
 
 // rankRatings re-deals each ranked rating among the riders WorldDB covers:
@@ -369,6 +372,10 @@ func rankRatings(riders []model.Rider, matched map[int]wdbRider) {
 		order := append([]int(nil), idx...)
 		sort.SliceStable(order, func(a, b int) bool {
 			ca, cb := matched[order[a]].Charac[rr.charac], matched[order[b]].Charac[rr.charac]
+			if rr.charac2 >= 0 {
+				ca += matched[order[a]].Charac[rr.charac2]
+				cb += matched[order[b]].Charac[rr.charac2]
+			}
 			if ca != cb {
 				return ca < cb
 			}
@@ -423,6 +430,8 @@ var fields = []struct {
 	{"consistency", func(r model.Rider) float64 { return float64(r.Consistency) }, func(r *model.Rider, v float64) { r.Consistency = ability(v) }},
 	{"tactical", func(r model.Rider) float64 { return float64(r.TacticalAwareness) }, func(r *model.Rider, v float64) { r.TacticalAwareness = ability(v) }},
 	{"handling", func(r model.Rider) float64 { return float64(r.Handling) }, func(r *model.Rider, v float64) { r.Handling = ability(v) }},
+	{"punch", func(r model.Rider) float64 { return float64(r.PunchRating()) }, func(r *model.Rider, v float64) { r.Punch = ability(v) }},
+	{"repeatability", func(r model.Rider) float64 { return float64(r.RepeatabilityRating()) }, func(r *model.Rider, v float64) { r.Repeatability = ability(v) }},
 }
 
 func ability(v float64) int { return int(math.Round(math.Max(1, math.Min(100, v)))) }

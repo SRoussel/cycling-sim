@@ -42,15 +42,34 @@ const (
 	defaultWPrime          = 20000.0 // no peak power known
 )
 
+// Punch: maximal aerobic power over threshold, punchGapMean + punchPerPoint
+// per Punch point around the field's mean rating punchMean (~12-19% for
+// Punch 60-86). W' runs with the gap above threshold (the threshold part of
+// W' scales by gap/punchGapMean), so a puncheur carries more for short
+// climbs than a diesel climber with the same threshold; the field's mean W'
+// is unchanged.
+const (
+	punchGapMean  = 0.17
+	punchPerPoint = 0.002
+	punchMean     = 75
+)
+
+// punchGap is a rider's maximal aerobic power over threshold, minus one.
+func punchGap(r *model.Rider) float64 {
+	return math.Max(0.08, punchGapMean+float64(r.PunchRating()-punchMean)*punchPerPoint)
+}
+
 func NewWPrimeState(rider *model.Rider) *WPrimeState {
 	wMax := defaultWPrime
 	if rider.MaxSprintWatts > 0 {
 		wMax = wPrimeSprintShare*wPrimeSeconds*float64(rider.MaxSprintWatts) +
-			(1-wPrimeSprintShare)*wPrimeThresholdSeconds*float64(rider.FTPWatts)
+			(1-wPrimeSprintShare)*wPrimeThresholdSeconds*float64(rider.FTPWatts)*punchGap(rider)/punchGapMean
 	}
-	// Recovery attribute determines reconstitution rate
-	// 70 → rate 0.03, higher = faster reconstitution
-	reconRate := 0.03 + float64(rider.Recovery-70)*0.0005
+	// Repeatability (within a race) sets the reconstitution rate:
+	// 70 → rate 0.03, higher = faster reconstitution. (Recovery, between
+	// days, set it before Nov 2026: Grand Tour climbers recovered fastest
+	// between efforts in a classic.)
+	reconRate := 0.03 + float64(rider.RepeatabilityRating()-70)*0.0005
 	if reconRate < 0.01 {
 		reconRate = 0.01
 	}

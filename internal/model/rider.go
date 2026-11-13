@@ -24,6 +24,28 @@ type Rider struct {
 	Consistency       int
 	TacticalAwareness int
 	Handling          int
+	// Punch: power above threshold over short climbs (1-5 min), as maximal
+	// aerobic power over threshold; sets W' (Nov 2026). Repeatability: how
+	// fast W' refills between efforts within a race (Recovery is recovery
+	// between days). 0 means unset (average, 70).
+	Punch         int
+	Repeatability int
+}
+
+// PunchRating is Punch, 70 when unset.
+func (r *Rider) PunchRating() int {
+	if r.Punch == 0 {
+		return 70
+	}
+	return r.Punch
+}
+
+// RepeatabilityRating is Repeatability, 70 when unset.
+func (r *Rider) RepeatabilityRating() int {
+	if r.Repeatability == 0 {
+		return 70
+	}
+	return r.Repeatability
 }
 
 // Validate checks that all rider fields are within acceptable ranges.
@@ -75,6 +97,8 @@ func (r *Rider) Validate() error {
 		"Consistency":       r.Consistency,
 		"TacticalAwareness": r.TacticalAwareness,
 		"Handling":          r.Handling,
+		"Punch":             r.PunchRating(),
+		"Repeatability":     r.RepeatabilityRating(),
 	}
 	for name, val := range abilities {
 		if val < 1 || val > 100 {

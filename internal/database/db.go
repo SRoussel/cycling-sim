@@ -224,6 +224,8 @@ func (db *DB) migrate() error {
 		`ALTER TABLE segments ADD COLUMN heading_deg REAL NOT NULL DEFAULT 0`,
 		`ALTER TABLE segments ADD COLUMN cobble_stars INTEGER NOT NULL DEFAULT 0`,
 		`ALTER TABLE stage_race_stages ADD COLUMN prestige REAL NOT NULL DEFAULT 0`,
+		`ALTER TABLE riders ADD COLUMN punch INTEGER NOT NULL DEFAULT 70`,
+		`ALTER TABLE riders ADD COLUMN repeatability INTEGER NOT NULL DEFAULT 70`,
 	} {
 		if _, err := db.Exec(stmt); err != nil && !strings.Contains(strings.ToLower(err.Error()), "duplicate column") {
 			return err

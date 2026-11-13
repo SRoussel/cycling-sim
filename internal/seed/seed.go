@@ -239,6 +239,11 @@ func readRidersCSV(path string, layers ...map[string]RiderOverride) ([]model.Rid
 			Consistency:       consistency,
 			TacticalAwareness: acceleration,
 			Handling:          handling,
+			// Starting values (the scale rankRatings re-deals by WorldDB's
+			// order): punch between the climbing and sprint ratings,
+			// repeatability as recovery.
+			Punch:         (climbing + sprint + 1) / 2,
+			Repeatability: recovery,
 		}
 		baseKg, baseCm, baseCdA := rider.WeightKg, rider.HeightCm, rider.CdA
 		for _, overrides := range layers {

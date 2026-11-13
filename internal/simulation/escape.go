@@ -95,6 +95,16 @@ func (s *RaceState) attackPays(rs *RiderState, seg *model.Segment) bool {
 	if !dropsThreat {
 		return false
 	}
+	// In a safe front selection, an attack that a faster sprinter can follow
+	// only tows him to the line: wait for one that drops him.
+	if s.frontSafe(rs) {
+		mine := FatiguedSprintPower(rs)
+		for _, o := range own[1:] {
+			if FatiguedSprintPower(o) > mine {
+				return false
+			}
+		}
+	}
 	var rest []*RiderState
 	for _, o := range s.Road {
 		if !inOwn[o] {

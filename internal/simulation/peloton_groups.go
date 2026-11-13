@@ -550,6 +550,12 @@ func riderEffort(rs *RiderState, action Action, segment *model.Segment, remainin
 		}
 		return burstOver(remainingKm), ActionChase
 	}
+	// An attack is an attack, also from a front group committed to the line
+	// (before Nov 2026 the commit below overrode it: a leader in a front
+	// selection never attacked his companions, Van der Poel in Roubaix).
+	if action == ActionAttack && state.escapeHolds(rs) {
+		return burstOver(segment.DistanceKm), action
+	}
 	// A leader clear of their rivals who can hold it commits to the line.
 	if state.escapeHolds(rs) {
 		return burstOver(remainingKm), ActionChase

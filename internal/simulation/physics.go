@@ -289,17 +289,35 @@ func EffectivePower(rider *model.Rider, basePower float64, segment *model.Segmen
 	}
 	power := basePower * factor * AltitudePowerFactor(segment.ElevationM)
 	if !isTT && segment.SurfaceType.Unpaved() {
-		// Reduce effective power for poor handlers on cobbles.
-		handlingFactor := 1.0 + float64(rider.Handling-70)*0.006
-		if handlingFactor < 0.7 {
-			handlingFactor = 0.7
-		}
-		if handlingFactor > 1.06 {
-			handlingFactor = 1.06
-		}
-		power *= handlingFactor
+		power *= RoughRoadFactor(rider, segment.SurfaceType)
 	}
 	return power
+}
+
+// Rough roads (cobbles, gravel): the classics skill. Handling (riding the
+// cobbles, line, position) adds handlingPerPoint per point around the
+// field's average of 70, without a cap at the top (before Nov 2026 the bonus
+// stopped at Handling 80, so Van der Poel, Pedersen and Tarling were equal on
+// the cobbles). A light rider is jostled more and loses power that a heavier
+// one puts into the road: (mass / jostleRefKg)^jostleExp, half as much on
+// gravel.
+const (
+	handlingPerPoint = 0.003
+	jostleRefKg      = 72.0
+	jostleExp        = 0.2
+)
+
+// RoughRoadFactor is the share of power a rider puts down on a rough road.
+func RoughRoadFactor(rider *model.Rider, surface model.SurfaceType) float64 {
+	f := 1.0 + float64(rider.Handling-70)*handlingPerPoint
+	if rider.WeightKg > 0 {
+		exp := jostleExp
+		if surface == model.SurfaceGravel {
+			exp /= 2
+		}
+		f *= math.Pow(rider.WeightKg/jostleRefKg, exp)
+	}
+	return math.Max(0.7, f)
 }
 
 // SprintPower calculates a rider's fresh sprint power output.

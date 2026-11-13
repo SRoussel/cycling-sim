@@ -554,7 +554,7 @@ func riderEffort(rs *RiderState, action Action, segment *model.Segment, remainin
 	// (before Nov 2026 the commit below overrode it: a leader in a front
 	// selection never attacked his companions, Van der Poel in Roubaix).
 	if action == ActionAttack && state.escapeHolds(rs) {
-		return burstOver(segment.DistanceKm), action
+		return burstOver(state.attackKm(segment)), action
 	}
 	// A leader clear of their rivals who can hold it commits to the line.
 	if state.escapeHolds(rs) {
@@ -583,7 +583,7 @@ func riderEffort(rs *RiderState, action Action, segment *model.Segment, remainin
 	}
 	// Attacks are bursts: W' spent over this step.
 	if action == ActionAttack {
-		return burstOver(segment.DistanceKm), action
+		return burstOver(state.attackKm(segment)), action
 	}
 	// Domestiques of a driving team set the pace their leader can hold on the
 	// wheel at the phase's intensity (a tempo mid-race, threshold in the

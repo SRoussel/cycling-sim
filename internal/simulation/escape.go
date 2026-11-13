@@ -67,13 +67,14 @@ func (s *RaceState) attackPays(rs *RiderState, seg *model.Segment) bool {
 	}
 	r := rs.Rider
 	threshold := EffectivePower(r, rs.CurrentFTP(), seg, false)
+	km := s.attackKm(seg)
 	v0 := segmentSpeed(threshold, r.TotalMassKg(), r.CdA, seg, r.Handling)
-	burst := threshold + rs.WPrime.AvailablePowerAboveFTP(SegmentTime(v0, seg.DistanceKm))
+	burst := threshold + rs.WPrime.AvailablePowerAboveFTP(SegmentTime(v0, km))
 	v := segmentSpeed(burst, r.TotalMassKg(), r.CdA, seg, r.Handling)
 	holds := func(o *RiderState) bool {
 		or := o.Rider
 		need := segmentPower(v, or.TotalMassKg(), or.CdA*groupDraft(2, false, seg, v), seg, or.Handling)
-		avail := EffectivePower(or, o.CurrentFTP(), seg, false) + o.WPrime.AvailablePowerAboveFTP(SegmentTime(v, seg.DistanceKm))
+		avail := EffectivePower(or, o.CurrentFTP(), seg, false) + o.WPrime.AvailablePowerAboveFTP(SegmentTime(v, km))
 		return need <= avail
 	}
 	own := []*RiderState{rs}
@@ -378,4 +379,29 @@ func (s *RaceState) frontSafe(rs *RiderState) bool {
 		own = own[:maxRotation]
 	}
 	return s.timeToLine(own) < s.timeToLine(chase)+gap
+}
+
+// attackKm: the stretch an attack is ridden over. In a one-day race an
+// attack on a hard section (a climb, cobbles, gravel) lasts the rest of it:
+// the decisive Kwaremont attack is a two- or three-minute effort that empties
+// the followers, not a 20-second surge anyone with a little reserve can
+// match (Nov 2026: judged per step, a faster sprinter always held Van der
+// Poel's wheel in Flanders). Otherwise (and in stage races) the step.
+func (s *RaceState) attackKm(seg *model.Segment) float64 {
+	if s == nil || s.IsStageRace || len(s.Course) == 0 || s.SegIndex >= len(s.Course) {
+		return seg.DistanceKm
+	}
+	hard := func(g *model.Segment) bool { return g.SurfaceType.Unpaved() || climbOf(g) >= terrainClimb }
+	if !hard(seg) {
+		return seg.DistanceKm
+	}
+	km := 0.0
+	for i := s.SegIndex; i < len(s.Course) && hard(&s.Course[i]); i++ {
+		d := s.Course[i].DistanceKm
+		if i == s.SegIndex && s.SegmentKmLeft > 0 && s.SegmentKmLeft < d {
+			d = s.SegmentKmLeft
+		}
+		km += d
+	}
+	return math.Max(km, seg.DistanceKm)
 }

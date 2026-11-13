@@ -250,10 +250,12 @@ func planYear(db *database.DB, s *model.Season) error {
 	// 2. Full fields.
 	for _, e := range todo {
 		squad := SquadSize(&e)
-		// Leaders ride their targets; squads fill with the others.
+		// Leaders ride their targets; squads fill with the others, and with
+		// leaders who got few targets (a team's third classics leader rides
+		// as a helper rather than not at all).
 		byTeam := map[string][]model.Rider{}
 		for _, r := range riders {
-			if free(r, e) && values[r.ID] < leaderValue {
+			if free(r, e) && (values[r.ID] < leaderValue || plannedDays(plans[r.ID]) < leaderFillDays) {
 				byTeam[r.Team] = append(byTeam[r.Team], r)
 			}
 		}
@@ -308,6 +310,18 @@ func planYear(db *database.DB, s *model.Season) error {
 		}
 	}
 	return nil
+}
+
+// leaderFillDays: a leader with fewer race days planned from his targets
+// also fills squads.
+const leaderFillDays = 25
+
+func plannedDays(sc schedule) int {
+	n := 0
+	for _, e := range sc {
+		n += e.Days()
+	}
+	return n
 }
 
 func riderByID(riders []model.Rider, id int64) model.Rider {

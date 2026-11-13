@@ -29,6 +29,7 @@ export function GroupSheet({ name, groups, tc, onClose }: { name: string; groups
         const wkg = info && info.weight > 0 ? info.ftp / info.weight : 0
         return {
           id: rid,
+          info,
           name: info?.name ?? `Rider ${rid}`,
           team: info?.team ?? '',
           mine: info?.team === tc.controlledTeam,
@@ -84,7 +85,7 @@ export function GroupSheet({ name, groups, tc, onClose }: { name: string; groups
             <tbody>
               {rows.map((r) => (
                 <tr key={r.id} className={r.mine ? 'mine' : ''}>
-                  <td className="who" title={r.team}>
+                  <td className="who" title={r.info ? `${r.team} · Climbing ${r.info.climbing} · Punch ${r.info.punch} · Repeated efforts ${r.info.repeatability} · Cobbles ${r.info.handling} · Endurance ${r.info.endurance}` : r.team}>
                     <Jersey team={r.team} />
                     <span>{r.name}</span>
                     <small>{r.team}</small>

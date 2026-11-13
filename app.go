@@ -74,6 +74,10 @@ type RiderInfo struct {
 	Endurance   int     `json:"endurance"`
 	Handling    int     `json:"handling"`
 	Recovery    int     `json:"recovery"`
+	// Punch: short climbs (1-5 min) above threshold; Repeatability: how fast
+	// the reserve refills between efforts within a race.
+	Punch         int `json:"punch"`
+	Repeatability int `json:"repeatability"`
 }
 
 // RaceInfo represents a race for the frontend
@@ -724,19 +728,21 @@ func (a *App) SaveSimulationParams(params SimParams) error {
 // riderToInfo converts a model.Rider to the frontend-facing RiderInfo DTO.
 func riderToInfo(r model.Rider) RiderInfo {
 	return RiderInfo{
-		ID:          r.ID,
-		Name:        r.Name,
-		Team:        r.Team,
-		Nationality: r.Nationality,
-		Weight:      r.WeightKg,
-		FTP:         r.FTPWatts,
-		Sprint:      r.SprintAbility,
-		Climbing:    r.ClimbingAbility,
-		TT:          r.TTAbility,
-		Descending:  r.DescendingAbility,
-		Endurance:   r.Endurance,
-		Handling:    r.Handling,
-		Recovery:    r.Recovery,
+		ID:            r.ID,
+		Name:          r.Name,
+		Team:          r.Team,
+		Nationality:   r.Nationality,
+		Weight:        r.WeightKg,
+		FTP:           r.FTPWatts,
+		Sprint:        r.SprintAbility,
+		Climbing:      r.ClimbingAbility,
+		TT:            r.TTAbility,
+		Descending:    r.DescendingAbility,
+		Endurance:     r.Endurance,
+		Handling:      r.Handling,
+		Recovery:      r.Recovery,
+		Punch:         r.PunchRating(),
+		Repeatability: r.RepeatabilityRating(),
 	}
 }
 

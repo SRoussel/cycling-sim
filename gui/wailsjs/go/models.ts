@@ -79,6 +79,8 @@ export namespace main {
 	    endurance: number;
 	    handling: number;
 	    recovery: number;
+	    punch: number;
+	    repeatability: number;
 	
 	    static createFrom(source: any = {}) {
 	        return new RiderInfo(source);
@@ -99,6 +101,8 @@ export namespace main {
 	        this.endurance = source["endurance"];
 	        this.handling = source["handling"];
 	        this.recovery = source["recovery"];
+	        this.punch = source["punch"];
+	        this.repeatability = source["repeatability"];
 	    }
 	}
 	export class InteractiveSessionInfo {
@@ -519,6 +523,8 @@ export namespace main {
 	    endurance: number;
 	    handling: number;
 	    recovery: number;
+	    punch: number;
+	    repeatability: number;
 	    age: number;
 	    specialty: string;
 	    wkg: number;
@@ -555,6 +561,8 @@ export namespace main {
 	        this.endurance = source["endurance"];
 	        this.handling = source["handling"];
 	        this.recovery = source["recovery"];
+	        this.punch = source["punch"];
+	        this.repeatability = source["repeatability"];
 	        this.age = source["age"];
 	        this.specialty = source["specialty"];
 	        this.wkg = source["wkg"];
@@ -606,6 +614,8 @@ export namespace main {
 	    endurance: number;
 	    handling: number;
 	    recovery: number;
+	    punch: number;
+	    repeatability: number;
 	    age: number;
 	    specialty: string;
 	    wkg: number;
@@ -649,6 +659,8 @@ export namespace main {
 	        this.endurance = source["endurance"];
 	        this.handling = source["handling"];
 	        this.recovery = source["recovery"];
+	        this.punch = source["punch"];
+	        this.repeatability = source["repeatability"];
 	        this.age = source["age"];
 	        this.specialty = source["specialty"];
 	        this.wkg = source["wkg"];

@@ -26,6 +26,11 @@ function CategoryBadge({ category }: { category: string }) {
   return <span className={`badge ${c.badge}`}>{c.label}</span>
 }
 
+/** The 1-100 ratings that shape a rider's racing, for a tooltip. */
+function ratingsTitle(r: main.RiderInfo): string {
+  return `Climbing ${r.climbing} · Punch ${r.punch} · Repeated efforts ${r.repeatability} · Cobbles ${r.handling} · Endurance ${r.endurance} · Sprint ${r.sprint} · TT ${r.tt}`
+}
+
 function eventDates(e: main.SeasonEventInfo): string {
   return e.days > 1 ? `${e.start} – ${e.end}` : e.start
 }
@@ -356,7 +361,7 @@ function NextRace({ hub, reload, onRaced }: { hub: main.SeasonHub; reload: () =>
                 return (
                   <tr key={r.id} className={`${on ? 'picked' : ''}${r.available ? '' : ' unavailable'}`} onClick={() => r.available && toggle(r.id)}>
                     <td><input type="checkbox" checked={on} disabled={!r.available || (!on && picked.length >= squad.size)} readOnly /></td>
-                    <td className="rider-cell">
+                    <td className="rider-cell" title={ratingsTitle(r)}>
                       <b>{r.name}</b> <span className="muted">{r.age}</span>
                       {!r.available && <span className="why"> {r.why}</span>}
                     </td>
@@ -520,6 +525,10 @@ function Team({ hub, reload }: { hub: main.SeasonHub; reload: () => Promise<void
             <th title="Threshold power">FTP</th>
             <th>W/kg</th>
             <th title="Peak sprint power">Sprint</th>
+            <th title="Short climbs (1-5 min): how far above threshold he can go">Punch</th>
+            <th title="How fast he recovers between efforts within a race">Repeat</th>
+            <th title="Riding the cobbles and gravel">Cobbles</th>
+            <th title="How little he fades over a long, hard day">Endur.</th>
             <th>Salary</th>
             <th title="Last year of his contract">Contract</th>
             <th>Morale</th>
@@ -538,6 +547,10 @@ function Team({ hub, reload }: { hub: main.SeasonHub; reload: () => Promise<void
               <td>{r.ftp} W</td>
               <td>{r.wkg.toFixed(2)}</td>
               <td>{r.sprintW} W</td>
+              <td>{r.punch}</td>
+              <td>{r.repeatability}</td>
+              <td>{r.handling}</td>
+              <td>{r.endurance}</td>
               <td>{money(r.salary)}</td>
               <td className={r.contractEnd <= year && !r.nextTeam ? 'warn' : ''}>
                 {r.nextTeam ? (r.nextTeam === hub.season.team ? `renewed to ${r.contractEnd > year ? r.contractEnd : ''}` : `→ ${r.nextTeam}`) : r.contractEnd}
@@ -691,7 +704,7 @@ function OfferRow({ r, onOffer, action, showTeam }: {
   const [years, setYears] = useState(2)
   return (
     <tr>
-      <td><b>{r.name}</b></td>
+      <td title={ratingsTitle(r)}><b>{r.name}</b></td>
       <td>{r.age}</td>
       <td className="muted">{r.specialty}</td>
       {showTeam && <td className="muted">{r.team ? <><Jersey team={r.team} /> {r.team}</> : 'free'}</td>}

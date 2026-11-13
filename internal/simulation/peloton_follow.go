@@ -129,6 +129,10 @@ func shelteredFor(rs *RiderState, action Action, state *RaceState) bool {
 	return false
 }
 
+// disorganisedRotation: riders sharing the front of a group racing for
+// places (one-day races).
+const disorganisedRotation = 2
+
 // paceLineSpeed is the speed a group sustains when its strongest workers
 // rotate on the front. Sheltered riders only work when the group is too
 // small to protect them.
@@ -158,6 +162,16 @@ func paceLineSpeed(rps []riderPower, segment *model.Segment, cooperative bool) (
 	k = len(workers)
 	if k > maxRotation {
 		k = maxRotation
+	}
+	// Riders racing each other for places out-conserve each other: a couple
+	// take grudging turns and nobody spends his reserve for the others.
+	placings := len(workers) > 0
+	for _, w := range workers {
+		placings = placings && w.placings
+	}
+	if placings {
+		k = min(k, disorganisedRotation)
+		cooperative = false
 	}
 	// With N workers sharing k slots, each is on the front only k/N of the
 	// time, so the rotation can spend W' N/k times faster while there:

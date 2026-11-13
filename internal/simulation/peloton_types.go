@@ -39,6 +39,9 @@ type riderPower struct {
 	breakaway bool
 	action    Action
 	sheltered bool // sits in the group instead of taking turns
+	// placings: racing for places behind a front that can't be caught
+	// (winGone): riders out-conserve each other (see paceLineSpeed).
+	placings bool
 }
 
 // Group represents a cluster of riders traveling together.

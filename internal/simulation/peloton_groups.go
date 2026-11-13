@@ -213,6 +213,11 @@ func FormGroups(riders []*RiderState, segment *model.Segment, isTT bool, remaini
 			action:    action,
 			sheltered: shelteredFor(rs, action, state) && (action == ActionConserve || helpers[rs.Rider.Team] > 0),
 		}
+		// Racing for places, a rider who'd win the group's sprint sits on.
+		if state != nil && action != ActionAttack && state.winGone(rs) {
+			rps[i].placings = true
+			rps[i].sheltered = rps[i].sheltered || state.outsprintsChase(rs)
+		}
 	}
 
 	// A leader chasing a rival sits in while the team does the chasing. When
@@ -516,6 +521,9 @@ func riderEffort(rs *RiderState, action Action, segment *model.Segment, remainin
 	// One-day races: when the front can't be caught, the win is gone and
 	// this group races for placings instead of chasing (winGone).
 	if !holdBack && state.winGone(rs) {
+		// Racing for places: riders out-conserve each other, nobody wants to
+		// tow the others to the sprint, so it's a grudging tempo to the line
+		// (attacks for the podium come from the attack rules).
 		return threshold * IntensityForPhase(PhaseMid), ActionHold
 	}
 	// A rival up the road is chased to the line: by the leader's domestiques

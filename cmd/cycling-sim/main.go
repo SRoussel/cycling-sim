@@ -64,9 +64,10 @@ func main() {
 		if len(args) > 1 && args[0] == "--sets" {
 			n, err := strconv.Atoi(args[1])
 			if err != nil || n < 1 {
-				fatalf("Usage: cycling-sim validate --sets N [--cross-season]\n")
+				fatalf("Usage: cycling-sim validate --sets N [--cross-season | --season 2026]\n")
 			}
-			cmdValidateSets(db, n, len(args) > 2 && args[2] == "--cross-season")
+			season2026 := len(args) > 3 && args[2] == "--season" && args[3] == "2026"
+			cmdValidateSets(db, n, len(args) > 2 && args[2] == "--cross-season", season2026)
 			break
 		}
 		cmdValidate(db, len(args) > 0 && (args[0] == "-v" || args[0] == "--verbose"))
@@ -186,6 +187,7 @@ Commands:
   import-riders <dir>            Read riders from a local WorldDB mod (real ages, missing
                                  WorldTeam/ProTeam riders) into data/local/
   validate --sets N [--cross-season]  2024 references over N seed sets (judge changes);
+  validate --sets N --season 2026     2026 references (data/reference_2026.csv, start lists);
                                  --cross-season adds the 2023 races
   import-results [dir]           Derive ratings from saved result pages in
                                  dir/<sprint|hilly|mountain|cobbles|tt>/
@@ -470,10 +472,20 @@ func clock(secs float64) string {
 
 // cmdValidateSets scores the reference races over n independent seed sets:
 // a change is real when it moves the mean by more than the spread.
-func cmdValidateSets(db *database.DB, n int, crossSeason bool) {
+func cmdValidateSets(db *database.DB, n int, crossSeason, season2026 bool) {
 	fmt.Printf("Reference races over %d seed sets (gap error: mean, min-max; real winner's win rate)\n", n)
 	var total float64
-	results := simulation.RunSeedSets(db, n, crossSeason)
+	var results []simulation.SeedSetResult
+	if season2026 {
+		riders, _ := db.ListRiders()
+		oneDay, stage, err := simulation.Load2026References(seed.DataPath("reference_2026.csv"), seed.DataPath("startlists_2026.csv"), riders)
+		if err != nil {
+			fatalf("Error reading the 2026 references: %v\n", err)
+		}
+		results = simulation.RunSeedSetsFor(db, n, oneDay, stage)
+	} else {
+		results = simulation.RunSeedSets(db, n, crossSeason)
+	}
 	for _, r := range results {
 		mean, lo, hi := 0.0, math.Inf(1), math.Inf(-1)
 		for _, v := range r.MAE {

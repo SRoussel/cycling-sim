@@ -25,7 +25,7 @@ func TestRiderStep(t *testing.T) {
 		{"never finished", simulation.RiderCheck{RealPos: 5, RealGap: 30, SimPos: 522}, false, 0, false},
 	}
 	for _, c := range cases {
-		got, ok := riderStep(c.c, c.stage)
+		got, ok := riderStep(c.c, c.stage, false)
 		if ok != c.ok || math.Abs(got-c.want) > 1e-9 {
 			t.Errorf("%s: step %.2f (%v), want %.2f (%v)", c.name, got, ok, c.want, c.ok)
 		}

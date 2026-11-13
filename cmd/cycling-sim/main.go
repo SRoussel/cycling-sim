@@ -94,15 +94,17 @@ func main() {
 		fmt.Printf("Updated %d riders from riders.csv + %s (saved results kept).\n", n, strings.Join(seed.RatingLayers, " + "))
 	case "fit-ratings":
 		out := seed.DataPath(seed.FittedFile)
-		classics := false
+		classics, season2026 := false, false
 		for _, a := range args {
 			if a == "--classics" {
 				classics = true
+			} else if a == "--season=2026" || a == "--season2026" {
+				season2026 = true
 			} else {
 				out = a
 			}
 		}
-		cmdFitRatings(db, out, classics)
+		cmdFitRatings(db, out, classics, season2026)
 	case "import-results":
 		dir := "data/results"
 		if len(args) > 0 {
@@ -199,6 +201,7 @@ Commands:
   apply-ratings                  Re-apply riders.csv + rating layers to the
                                  riders in the DB, keeping saved results
   fit-ratings [--classics] [file] Fit rider thresholds to the 2024 Tour GC
+  fit-ratings --season=2026 [file]  Fit to every 2026 reference (ridge prior, ±10%)
                                  (--classics: also the one-day races) by
                                  simulation; writes file (default
                                  data/rider_fitted.csv) and updates the DB
@@ -676,7 +679,7 @@ func cmdImportStages(db *database.DB, dir string) {
 	fmt.Printf("Wrote %s (local only, not committed) and updated %d courses in the database.\n", out, len(profiles))
 }
 
-func cmdFitRatings(db *database.DB, path string, classics bool) {
+func cmdFitRatings(db *database.DB, path string, classics, season2026 bool) {
 	riders, err := db.ListRiders()
 	if err != nil || len(riders) == 0 {
 		fatalf("No riders in the database: run 'cycling-sim seed' first.\n")
@@ -700,6 +703,25 @@ func cmdFitRatings(db *database.DB, path string, classics bool) {
 	what := "the 2024 Tour GC"
 	if classics {
 		what += " and 2024 classics"
+	}
+	if season2026 {
+		// Every 2026 reference, one-day and GC, with a ridge prior (the base
+		// counts as one race) and wider bounds; races on an approximate course
+		// (no 2026 route seeded) count half.
+		oneDay, stage, err := simulation.Load2026References(seed.DataPath("reference_2026.csv"), seed.DataPath("startlists_2026.csv"), riders)
+		if err != nil {
+			fatalf("Error reading the 2026 references: %v\n", err)
+		}
+		opt.OneDay, opt.Stage = oneDay, stage
+		opt.Weight = map[string]float64{}
+		for _, e := range append(oneDay, stage...) {
+			if !strings.HasSuffix(e.InternalName, " 2026") {
+				opt.Weight[e.DisplayName] = 0.5
+			}
+		}
+		opt.Prior, opt.MaxChange = 1, 0.10
+		opt.Iterations, opt.Runs, opt.StageRuns = 20, 30, 16
+		what = "every 2026 reference (one-day and GC)"
 	}
 	fmt.Printf("Fitting thresholds to %s (this takes a minute or two)...\n", what)
 	adj, err := calibrate.Fit(db, base, opt)

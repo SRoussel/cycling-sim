@@ -301,7 +301,10 @@ func withWorldDB(riders, train []model.Rider, wdb []wdbRider) []model.Rider {
 			matched[i] = x
 		}
 	}
-	defer func() { rankRatings(riders, matched) }()
+	defer func() {
+		rankRatings(riders, matched)
+		rebuildPhysics(riders, matched)
+	}()
 	if len(missing) == 0 {
 		return riders
 	}
@@ -542,4 +545,90 @@ func ridge(X [][]float64, y []float64, lambda float64) []float64 {
 		}
 	}
 	return beta
+}
+
+// Physical rebuild (Nov 2026; the user: the ratings looked random and
+// sloppy — template heights and drag areas, ProTeam riders with sprint
+// watts extrapolated from a regression). For every rider WorldDB covers,
+// threshold and sprint power are re-dealt from the field's own values in
+// the order WorldDB ranks the riders (its numbers are never used: one
+// developer's attempt at realism, a reference, not a standard), and drag
+// comes from the body. Values: W/kg and sprint W/kg keep exactly the
+// field's current spread; absolute watts follow each rider's real weight.
+//
+//   - threshold W/kg by mountain + medium_mountain + hill (sustained and
+//     punchy climbing; mountain alone ranked heavy classics riders far down);
+//   - sprint W/kg by sprint + acceleration, on an explicit range
+//     (sprintWKgMin for the weakest, sprintWKgMax for the best: the old
+//     values carried an inflated top end, Milan 26 W/kg);
+//   - CdA = the field's median CdA per frontal area × the rider's frontal
+//     area (Heil, from height and weight) × an aero factor from timetrial
+//   - prologue: ±aeroSpread (better time triallists ride lower for their
+//     size).
+const (
+	aeroSpread   = 0.04
+	sprintWKgMin = 15.0
+	sprintWKgMax = 24.0
+	sprintCurve  = 1.3 // the top sprinters stand out: p^1.3
+)
+
+func rebuildPhysics(riders []model.Rider, matched map[int]wdbRider) {
+	idx := make([]int, 0, len(matched))
+	for i := range matched {
+		if i < len(riders) && riders[i].WeightKg > 0 {
+			idx = append(idx, i)
+		}
+	}
+	if len(idx) < 50 {
+		return
+	}
+	sort.Ints(idx)
+	// order returns idx sorted by a WorldDB score, weakest first.
+	order := func(score func(x wdbRider) float64) []int {
+		o := append([]int(nil), idx...)
+		sort.SliceStable(o, func(a, b int) bool {
+			sa, sb := score(matched[o[a]]), score(matched[o[b]])
+			if sa != sb {
+				return sa < sb
+			}
+			return riders[o[a]].Name < riders[o[b]].Name
+		})
+		return o
+	}
+	deal := func(get func(r model.Rider) float64, set func(r *model.Rider, v float64), score func(x wdbRider) float64) {
+		vals := make([]float64, len(idx))
+		for k, i := range idx {
+			vals[k] = get(riders[i])
+		}
+		sort.Float64s(vals)
+		for k, i := range order(score) {
+			set(&riders[i], vals[k])
+		}
+	}
+	deal(func(r model.Rider) float64 { return float64(r.FTPWatts) / r.WeightKg },
+		func(r *model.Rider, v float64) { r.FTPWatts = int(math.Round(v * r.WeightKg)) },
+		func(x wdbRider) float64 { return x.Charac[1] + x.Charac[2] + x.Charac[3] })
+	sprinters := order(func(x wdbRider) float64 { return x.Charac[8] + x.Charac[9] })
+	for k, i := range sprinters {
+		p := float64(k) / float64(len(sprinters)-1)
+		riders[i].MaxSprintWatts = int(math.Max(800, math.Round((sprintWKgMin+(sprintWKgMax-sprintWKgMin)*math.Pow(p, sprintCurve))*riders[i].WeightKg)))
+	}
+
+	var perArea []float64
+	for _, i := range idx {
+		if a := frontalArea(riders[i].HeightCm, riders[i].WeightKg); a > 0 && riders[i].CdA > 0 {
+			perArea = append(perArea, riders[i].CdA/a)
+		}
+	}
+	if len(perArea) == 0 {
+		return
+	}
+	sort.Float64s(perArea)
+	cdPerArea := perArea[len(perArea)/2]
+	aero := order(func(x wdbRider) float64 { return x.Charac[6] + x.Charac[7] })
+	for k, i := range aero {
+		p := float64(k) / float64(len(aero)-1) // 0 weakest time triallist, 1 best
+		f := 1 + aeroSpread*(1-2*p)
+		riders[i].CdA = math.Round(cdPerArea*frontalArea(riders[i].HeightCm, riders[i].WeightKg)*f*1000) / 1000
+	}
 }

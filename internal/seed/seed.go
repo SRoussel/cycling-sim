@@ -132,21 +132,30 @@ func BuildRiders() ([]model.Rider, error) {
 		}
 		layers = append(layers, l)
 	}
-	riders, err := readRidersCSV(findDataFile("riders.csv"), layers...)
+	// The fitted layer (threshold corrections from results) applies last,
+	// on the finished field: the WorldDB rebuild re-deals threshold W/kg, so
+	// a correction applied before it would be lost.
+	fitted := layers[len(layers)-1]
+	riders, err := readRidersCSV(findDataFile("riders.csv"), layers[:len(layers)-1]...)
 	if err != nil {
 		return nil, err
 	}
+	riders = scaleThresholdsWithMass(riders)
 	wdb, err := loadWorldDB()
-	if err != nil || wdb == nil {
-		return scaleThresholdsWithMass(riders), err
-	}
-	// Fits are trained on ratings without the fitted layer (a correction
-	// for particular races, not a property of the rating scale).
-	train, err := readRidersCSV(findDataFile("riders.csv"), layers[:len(layers)-1]...)
 	if err != nil {
 		return nil, err
 	}
-	return scaleThresholdsWithMass(withWorldDB(riders, train, wdb)), nil
+	if wdb != nil {
+		riders = withWorldDB(riders, riders, wdb)
+	}
+	for i := range riders {
+		if o, ok := fitted[normalizeName(riders[i].Name)]; ok {
+			if err := o.Apply(&riders[i]); err != nil {
+				return nil, err
+			}
+		}
+	}
+	return riders, nil
 }
 
 // UnfittedFTPs returns each rider's threshold from every rating layer except
@@ -168,12 +177,12 @@ func UnfittedFTPs() (map[string]int, error) {
 	if err != nil {
 		return nil, err
 	}
+	riders = scaleThresholdsWithMass(riders)
 	if wdb, err := loadWorldDB(); err != nil {
 		return nil, err
 	} else if wdb != nil {
 		riders = withWorldDB(riders, riders, wdb)
 	}
-	riders = scaleThresholdsWithMass(riders)
 	out := make(map[string]int, len(riders))
 	for _, r := range riders {
 		out[normalizeName(r.Name)] = r.FTPWatts

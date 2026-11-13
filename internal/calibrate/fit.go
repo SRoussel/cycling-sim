@@ -30,6 +30,20 @@ type Options struct {
 	// or two results per rider it fits 2024 but makes the 2023 hold-out worse.
 	Classics bool
 	Log      func(format string, args ...any)
+
+	// References, when set, replace the 2024 ones (KnownRealStageRaces, and
+	// KnownRealRaces with Classics): the races to fit (Nov 2026: every 2026
+	// reference, one-day and GC).
+	OneDay, Stage []simulation.RealRaceEntry
+	// Weight scales a reference's evidence by display name (default 1):
+	// races run on an approximate course count less.
+	Weight map[string]float64
+	// Prior (ridge) counts the base rating as this many races asking for no
+	// change: a rider's correction is the sum of his races' steps over
+	// (their weight + Prior), pulled back towards the base each pass, so a
+	// rider seen once moves less than one seen in five races. 0 = off (the
+	// plain mean of the old fit).
+	Prior float64
 }
 
 // DefaultOptions are a reasonable trade-off between noise and run time (runs
@@ -51,7 +65,9 @@ const (
 	placesPerPct       = 20.0  // when only the position is known
 	maxStepPct         = 1.5   // per pass and race
 	intruderPenaltyPct = 0.5   // per pass, scaled by how often they intrude
-	settledPct         = 0.1   // stop when the mean step falls below this
+	settledPct         = 0.1   // stop when the mean step falls below this...
+	settledMaxPct      = 0.5   // ...and no rider still asks for more than this
+	maxCorrectionPct   = 10.0  // one race's error, with a prior (see riderStep)
 	damping            = 0.7   // fraction of the requested step taken (damps run-to-run noise)
 	missingSimPos      = 500.0 // simulated position beyond this: rider never finished
 	plausibleMarginPct = 2.0   // tolerance above the strongest rider (fit noise)
@@ -86,39 +102,61 @@ func Fit(db *database.DB, base []model.Rider, opt Options) ([]Adjustment, error)
 	evidence := map[int64][]string{}
 	for it := 1; it <= opt.Iterations; it++ {
 		riders := applyScales(base, scale)
-		results := simulation.RunRealStageRaceValidationFor(db, riders, simulation.KnownRealStageRaces(), opt.StageRuns)
-		if opt.Classics {
-			results = append(results, simulation.RunRealRaceValidationFor(db, riders, simulation.KnownRealRaces(), opt.Runs)...)
+		var results []simulation.ValidationSummary
+		if opt.Stage != nil || opt.OneDay != nil {
+			results = simulation.RunRealStageRaceValidationFor(db, riders, opt.Stage, opt.StageRuns)
+			results = append(results, simulation.RunRealRaceValidationFor(db, riders, opt.OneDay, opt.Runs)...)
+		} else {
+			results = simulation.RunRealStageRaceValidationFor(db, riders, simulation.KnownRealStageRaces(), opt.StageRuns)
+			if opt.Classics {
+				results = append(results, simulation.RunRealRaceValidationFor(db, riders, simulation.KnownRealRaces(), opt.Runs)...)
+			}
 		}
 		steps := map[int64][]float64{}
+		weights := map[int64][]float64{}
 		ev := map[int64][]string{}
 		var mae float64
 		for _, res := range results {
 			mae += res.MeanTimeGapErrorSecs
 			stage := strings.Contains(res.Name, "(GC)")
+			w := 1.0
+			if v, ok := opt.Weight[res.Name]; ok {
+				w = v
+			}
 			for _, c := range res.Riders {
-				if s, ok := riderStep(c, stage); ok {
+				if s, ok := riderStep(c, stage, opt.Prior > 0); ok {
 					steps[c.RiderID] = append(steps[c.RiderID], s)
+					weights[c.RiderID] = append(weights[c.RiderID], w)
 					ev[c.RiderID] = append(ev[c.RiderID], fmt.Sprintf("%s %+.1f%%", res.Name, s))
 				}
 			}
 			for _, c := range res.Intruders {
 				s := -intruderPenaltyPct * c.Top10Pct / 100
 				steps[c.RiderID] = append(steps[c.RiderID], s)
+				weights[c.RiderID] = append(weights[c.RiderID], w)
 				ev[c.RiderID] = append(ev[c.RiderID], fmt.Sprintf("%s intruder %+.1f%%", res.Name, s))
 			}
 		}
-		var total float64
+		var total, largest float64
 		for id, ss := range steps {
-			mean := 0.0
-			for _, s := range ss {
-				mean += s / float64(len(ss))
-			}
-			total += math.Abs(mean)
 			cur := scale[id]
 			if cur == 0 {
 				cur = 1
 			}
+			// Weighted mean step; with a prior, the base counts as Prior
+			// races asking to return to it (ridge on the log scale).
+			sum, wsum := 0.0, 0.0
+			for i, s := range ss {
+				sum += s * weights[id][i]
+				wsum += weights[id][i]
+			}
+			mean := sum / wsum
+			if opt.Prior > 0 {
+				mean = (sum - opt.Prior*100*math.Log(cur)) / (wsum + opt.Prior)
+			}
+			mean = clamp(mean, -maxStepPct, maxStepPct) // rate limit per pass
+			total += math.Abs(mean)
+			largest = math.Max(largest, math.Abs(mean))
 			scale[id] = clamp(cur*(1+damping*mean/100), 1-opt.MaxChange, 1+opt.MaxChange)
 			evidence[id] = ev[id]
 		}
@@ -126,9 +164,11 @@ func Fit(db *database.DB, base []model.Rider, opt Options) ([]Adjustment, error)
 		if len(steps) > 0 {
 			meanStep = total / float64(len(steps))
 		}
-		logf("pass %d: mean gap error %.0fs over %d cases, %d riders adjusted, mean step %.2f%%\n",
-			it, mae/float64(max(1, len(results))), len(results), len(steps), meanStep)
-		if meanStep < settledPct {
+		logf("pass %d: mean gap error %.0fs over %d cases, %d riders adjusted, mean step %.2f%%, largest %.2f%%\n",
+			it, mae/float64(max(1, len(results))), len(results), len(steps), meanStep, largest)
+		// A rider far off keeps asking for big steps while the many riders
+		// near their rating pull the mean down: settle on both.
+		if meanStep < settledPct && largest < settledMaxPct {
 			break
 		}
 	}
@@ -164,7 +204,12 @@ func Fit(db *database.DB, base []model.Rider, opt Options) ([]Adjustment, error)
 
 // riderStep is the threshold change (%) one race asks of a rider: from the
 // gap error when the real gap is known, else from the position error.
-func riderStep(c simulation.RiderCheck, stage bool) (float64, bool) {
+//
+// With a prior (wide) the race's error is kept whole (up to the fit's
+// bounds): a per-race cap would cap the correction itself, since the prior
+// balances the capped error; the rate limit then applies to the combined
+// step.
+func riderStep(c simulation.RiderCheck, stage, wide bool) (float64, bool) {
 	if c.SimPos > missingSimPos {
 		return 0, false // never finished in the simulation: no usable signal
 	}
@@ -173,7 +218,11 @@ func riderStep(c simulation.RiderCheck, stage bool) (float64, bool) {
 		if stage {
 			per = stageSecsPerPct
 		}
-		return clamp((c.SimGap-c.RealGap)/per, -maxStepPct, maxStepPct), true
+		lim := maxStepPct
+		if wide {
+			lim = maxCorrectionPct
+		}
+		return clamp((c.SimGap-c.RealGap)/per, -lim, lim), true
 	}
 	if c.RealPos > 0 {
 		return clamp((c.SimPos-float64(c.RealPos))/placesPerPct, -1, 1), true
@@ -199,10 +248,10 @@ func Write(path string, adj []Adjustment) error {
 		return err
 	}
 	defer f.Close()
-	fmt.Fprintln(f, "# Threshold corrections fitted by `cycling-sim fit-ratings` to 2024 reference")
-	fmt.Fprintln(f, "# results (see the Source column). Applied last at seed time, as a multiplier on the")
-	fmt.Fprintln(f, "# threshold from riders.csv / rider_derived.csv / rider_overrides.csv.")
-	fmt.Fprintln(f, "# Regenerated on each fit; the 2023 hold-out in `cycling-sim validate` checks it.")
+	fmt.Fprintln(f, "# Threshold corrections fitted by `cycling-sim fit-ratings` to reference results")
+	fmt.Fprintln(f, "# (see the Source column; `fit-ratings --season=2026`: every 2026 reference, ridge")
+	fmt.Fprintln(f, "# prior). Applied last at seed time, as a multiplier on the threshold from the")
+	fmt.Fprintln(f, "# earlier layers and the WorldDB rebuild. Regenerated on each fit.")
 	w := csv.NewWriter(f)
 	if err := w.Write([]string{"Name", "FTP_scale", "Source"}); err != nil {
 		return err

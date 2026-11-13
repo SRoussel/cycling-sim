@@ -1,0 +1,214 @@
+# 2026 reference results, read verbatim from English Wikipedia (Nov 2026): one-day top 10 and final GC top 10.
+# Gap in seconds behind the winner. Source page: https://en.wikipedia.org/wiki/2026_<race> (Flanders: 2026_Tour_of_Flanders_(men's_race);
+# Dauphine: 2026_Tour_Auvergne-Rhône-Alpes; San Sebastián: 2026_Clásica_de_San_Sebastián). E3's winning time on Wikipedia equals Strade's (possible copy error; gaps unaffected).
+Kind,Race,Date,Position,Rider,GapSeconds
+oneday,"Strade Bianche",2026-03-07,1,"Tadej Pogačar",0
+oneday,"Strade Bianche",2026-03-07,2,"Paul Seixas",60
+oneday,"Strade Bianche",2026-03-07,3,"Isaac del Toro",69
+oneday,"Strade Bianche",2026-03-07,4,"Romain Grégoire",124
+oneday,"Strade Bianche",2026-03-07,5,"Gianni Vermeersch",124
+oneday,"Strade Bianche",2026-03-07,6,"Jan Christen",127
+oneday,"Strade Bianche",2026-03-07,7,"Tom Pidcock",134
+oneday,"Strade Bianche",2026-03-07,8,"Matteo Jorgenson",140
+oneday,"Strade Bianche",2026-03-07,9,"Andreas Kron",226
+oneday,"Strade Bianche",2026-03-07,10,"Wout van Aert",226
+oneday,"Milan-San Remo",2026-03-21,1,"Tadej Pogačar",0
+oneday,"Milan-San Remo",2026-03-21,2,"Tom Pidcock",0
+oneday,"Milan-San Remo",2026-03-21,3,"Wout van Aert",4
+oneday,"Milan-San Remo",2026-03-21,4,"Mads Pedersen",4
+oneday,"Milan-San Remo",2026-03-21,5,"Corbin Strong",4
+oneday,"Milan-San Remo",2026-03-21,6,"Andrea Vendrame",4
+oneday,"Milan-San Remo",2026-03-21,7,"Jasper Stuyven",4
+oneday,"Milan-San Remo",2026-03-21,8,"Mathieu van der Poel",4
+oneday,"Milan-San Remo",2026-03-21,9,"Matteo Trentin",4
+oneday,"Milan-San Remo",2026-03-21,10,"Edoardo Zambanini",4
+oneday,"E3 Saxo Classic",2026-03-27,1,"Mathieu van der Poel",0
+oneday,"E3 Saxo Classic",2026-03-27,2,"Per Strand Hagenes",3
+oneday,"E3 Saxo Classic",2026-03-27,3,"Florian Vermeersch",3
+oneday,"E3 Saxo Classic",2026-03-27,4,"Stan Dewulf",3
+oneday,"E3 Saxo Classic",2026-03-27,5,"Jonas Abrahamsen",3
+oneday,"E3 Saxo Classic",2026-03-27,6,"Tobias Lund Andresen",24
+oneday,"E3 Saxo Classic",2026-03-27,7,"Christophe Laporte",24
+oneday,"E3 Saxo Classic",2026-03-27,8,"Gianni Vermeersch",24
+oneday,"E3 Saxo Classic",2026-03-27,9,"Mads Pedersen",24
+oneday,"E3 Saxo Classic",2026-03-27,10,"Matteo Trentin",24
+oneday,"Gent-Wevelgem",2026-03-29,1,"Jasper Philipsen",0
+oneday,"Gent-Wevelgem",2026-03-29,2,"Tobias Lund Andresen",0
+oneday,"Gent-Wevelgem",2026-03-29,3,"Christophe Laporte",0
+oneday,"Gent-Wevelgem",2026-03-29,4,"Arnaud De Lie",0
+oneday,"Gent-Wevelgem",2026-03-29,5,"Robert Donaldson",0
+oneday,"Gent-Wevelgem",2026-03-29,6,"Matteo Trentin",0
+oneday,"Gent-Wevelgem",2026-03-29,7,"Luca Mozzato",0
+oneday,"Gent-Wevelgem",2026-03-29,8,"Aimé De Gendt",0
+oneday,"Gent-Wevelgem",2026-03-29,9,"Jonas Abrahamsen",0
+oneday,"Gent-Wevelgem",2026-03-29,10,"Jasper Stuyven",0
+oneday,"Tour of Flanders",2026-04-05,1,"Tadej Pogačar",0
+oneday,"Tour of Flanders",2026-04-05,2,"Mathieu van der Poel",34
+oneday,"Tour of Flanders",2026-04-05,3,"Remco Evenepoel",71
+oneday,"Tour of Flanders",2026-04-05,4,"Wout van Aert",124
+oneday,"Tour of Flanders",2026-04-05,5,"Mads Pedersen",168
+oneday,"Tour of Flanders",2026-04-05,6,"Jasper Stuyven",268
+oneday,"Tour of Flanders",2026-04-05,7,"Florian Vermeersch",268
+oneday,"Tour of Flanders",2026-04-05,8,"Matej Mohorič",270
+oneday,"Tour of Flanders",2026-04-05,9,"Christophe Laporte",322
+oneday,"Tour of Flanders",2026-04-05,10,"Gianni Vermeersch",322
+oneday,"Paris-Roubaix",2026-04-12,1,"Wout van Aert",0
+oneday,"Paris-Roubaix",2026-04-12,2,"Tadej Pogačar",0
+oneday,"Paris-Roubaix",2026-04-12,3,"Jasper Stuyven",13
+oneday,"Paris-Roubaix",2026-04-12,4,"Mathieu van der Poel",15
+oneday,"Paris-Roubaix",2026-04-12,5,"Christophe Laporte",15
+oneday,"Paris-Roubaix",2026-04-12,6,"Mick van Dijke",15
+oneday,"Paris-Roubaix",2026-04-12,7,"Mads Pedersen",15
+oneday,"Paris-Roubaix",2026-04-12,8,"Stefan Bissegger",20
+oneday,"Paris-Roubaix",2026-04-12,9,"Nils Politt",156
+oneday,"Paris-Roubaix",2026-04-12,10,"Mike Teunissen",156
+oneday,"Amstel Gold Race",2026-04-19,1,"Remco Evenepoel",0
+oneday,"Amstel Gold Race",2026-04-19,2,"Mattias Skjelmose",1
+oneday,"Amstel Gold Race",2026-04-19,3,"Benoît Cosnefroy",119
+oneday,"Amstel Gold Race",2026-04-19,4,"Romain Grégoire",119
+oneday,"Amstel Gold Race",2026-04-19,5,"Emiel Verstrynge",119
+oneday,"Amstel Gold Race",2026-04-19,6,"Mauro Schmid",119
+oneday,"Amstel Gold Race",2026-04-19,7,"Mauri Vansevenant",119
+oneday,"Amstel Gold Race",2026-04-19,8,"Albert Withen Philipsen",119
+oneday,"Amstel Gold Race",2026-04-19,9,"Ewen Costiou",119
+oneday,"Amstel Gold Race",2026-04-19,10,"Marco Frigo",119
+oneday,"La Fleche Wallonne",2026-04-22,1,"Paul Seixas",0
+oneday,"La Fleche Wallonne",2026-04-22,2,"Mauro Schmid",3
+oneday,"La Fleche Wallonne",2026-04-22,3,"Ben Tulett",3
+oneday,"La Fleche Wallonne",2026-04-22,4,"Benoît Cosnefroy",3
+oneday,"La Fleche Wallonne",2026-04-22,5,"Mattias Skjelmose",8
+oneday,"La Fleche Wallonne",2026-04-22,6,"Alex Baudin",8
+oneday,"La Fleche Wallonne",2026-04-22,7,"Ion Izagirre",10
+oneday,"La Fleche Wallonne",2026-04-22,8,"Lenny Martinez",10
+oneday,"La Fleche Wallonne",2026-04-22,9,"Romain Grégoire",10
+oneday,"La Fleche Wallonne",2026-04-22,10,"Andreas Kron",10
+oneday,"Liege-Bastogne-Liege",2026-04-26,1,"Tadej Pogačar",0
+oneday,"Liege-Bastogne-Liege",2026-04-26,2,"Paul Seixas",45
+oneday,"Liege-Bastogne-Liege",2026-04-26,3,"Remco Evenepoel",102
+oneday,"Liege-Bastogne-Liege",2026-04-26,4,"Emiel Verstrynge",102
+oneday,"Liege-Bastogne-Liege",2026-04-26,5,"Egan Bernal",102
+oneday,"Liege-Bastogne-Liege",2026-04-26,6,"Pello Bilbao",102
+oneday,"Liege-Bastogne-Liege",2026-04-26,7,"Romain Grégoire",102
+oneday,"Liege-Bastogne-Liege",2026-04-26,8,"Christian Scaroni",102
+oneday,"Liege-Bastogne-Liege",2026-04-26,9,"Tobias Halland Johannessen",102
+oneday,"Liege-Bastogne-Liege",2026-04-26,10,"Filippo Zana",102
+oneday,"Clasica San Sebastian",2026-08-01,1,"Remco Evenepoel",0
+oneday,"Clasica San Sebastian",2026-08-01,2,"Richard Carapaz",0
+oneday,"Clasica San Sebastian",2026-08-01,3,"Ben Tulett",29
+oneday,"Clasica San Sebastian",2026-08-01,4,"Christian Scaroni",29
+oneday,"Clasica San Sebastian",2026-08-01,5,"Pello Bilbao",29
+oneday,"Clasica San Sebastian",2026-08-01,6,"Giulio Ciccone",29
+oneday,"Clasica San Sebastian",2026-08-01,7,"Jan Christen",29
+oneday,"Clasica San Sebastian",2026-08-01,8,"Marc Hirschi",29
+oneday,"Clasica San Sebastian",2026-08-01,9,"Marcel Camprubí",29
+oneday,"Clasica San Sebastian",2026-08-01,10,"Léo Bisiaux",29
+oneday,"Il Lombardia",2026-10-10,1,"Paul Seixas",0
+oneday,"Il Lombardia",2026-10-10,2,"Enric Mas",48
+oneday,"Il Lombardia",2026-10-10,3,"Giulio Ciccone",65
+oneday,"Il Lombardia",2026-10-10,4,"Remco Evenepoel",80
+oneday,"Il Lombardia",2026-10-10,5,"Brandon McNulty",80
+oneday,"Il Lombardia",2026-10-10,6,"Tom Pidcock",80
+oneday,"Il Lombardia",2026-10-10,7,"Pello Bilbao",80
+oneday,"Il Lombardia",2026-10-10,8,"Christian Scaroni",80
+oneday,"Il Lombardia",2026-10-10,9,"Filippo Zana",80
+oneday,"Il Lombardia",2026-10-10,10,"Mathys Rondel",80
+gc,"Paris-Nice",2026-03-08,1,"Jonas Vingegaard",0
+gc,"Paris-Nice",2026-03-08,2,"Daniel Martínez",263
+gc,"Paris-Nice",2026-03-08,3,"Georg Steinhauser",367
+gc,"Paris-Nice",2026-03-08,4,"Kévin Vauquelin",384
+gc,"Paris-Nice",2026-03-08,5,"Lenny Martinez",451
+gc,"Paris-Nice",2026-03-08,6,"Marc Soler",549
+gc,"Paris-Nice",2026-03-08,7,"Ion Izagirre",559
+gc,"Paris-Nice",2026-03-08,8,"Mathys Rondel",623
+gc,"Paris-Nice",2026-03-08,9,"Alex Baudin",633
+gc,"Paris-Nice",2026-03-08,10,"Harold Tejada",700
+gc,"Tirreno-Adriatico",2026-03-09,1,"Isaac del Toro",0
+gc,"Tirreno-Adriatico",2026-03-09,2,"Matteo Jorgenson",40
+gc,"Tirreno-Adriatico",2026-03-09,3,"Giulio Pellizzari",42
+gc,"Tirreno-Adriatico",2026-03-09,4,"Tobias Halland Johannessen",74
+gc,"Tirreno-Adriatico",2026-03-09,5,"Primož Roglič",81
+gc,"Tirreno-Adriatico",2026-03-09,6,"Giulio Ciccone",86
+gc,"Tirreno-Adriatico",2026-03-09,7,"Santiago Buitrago",109
+gc,"Tirreno-Adriatico",2026-03-09,8,"Ben Healy",115
+gc,"Tirreno-Adriatico",2026-03-09,9,"Magnus Sheffield",122
+gc,"Tirreno-Adriatico",2026-03-09,10,"Alessandro Pinarello",126
+gc,"Volta a Catalunya",2026-03-23,1,"Jonas Vingegaard",0
+gc,"Volta a Catalunya",2026-03-23,2,"Lenny Martinez",82
+gc,"Volta a Catalunya",2026-03-23,3,"Florian Lipowitz",90
+gc,"Volta a Catalunya",2026-03-23,4,"Valentin Paret-Peintre",103
+gc,"Volta a Catalunya",2026-03-23,5,"Remco Evenepoel",133
+gc,"Volta a Catalunya",2026-03-23,6,"Felix Gall",197
+gc,"Volta a Catalunya",2026-03-23,7,"Mattias Skjelmose",251
+gc,"Volta a Catalunya",2026-03-23,8,"Cian Uijtdebroeks",320
+gc,"Volta a Catalunya",2026-03-23,9,"Matthew Riccitello",325
+gc,"Volta a Catalunya",2026-03-23,10,"Richard Carapaz",336
+gc,"Tour of the Basque Country",2026-04-06,1,"Paul Seixas",0
+gc,"Tour of the Basque Country",2026-04-06,2,"Florian Lipowitz",150
+gc,"Tour of the Basque Country",2026-04-06,3,"Tobias Halland Johannessen",153
+gc,"Tour of the Basque Country",2026-04-06,4,"Ion Izagirre",230
+gc,"Tour of the Basque Country",2026-04-06,5,"Clément Champoussin",283
+gc,"Tour of the Basque Country",2026-04-06,6,"Pello Bilbao",303
+gc,"Tour of the Basque Country",2026-04-06,7,"Javier Romo",305
+gc,"Tour of the Basque Country",2026-04-06,8,"Igor Arrieta",325
+gc,"Tour of the Basque Country",2026-04-06,9,"Alex Baudin",341
+gc,"Tour of the Basque Country",2026-04-06,10,"Kévin Vauquelin",453
+gc,"Tour de Romandie",2026-04-28,1,"Tadej Pogačar",0
+gc,"Tour de Romandie",2026-04-28,2,"Florian Lipowitz",42
+gc,"Tour de Romandie",2026-04-28,3,"Lenny Martinez",164
+gc,"Tour de Romandie",2026-04-28,4,"Jørgen Nordhagen",171
+gc,"Tour de Romandie",2026-04-28,5,"Luke Plapp",195
+gc,"Tour de Romandie",2026-04-28,6,"Luke Tuckwell",196
+gc,"Tour de Romandie",2026-04-28,7,"Jefferson Alveiro Cepeda",198
+gc,"Tour de Romandie",2026-04-28,8,"Albert Withen Philipsen",200
+gc,"Tour de Romandie",2026-04-28,9,"Lorenzo Fortunato",204
+gc,"Tour de Romandie",2026-04-28,10,"Junior Lecerf",212
+gc,"Giro d'Italia",2026-05-08,1,"Jonas Vingegaard",0
+gc,"Giro d'Italia",2026-05-08,2,"Felix Gall",322
+gc,"Giro d'Italia",2026-05-08,3,"Jai Hindley",385
+gc,"Giro d'Italia",2026-05-08,4,"Thymen Arensman",422
+gc,"Giro d'Italia",2026-05-08,5,"Derek Gee-West",476
+gc,"Giro d'Italia",2026-05-08,6,"Afonso Eulálio",579
+gc,"Giro d'Italia",2026-05-08,7,"Michael Storer",613
+gc,"Giro d'Italia",2026-05-08,8,"Davide Piganzoli",652
+gc,"Giro d'Italia",2026-05-08,9,"Damiano Caruso",684
+gc,"Giro d'Italia",2026-05-08,10,"Egan Bernal",774
+gc,"Tour Auvergne-Rhone-Alpes",2026-06-07,1,"Isaac del Toro",0
+gc,"Tour Auvergne-Rhone-Alpes",2026-06-07,2,"Luke Tuckwell",54
+gc,"Tour Auvergne-Rhone-Alpes",2026-06-07,3,"Juan Ayuso",77
+gc,"Tour Auvergne-Rhone-Alpes",2026-06-07,4,"Matteo Jorgenson",96
+gc,"Tour Auvergne-Rhone-Alpes",2026-06-07,5,"Tobias Halland Johannessen",106
+gc,"Tour Auvergne-Rhone-Alpes",2026-06-07,6,"Mattias Skjelmose",161
+gc,"Tour Auvergne-Rhone-Alpes",2026-06-07,7,"Cian Uijtdebroeks",191
+gc,"Tour Auvergne-Rhone-Alpes",2026-06-07,8,"Cristián Rodríguez",195
+gc,"Tour Auvergne-Rhone-Alpes",2026-06-07,9,"José Félix Parra",385
+gc,"Tour Auvergne-Rhone-Alpes",2026-06-07,10,"Guillaume Martin",441
+gc,"Tour de Suisse",2026-06-17,1,"Tadej Pogačar",0
+gc,"Tour de Suisse",2026-06-17,2,"Richard Carapaz",392
+gc,"Tour de Suisse",2026-06-17,3,"Mathias Vacek",413
+gc,"Tour de Suisse",2026-06-17,4,"Tobias Foss",454
+gc,"Tour de Suisse",2026-06-17,5,"Ilan Van Wilder",471
+gc,"Tour de Suisse",2026-06-17,6,"Brandon McNulty",473
+gc,"Tour de Suisse",2026-06-17,7,"Matthew Riccitello",528
+gc,"Tour de Suisse",2026-06-17,8,"Primož Roglič",563
+gc,"Tour de Suisse",2026-06-17,9,"Sergio Higuita",566
+gc,"Tour de Suisse",2026-06-17,10,"Bart Lemmen",584
+gc,"Tour de France",2026-07-04,1,"Tadej Pogačar",0
+gc,"Tour de France",2026-07-04,2,"Remco Evenepoel",386
+gc,"Tour de France",2026-07-04,3,"Isaac del Toro",582
+gc,"Tour de France",2026-07-04,4,"Paul Seixas",716
+gc,"Tour de France",2026-07-04,5,"Lenny Martinez",782
+gc,"Tour de France",2026-07-04,6,"Mattias Skjelmose",899
+gc,"Tour de France",2026-07-04,7,"Juan Ayuso",1068
+gc,"Tour de France",2026-07-04,8,"Richard Carapaz",1200
+gc,"Tour de France",2026-07-04,9,"Tom Pidcock",1768
+gc,"Tour de France",2026-07-04,10,"Jordan Jegat",2001
+gc,"Vuelta a Espana",2026-08-22,1,"Enric Mas",0
+gc,"Vuelta a Espana",2026-08-22,2,"Primož Roglič",135
+gc,"Vuelta a Espana",2026-08-22,3,"Felix Gall",164
+gc,"Vuelta a Espana",2026-08-22,4,"Richard Carapaz",414
+gc,"Vuelta a Espana",2026-08-22,5,"Sepp Kuss",525
+gc,"Vuelta a Espana",2026-08-22,6,"Oscar Onley",568
+gc,"Vuelta a Espana",2026-08-22,7,"Jakob Omrzel",638
+gc,"Vuelta a Espana",2026-08-22,8,"Clément Berthet",701
+gc,"Vuelta a Espana",2026-08-22,9,"Cristián Rodríguez",719
+gc,"Vuelta a Espana",2026-08-22,10,"Harold Tejada",771

@@ -28,15 +28,25 @@ const baseReconRate = 0.03
 // DurabilityFactor). wPrimeSeconds scales peak power to W': 14 s gives the
 // 15-28 kJ range reported for trained and pro cyclists (~21 kJ at a typical
 // 1550 W). It decides short climbs, where W' matters as much as threshold.
+//
+// Since Nov 2026 (the user: sprint power shouldn't drive anaerobic capacity
+// so much) W' is mostly a share of the rider's power: wPrimeSprintShare of
+// it from peak power, the rest wPrimeThresholdSeconds of threshold power
+// (W' runs ~50-70 s of critical power in trained cyclists). The field's mean
+// is unchanged (21.1 kJ); pure sprinters lose a few kJ (Philipsen 26.6 ->
+// 22.0), riders strong at threshold gain (Van der Poel 23.6, above Pedersen).
 const (
-	wPrimeSeconds = 14.0
-	defaultWPrime = 20000.0 // no peak power known
+	wPrimeSeconds          = 14.0
+	wPrimeSprintShare      = 0.3
+	wPrimeThresholdSeconds = 54.8
+	defaultWPrime          = 20000.0 // no peak power known
 )
 
 func NewWPrimeState(rider *model.Rider) *WPrimeState {
 	wMax := defaultWPrime
 	if rider.MaxSprintWatts > 0 {
-		wMax = wPrimeSeconds * float64(rider.MaxSprintWatts)
+		wMax = wPrimeSprintShare*wPrimeSeconds*float64(rider.MaxSprintWatts) +
+			(1-wPrimeSprintShare)*wPrimeThresholdSeconds*float64(rider.FTPWatts)
 	}
 	// Recovery attribute determines reconstitution rate
 	// 70 → rate 0.03, higher = faster reconstitution

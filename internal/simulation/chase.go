@@ -41,6 +41,9 @@ const catchMarginS = 60.0
 const chaseAllIn = 1.0
 
 // chasePlan is a road group's plan for the groups ahead.
+// traceChase, when set (trace harnesses only), sees every planned chase.
+var traceChase func(s *RaceState, group []*RiderState, plan chasePlan)
+
 type chasePlan struct {
 	intensity float64         // fraction of threshold the chasers ride; 0 = no chase
 	teams     map[string]bool // teams whose domestiques chase
@@ -84,6 +87,7 @@ func (s *RaceState) planChase(group []*RiderState) chasePlan {
 				continue
 			}
 			a := math.Inf(1)
+			sprintHunt := false
 			switch p.TeamRole {
 			case RoleLeader:
 				// A GC contender's team defends its leader's place when it is
@@ -118,7 +122,19 @@ func (s *RaceState) planChase(group []*RiderState) chasePlan {
 				}
 			case RoleSprinter:
 				if s.teamOrders(p.Rider.Team).Ambition != OrderNo && s.sprinterCanFollow(p, group) {
-					a = -catchMarginS
+					// A sprinter who survives even the favourites racing the
+					// finale (sprinterSurvivesFinale: true of a flat run-in)
+					// has his team chase whatever it costs. One who holds a
+					// threshold pace but not their attacks (a puncheur on a
+					// hilly stage race day) has it ride for the stage as a
+					// hunter does, only when a steady tempo catches the break:
+					// chasing whatever it cost, Narváez's and Holter's teams
+					// chased every hilly and mountain break of the Giro.
+					if !s.IsStageRace || s.sprinterSurvivesFinale(p, group) {
+						a = -catchMarginS
+					} else {
+						sprintHunt = true
+					}
 				}
 			}
 			if teamIn(brk, p.Rider.Team) {
@@ -139,7 +155,7 @@ func (s *RaceState) planChase(group []*RiderState) chasePlan {
 				if old, ok := allow[p.Rider.Team]; !ok || a < old {
 					allow[p.Rider.Team] = a
 				}
-			} else if p.TeamRole == RoleLeader && s.hunting(p) {
+			} else if sprintHunt || p.TeamRole == RoleLeader && s.hunting(p) {
 				hunters[p.Rider.Team] = true
 			}
 		}
@@ -301,9 +317,37 @@ func (s *RaceState) sprinterCanFollow(sp *RiderState, group []*RiderState) bool 
 	return ok
 }
 
+// sprinterSurvivesFinale is sprinterCanFollow with the finale raced: over the
+// last finalKm the group's fastest riders ride their threshold plus their
+// W' spread over each segment (maxPowerFor: the favourites attacking), not a
+// threshold pace line.
+func (s *RaceState) sprinterSurvivesFinale(sp *RiderState, group []*RiderState) bool {
+	if v, ok := s.survivesFinale[sp]; ok {
+		return v
+	}
+	ok := s.sprinterFollowsAt(sp, group, true)
+	if s.survivesFinale == nil {
+		s.survivesFinale = map[*RiderState]bool{}
+	}
+	s.survivesFinale[sp] = ok
+	return ok
+}
+
 func (s *RaceState) sprinterFollows(sp *RiderState, group []*RiderState) bool {
+	return s.sprinterFollowsAt(sp, group, false)
+}
+
+// finalKm: the finale the favourites race (PhaseFinal's start).
+const finalKm = 20.0
+
+func (s *RaceState) sprinterFollowsAt(sp *RiderState, group []*RiderState, raced bool) bool {
 	if len(group) <= 1 {
 		return true
+	}
+	// Distance left at the start of each remaining segment.
+	left := make([]float64, len(s.Course)+1)
+	for i := len(s.Course) - 1; i >= s.SegIndex && i >= 0; i-- {
+		left[i] = left[i+1] + s.Course[i].DistanceKm
 	}
 	r := sp.Rider
 	wp := *sp.WPrime
@@ -319,8 +363,14 @@ func (s *RaceState) sprinterFollows(sp *RiderState, group []*RiderState) bool {
 		}
 		n := float64(len(line))
 		var p, m, cda, handling float64
+		finale := raced && left[i] <= finalKm+seg.DistanceKm
 		for _, rs := range line {
-			p += EffectivePower(rs.Rider, rs.CurrentFTP(), seg, false)
+			thr := EffectivePower(rs.Rider, rs.CurrentFTP(), seg, false)
+			if finale {
+				v0 := segmentSpeed(thr, rs.Rider.TotalMassKg(), rs.Rider.CdA, seg, rs.Rider.Handling)
+				thr = rs.maxPowerFor(thr, thr, SegmentTime(v0, km))
+			}
+			p += thr
 			m += rs.Rider.TotalMassKg()
 			cda += rs.Rider.CdA
 			handling += float64(rs.Rider.Handling)

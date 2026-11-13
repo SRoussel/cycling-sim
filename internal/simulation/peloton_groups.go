@@ -95,6 +95,9 @@ func FormGroups(riders []*RiderState, segment *model.Segment, isTT bool, remaini
 	// Stage races: interested teams' domestiques chase the groups ahead to a
 	// plan (chase.go) instead of everyone chasing by rule.
 	plan := state.planChase(riders)
+	if traceChase != nil {
+		traceChase(state, riders, plan)
+	}
 	rps := make([]riderPower, len(riders))
 	for i, rs := range riders {
 		var power float64

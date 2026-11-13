@@ -163,6 +163,7 @@ type RaceState struct {
 	lineTime              map[lineKey]float64       // per-step cache of timeToLine
 	reach                 float64                   // per-step cache of breakReach
 	canFollow             map[*RiderState]bool      // per-step cache of sprinterCanFollow
+	survivesFinale        map[*RiderState]bool      // per-step cache of sprinterSurvivesFinale
 	fastLines             map[fastKey][]*RiderState // per-step cache of fastestLine
 	Climb                 float64                   // ClimbFactor of the current step
 	BreakawayHasDangerous bool

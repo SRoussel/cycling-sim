@@ -338,6 +338,9 @@ func TestFlatRaceWithBreakawayStillRealistic(t *testing.T) {
 	}
 	for i := range riders {
 		riders[i].ID = int64(i + 1)
+		// No day-to-day form (off days): this checks the breakaway logic,
+		// and an off day in a five-rider race is a big loss on its own.
+		riders[i].Consistency = 150
 	}
 
 	race := &model.Race{ID: 1, Name: "Flat Race", CourseID: 1, RaceType: model.RaceTypeRoad}

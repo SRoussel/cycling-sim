@@ -312,6 +312,10 @@ func RunRealRaceValidationFor(db *database.DB, allRiders []model.Rider, entries 
 				Course: course,
 				Riders: riders,
 				Seed:   ValidationSeedBase + int64(run+1),
+				// Real races have crashes, punctures and mechanicals: with
+				// them off, favourites made the top 10 far more reliably than
+				// the simulation's chances said (calibration.go).
+				IncidentsEnabled: true,
 			}
 			// A real edition: riders had their form of the day.
 			cfg.FormDate = race.Date
@@ -545,7 +549,7 @@ func RunRealStageRaceValidationFor(db *database.DB, allRiders []model.Rider, ent
 			if err2 != nil {
 				continue
 			}
-			stages = append(stages, StageConfig{Race: race, Course: course, StageNumber: st.StageNumber, RestDayBefore: st.RestDayBefore, Prestige: st.Prestige, SeasonalForm: true})
+			stages = append(stages, StageConfig{Race: race, Course: course, StageNumber: st.StageNumber, RestDayBefore: st.RestDayBefore, Prestige: st.Prestige, SeasonalForm: true, Incidents: true})
 			infos = append(infos, selection.StageInfo{Course: course, RaceType: race.RaceType})
 		}
 		pool := entry.pool(allRiders)

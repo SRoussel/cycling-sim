@@ -110,7 +110,23 @@ func RaceFormFactor(rider *model.Rider, rng *rand.Rand) float64 {
 	return 1.0 + rng.NormFloat64()*raceFormSpread*(1.0-float64(rider.Consistency)/150.0)
 }
 
+// Off days: chance for a rider of Consistency 75, and how much they cost.
+const (
+	offDayChance = 1.0 / 15
+	offDayMin    = 0.03
+	offDayMax    = 0.08
+)
+
 func DailyFormFactor(rider *model.Rider, rng *rand.Rand) float64 {
 	stddev := 0.02 * (1.0 - float64(rider.Consistency)/150.0)
-	return 1.0 + rng.NormFloat64()*stddev
+	f := 1.0 + rng.NormFloat64()*stddev
+	// Off days (Nov 2026): form isn't only a small symmetric wobble; about
+	// one day in 15 is a bad one (3-8% down) for an average rider, fewer for
+	// consistent ones (a favourite's bad day or two in a Grand Tour). With
+	// symmetric form alone the favourites were too reliable (calibration.go).
+	p := offDayChance * (1 - float64(rider.Consistency)/150) / 0.5
+	if rng.Float64() < p {
+		f *= 1 - (offDayMin + (offDayMax-offDayMin)*rng.Float64())
+	}
+	return f
 }

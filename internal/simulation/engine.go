@@ -136,6 +136,9 @@ func initStates(riders []model.Rider, rng *rand.Rand) []*RiderState {
 
 // StageConfig holds the configuration for one stage in a stage race.
 type StageConfig struct {
+	// Incidents: crashes, punctures and mechanicals (validation: real races
+	// have them; calibration.go).
+	Incidents     bool
 	Race          *model.Race
 	Course        *model.Course
 	StageNumber   int

@@ -161,7 +161,7 @@ func RunShapeValidationFor(db *database.DB, refs []RealShape, field func(string,
 			if err1 != nil || err2 != nil {
 				continue
 			}
-			stages = append(stages, StageConfig{Race: race, Course: course, StageNumber: st.StageNumber, RestDayBefore: st.RestDayBefore, Prestige: st.Prestige, SeasonalForm: true})
+			stages = append(stages, StageConfig{Race: race, Course: course, StageNumber: st.StageNumber, RestDayBefore: st.RestDayBefore, Prestige: st.Prestige, SeasonalForm: true, Incidents: true})
 			infos = append(infos, selection.StageInfo{Course: course, RaceType: race.RaceType})
 		}
 		start := selection.SelectStageRaceStartList(field(ref.InternalName, riders), infos, selection.DefaultConfig(model.RaceTypeRoad, true, len(stages)))

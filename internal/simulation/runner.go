@@ -560,18 +560,19 @@ func SimulateStageRaceWithProgress(stageRace *model.StageRace, stages []StageCon
 		}
 
 		config := RaceConfig{
-			Race:            stage.Race,
-			Course:          stage.Course,
-			Riders:          adjustedRiders,
-			Seed:            rng.Int63(),
-			ActionOverrides: overrides,
-			GCGaps:          gcGaps,
-			TeamPlan:        plan,
-			Shape:           stage.Shape,
-			Prestige:        stage.Prestige,
-			StageWins:       stageWins,
-			FormDate:        formDate,
-			RaceForm:        raceForm,
+			Race:             stage.Race,
+			Course:           stage.Course,
+			Riders:           adjustedRiders,
+			Seed:             rng.Int63(),
+			ActionOverrides:  overrides,
+			GCGaps:           gcGaps,
+			TeamPlan:         plan,
+			Shape:            stage.Shape,
+			Prestige:         stage.Prestige,
+			StageWins:        stageWins,
+			FormDate:         formDate,
+			RaceForm:         raceForm,
+			IncidentsEnabled: stage.Incidents,
 		}
 
 		var results []model.RaceResult

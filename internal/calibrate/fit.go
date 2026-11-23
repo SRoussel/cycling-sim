@@ -156,8 +156,23 @@ func Fit(db *database.DB, base []model.Rider, opt Options) ([]Adjustment, error)
 			}
 			mean = clamp(mean, -maxStepPct, maxStepPct) // rate limit per pass
 			total += math.Abs(mean)
-			largest = math.Max(largest, math.Abs(mean))
-			scale[id] = clamp(cur*(1+damping*mean/100), 1-opt.MaxChange, 1+opt.MaxChange)
+			// With a prior, the bound shrinks with the evidence as the prior
+			// does (MaxChange × w/(w+Prior)): a rider whose error never
+			// responds to his rating (he works for a leader; Cepeda's one
+			// Romandie) would otherwise sit at the full bound on one race.
+			bound := opt.MaxChange
+			if opt.Prior > 0 {
+				bound *= wsum / (wsum + opt.Prior)
+			}
+			next := clamp(cur*(1+damping*mean/100), 1-bound, 1+bound)
+			if next == cur && math.Abs(next-1) >= bound-1e-9 {
+				// Pinned at the bound and still asking: nothing left to fit
+				// (the rider's error isn't his rating); don't wait on him.
+				total -= math.Abs(mean)
+			} else {
+				largest = math.Max(largest, math.Abs(mean))
+			}
+			scale[id] = next
 			evidence[id] = ev[id]
 		}
 		meanStep := 0.0

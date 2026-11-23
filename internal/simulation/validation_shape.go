@@ -95,7 +95,18 @@ func KnownRealShapes2026() []RealShape {
 		InternalName: "Tour de Romandie 2026",
 		Kind:         ShapeWeekLong,
 		Stages:       []Outcome{T, X, X, X, X, X},
-	}}
+	}, tour2023Shape()}
+}
+
+// tour2023Shape: the 2023 Tour on its real route, the 2026 Tour's stand-in
+// (no 2026 file); how stages are won is race character, not form.
+func tour2023Shape() RealShape {
+	for _, r := range KnownRealShapes() {
+		if r.InternalName == "Tour de France 2023" {
+			return r
+		}
+	}
+	return RealShape{}
 }
 
 // shapeRuns: full stage-race simulations per race-shape check.

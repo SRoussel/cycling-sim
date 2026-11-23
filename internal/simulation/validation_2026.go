@@ -26,17 +26,22 @@ import (
 // race2026Course maps a reference race to the seeded race or stage race it
 // runs on (same name unless listed).
 var race2026Course = map[string]string{
-	"Volta a Catalunya":         "Volta a Catalunya 2024",
-	"Tour Auvergne-Rhone-Alpes": "Criterium du Dauphine",
-	"Giro d'Italia":             "Giro d'Italia 2026",
-	"Tirreno-Adriatico":         "Tirreno-Adriatico 2026",
-	"Tour de Romandie":          "Tour de Romandie 2026",
-	"Strade Bianche":            "Strade Bianche 2026",
-	"E3 Saxo Classic":           "E3 Saxo Classic 2026",
-	"Gent-Wevelgem":             "Gent-Wevelgem 2026",
-	"Tour of Flanders":          "Tour of Flanders 2026",
-	"Paris-Roubaix":             "Paris-Roubaix 2026",
-	"La Fleche Wallonne":        "La Fleche Wallonne 2026",
+	"Volta a Catalunya":          "Volta a Catalunya 2024",
+	"Tour Auvergne-Rhone-Alpes":  "Criterium du Dauphine 2023", // stand-in routes (no 2026 file)
+	"Paris-Nice":                 "Paris-Nice 2025",
+	"Tour of the Basque Country": "Tour of the Basque Country 2023",
+	// Tour de Suisse stays on its generic course: 2026 was a 5-stage race,
+	// the newest file (2023) an 8-stage one with two big mountain days.
+	"Tour de France":     "Tour de France 2023",
+	"Giro d'Italia":      "Giro d'Italia 2026",
+	"Tirreno-Adriatico":  "Tirreno-Adriatico 2026",
+	"Tour de Romandie":   "Tour de Romandie 2026",
+	"Strade Bianche":     "Strade Bianche 2026",
+	"E3 Saxo Classic":    "E3 Saxo Classic 2026",
+	"Gent-Wevelgem":      "Gent-Wevelgem 2026",
+	"Tour of Flanders":   "Tour of Flanders 2026",
+	"Paris-Roubaix":      "Paris-Roubaix 2026",
+	"La Fleche Wallonne": "La Fleche Wallonne 2026",
 }
 
 // foldKey matches rider names across sources: accents dropped, case and

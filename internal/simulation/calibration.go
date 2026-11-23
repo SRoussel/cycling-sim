@@ -1,8 +1,10 @@
 package simulation
 
 import (
+	"fmt"
 	"math"
 	"sort"
+	"strings"
 )
 
 // Calibration (Nov 2026): a real race is one draw from what could have
@@ -130,4 +132,70 @@ func Brier10(points []CalibPoint) float64 {
 		s += (p.P10 - y) * (p.P10 - y)
 	}
 	return s / float64(len(points))
+}
+
+// Race history (Nov 2026): race character is judged against a race's long
+// run (data/history_results.csv, about ten editions), not one edition.
+
+// HistoryRace is one race's past editions.
+type HistoryRace struct {
+	Name        string
+	Gap2        []float64 // gap of 2nd place per edition (s): the winning margin, or GC 2nd
+	Gap10       []float64 // gap of 10th place per edition (s)
+	Solo, Bunch int       // one-day editions won solo (2nd 5 s+ down) / with the whole top 10 together
+}
+
+// LoadHistory reads data/history_results.csv by race name.
+func LoadHistory(path string) (map[string]*HistoryRace, error) {
+	rows, err := readCSV(path)
+	if err != nil {
+		return nil, err
+	}
+	out := map[string]*HistoryRace{}
+	for _, row := range rows[1:] { // Kind,Race,Year,Winner,Gap2,Within5,Gap10
+		if len(row) < 7 {
+			continue
+		}
+		h := out[row[1]]
+		if h == nil {
+			h = &HistoryRace{Name: row[1]}
+			out[row[1]] = h
+		}
+		var g2, g10, within float64
+		fmt.Sscan(row[4], &g2)
+		fmt.Sscan(row[6], &g10)
+		h.Gap2 = append(h.Gap2, g2)
+		h.Gap10 = append(h.Gap10, g10)
+		if row[0] == "oneday" {
+			fmt.Sscan(row[5], &within)
+			if g2 >= finishSoloS {
+				h.Solo++
+			} else if within >= 10 {
+				h.Bunch++
+			}
+		}
+	}
+	return out, nil
+}
+
+// HistoryName is the race name a reference result goes by in the history
+// ("Tour of Flanders 2026" and "Giro d'Italia 2026 (GC)" are "Tour of
+// Flanders" and "Giro d'Italia").
+func HistoryName(display string) string {
+	s := strings.TrimSuffix(display, " (GC)")
+	f := strings.Fields(s)
+	if len(f) > 1 && len(f[len(f)-1]) == 4 && strings.HasPrefix(f[len(f)-1], "20") {
+		s = strings.Join(f[:len(f)-1], " ")
+	}
+	return s
+}
+
+// Range is the median and the min-max of xs.
+func Range(xs []float64) (med, lo, hi float64) {
+	if len(xs) == 0 {
+		return 0, 0, 0
+	}
+	s := append([]float64(nil), xs...)
+	sort.Float64s(s)
+	return medianOf(s), s[0], s[len(s)-1]
 }

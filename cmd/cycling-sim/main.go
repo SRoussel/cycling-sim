@@ -548,6 +548,7 @@ func cmdValidateSets(db *database.DB, n int, crossSeason, season2026 bool) {
 		fmt.Printf("  %-26s solo %3.0f%% of races (real %3.0f%%)\n", "All one-day races", nSolo/nRaces*100, realSolo/nRaces*100)
 	}
 	printCalibration(results)
+	printHistory(results)
 	fmt.Println("Race shape: how stages are won, averaged per race kind (judge on these); per race as detail")
 	var detail []string
 	for set := 0; set < n; set++ {
@@ -874,4 +875,57 @@ func printCalibration(results []simulation.SeedSetResult) {
 	score, blind, n := simulation.WinnerLogScore(races)
 	fmt.Printf("  Real winners got on average 2^%.2f = %.1f%% from the simulation (field-blind guess 2^%.2f = %.1f%%; %d races)\n",
 		score, math.Pow(2, score)*100, blind, math.Pow(2, blind)*100, n)
+}
+
+// printHistory sets the simulated race character against each race's long
+// run (data/history_results.csv): one-day finish types and margins, stage
+// races' GC gaps. A value outside the history's range is flagged.
+func printHistory(results []simulation.SeedSetResult) {
+	hist, err := simulation.LoadHistory(seed.DataPath("history_results.csv"))
+	if err != nil || len(hist) == 0 {
+		return
+	}
+	clk := func(s float64) string { return clock(s) }
+	flag := func(v, lo, hi float64) string {
+		if v < lo || v > hi {
+			return " ←"
+		}
+		return ""
+	}
+	fmt.Println("Against history (each race's last ~10 editions: median, range; ← outside the range)")
+	var simSolo, realSolo, nRaces float64
+	for _, r := range results {
+		h := hist[simulation.HistoryName(r.Name)]
+		if h == nil {
+			continue
+		}
+		if len(r.Finish) > 0 {
+			var solo, margin float64
+			for _, f := range r.Finish {
+				solo += f.Solo / float64(len(r.Finish))
+				margin += f.Margin / float64(len(r.Finish))
+			}
+			n := float64(len(h.Gap2))
+			med, lo, hi := simulation.Range(h.Gap2)
+			fmt.Printf("  %-26s solo %3.0f%% (history %3.0f%%, %d of %d)   margin %6s (history %s, %s-%s)%s\n",
+				simulation.HistoryName(r.Name), solo*100, float64(h.Solo)/n*100, h.Solo, len(h.Gap2), clk(margin), clk(med), clk(lo), clk(hi), flag(margin, lo, hi))
+			simSolo += solo
+			realSolo += float64(h.Solo) / n
+			nRaces++
+		}
+		if len(r.Spread) > 0 {
+			var s2, s10 float64
+			for _, sp := range r.Spread {
+				s2 += sp.Sim2 / float64(len(r.Spread))
+				s10 += sp.Sim10 / float64(len(r.Spread))
+			}
+			m2, lo2, hi2 := simulation.Range(h.Gap2)
+			m10, lo10, hi10 := simulation.Range(h.Gap10)
+			fmt.Printf("  %-26s GC 2nd %6s (history %s, %s-%s)%-2s  10th %6s (history %s, %s-%s)%s\n",
+				simulation.HistoryName(r.Name), clk(s2), clk(m2), clk(lo2), clk(hi2), flag(s2, lo2, hi2), clk(s10), clk(m10), clk(lo10), clk(hi10), flag(s10, lo10, hi10))
+		}
+	}
+	if nRaces > 0 {
+		fmt.Printf("  %-26s solo %3.0f%% of races (history %3.0f%%)\n", "All one-day races", simSolo/nRaces*100, realSolo/nRaces*100)
+	}
 }

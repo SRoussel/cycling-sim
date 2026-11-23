@@ -1,0 +1,184 @@
+# Race history (Nov 2026) for judging race character against a race's long run, not one
+# edition: English Wikipedia, each edition's page. One-day: gap of 2nd and 10th place (s) and
+# riders within 5 s of the winner (top 10 only, so 10 = the whole top 10 together), read
+# from the result tables. Stage races: final GC gaps of 2nd and 10th place (s), read from page
+# summaries (approximate); Tour Auvergne-Rhone-Alpes rows are the Criterium du Dauphine,
+# its former name. Week-long races 2016-2021 not collected; 2026 editions are in
+# reference_2026.csv. Races not held (2020) are left out.
+Kind,Race,Year,Winner,Gap2,Within5,Gap10
+oneday,"Tour of Flanders",2016,"Sagan",25,1,49
+oneday,"Tour of Flanders",2017,"Gilbert",29,1,53
+oneday,"Tour of Flanders",2018,"Terpstra",12,1,25
+oneday,"Tour of Flanders",2019,"Bettiol",14,1,17
+oneday,"Tour of Flanders",2020,"van der Poel",0,2,8
+oneday,"Tour of Flanders",2021,"Asgreen",0,2,47
+oneday,"Tour of Flanders",2022,"van der Poel",0,6,48
+oneday,"Tour of Flanders",2023,"Pogacar",16,1,169
+oneday,"Tour of Flanders",2024,"van der Poel",62,1,62
+oneday,"Tour of Flanders",2025,"Pogacar",61,1,139
+oneday,"Tour of Flanders",2026,"Pogacar",34,1,322
+oneday,"Gent-Wevelgem",2016,"Sagan",0,4,11
+oneday,"Gent-Wevelgem",2017,"Van Avermaet",0,2,6
+oneday,"Gent-Wevelgem",2018,"Sagan",0,10,0
+oneday,"Gent-Wevelgem",2019,"Kristoff",0,10,0
+oneday,"Gent-Wevelgem",2020,"Pedersen",0,7,100
+oneday,"Gent-Wevelgem",2021,"van Aert",0,7,85
+oneday,"Gent-Wevelgem",2022,"Girmay",0,4,8
+oneday,"Gent-Wevelgem",2023,"Laporte",0,2,124
+oneday,"Gent-Wevelgem",2024,"Pedersen",0,2,16
+oneday,"Gent-Wevelgem",2025,"Pedersen",49,1,49
+oneday,"Gent-Wevelgem",2026,"Philipsen",0,10,0
+oneday,"E3 Saxo Classic",2016,"Kwiatkowski",4,2,11
+oneday,"E3 Saxo Classic",2017,"Van Avermaet",0,3,52
+oneday,"E3 Saxo Classic",2018,"Terpstra",20,1,20
+oneday,"E3 Saxo Classic",2019,"Stybar",0,5,64
+oneday,"E3 Saxo Classic",2021,"Asgreen",32,1,90
+oneday,"E3 Saxo Classic",2022,"van Aert",0,2,96
+oneday,"E3 Saxo Classic",2023,"van Aert",0,3,91
+oneday,"E3 Saxo Classic",2024,"van der Poel",91,1,168
+oneday,"E3 Saxo Classic",2025,"van der Poel",65,1,163
+oneday,"E3 Saxo Classic",2026,"van der Poel",3,5,24
+oneday,"Paris-Roubaix",2016,"Hayman",0,5,140
+oneday,"Paris-Roubaix",2017,"Van Avermaet",0,5,12
+oneday,"Paris-Roubaix",2018,"Sagan",0,2,151
+oneday,"Paris-Roubaix",2019,"Gilbert",0,2,47
+oneday,"Paris-Roubaix",2021,"Colbrelli",0,3,76
+oneday,"Paris-Roubaix",2022,"van Baarle",107,1,179
+oneday,"Paris-Roubaix",2023,"van der Poel",46,1,251
+oneday,"Paris-Roubaix",2024,"van der Poel",180,1,287
+oneday,"Paris-Roubaix",2025,"van der Poel",78,1,276
+oneday,"Paris-Roubaix",2026,"van Aert",0,2,156
+oneday,"Strade Bianche",2016,"Cancellara",0,3,50
+oneday,"Strade Bianche",2017,"Kwiatkowski",15,1,172
+oneday,"Strade Bianche",2018,"Benoot",39,1,136
+oneday,"Strade Bianche",2019,"Alaphilippe",2,2,81
+oneday,"Strade Bianche",2020,"van Aert",30,1,465
+oneday,"Strade Bianche",2021,"van der Poel",5,2,159
+oneday,"Strade Bianche",2022,"Pogacar",37,1,113
+oneday,"Strade Bianche",2023,"Pidcock",20,1,95
+oneday,"Strade Bianche",2024,"Pogacar",164,1,317
+oneday,"Strade Bianche",2025,"Pogacar",84,1,306
+oneday,"Strade Bianche",2026,"Pogacar",60,1,226
+oneday,"Amstel Gold Race",2016,"Gasparotto",0,10,4
+oneday,"Amstel Gold Race",2017,"Gilbert",0,2,71
+oneday,"Amstel Gold Race",2018,"Valgren",0,3,36
+oneday,"Amstel Gold Race",2019,"van der Poel",0,10,0
+oneday,"Amstel Gold Race",2021,"van Aert",0,10,3
+oneday,"Amstel Gold Race",2022,"Kwiatkowski",0,2,20
+oneday,"Amstel Gold Race",2023,"Pogacar",38,1,194
+oneday,"Amstel Gold Race",2024,"Pidcock",0,9,11
+oneday,"Amstel Gold Race",2025,"Skjelmose",0,3,34
+oneday,"Amstel Gold Race",2026,"Evenepoel",1,2,119
+oneday,"La Fleche Wallonne",2016,"Valverde",0,10,5
+oneday,"La Fleche Wallonne",2017,"Valverde",1,10,1
+oneday,"La Fleche Wallonne",2018,"Alaphilippe",4,2,12
+oneday,"La Fleche Wallonne",2019,"Alaphilippe",0,2,11
+oneday,"La Fleche Wallonne",2020,"Hirschi",0,9,10
+oneday,"La Fleche Wallonne",2021,"Alaphilippe",0,2,16
+oneday,"La Fleche Wallonne",2022,"Teuns",2,4,7
+oneday,"La Fleche Wallonne",2023,"Pogacar",0,10,3
+oneday,"La Fleche Wallonne",2024,"Williams",0,5,10
+oneday,"La Fleche Wallonne",2025,"Pogacar",10,1,19
+oneday,"La Fleche Wallonne",2026,"Seixas",3,4,10
+oneday,"Liege-Bastogne-Liege",2016,"Poels",0,4,12
+oneday,"Liege-Bastogne-Liege",2017,"Valverde",0,7,7
+oneday,"Liege-Bastogne-Liege",2018,"Jungels",37,1,39
+oneday,"Liege-Bastogne-Liege",2019,"Fuglsang",27,1,86
+oneday,"Liege-Bastogne-Liege",2020,"Roglic",0,5,14
+oneday,"Liege-Bastogne-Liege",2021,"Pogacar",0,5,9
+oneday,"Liege-Bastogne-Liege",2022,"Evenepoel",48,1,48
+oneday,"Liege-Bastogne-Liege",2023,"Evenepoel",66,1,108
+oneday,"Liege-Bastogne-Liege",2024,"Pogacar",99,1,122
+oneday,"Liege-Bastogne-Liege",2025,"Pogacar",63,1,70
+oneday,"Liege-Bastogne-Liege",2026,"Pogacar",45,1,102
+oneday,"Milan-San Remo",2016,"Demare",0,10,0
+oneday,"Milan-San Remo",2017,"Kwiatkowski",0,10,5
+oneday,"Milan-San Remo",2018,"Nibali",0,10,0
+oneday,"Milan-San Remo",2019,"Alaphilippe",0,10,0
+oneday,"Milan-San Remo",2020,"van Aert",0,10,2
+oneday,"Milan-San Remo",2021,"Stuyven",0,10,0
+oneday,"Milan-San Remo",2022,"Mohoric",2,9,11
+oneday,"Milan-San Remo",2023,"van der Poel",15,1,26
+oneday,"Milan-San Remo",2024,"Philipsen",0,10,0
+oneday,"Milan-San Remo",2025,"van der Poel",0,3,43
+oneday,"Milan-San Remo",2026,"Pogacar",0,10,4
+oneday,"Clasica San Sebastian",2016,"Mollema",16,1,37
+oneday,"Clasica San Sebastian",2017,"Kwiatkowski",0,5,38
+oneday,"Clasica San Sebastian",2018,"Alaphilippe",0,2,16
+oneday,"Clasica San Sebastian",2019,"Evenepoel",38,1,38
+oneday,"Clasica San Sebastian",2021,"Powless",0,3,64
+oneday,"Clasica San Sebastian",2022,"Evenepoel",118,1,249
+oneday,"Clasica San Sebastian",2023,"Evenepoel",0,2,182
+oneday,"Clasica San Sebastian",2024,"Hirschi",0,2,37
+oneday,"Clasica San Sebastian",2025,"Ciccone",9,1,121
+oneday,"Clasica San Sebastian",2026,"Evenepoel",0,2,29
+oneday,"Il Lombardia",2016,"Chaves",0,3,84
+oneday,"Il Lombardia",2017,"Nibali",28,1,47
+oneday,"Il Lombardia",2018,"Pinot",32,1,82
+oneday,"Il Lombardia",2019,"Mollema",16,1,52
+oneday,"Il Lombardia",2020,"Fuglsang",31,1,388
+oneday,"Il Lombardia",2021,"Pogacar",0,2,145
+oneday,"Il Lombardia",2022,"Pogacar",0,2,86
+oneday,"Il Lombardia",2023,"Pogacar",52,1,86
+oneday,"Il Lombardia",2024,"Pogacar",196,1,298
+oneday,"Il Lombardia",2025,"Pogacar",108,1,270
+oneday,"Il Lombardia",2026,"Seixas",48,1,80
+gc,"Tour de France",2016,,245,,431
+gc,"Tour de France",2017,,54,,565
+gc,"Tour de France",2018,,111,,858
+gc,"Tour de France",2019,,71,,452
+gc,"Tour de France",2020,,59,,843
+gc,"Tour de France",2021,,320,,1114
+gc,"Tour de France",2022,,163,,2159
+gc,"Tour de France",2023,,449,,1590
+gc,"Tour de France",2024,,377,,1743
+gc,"Tour de France",2025,,264,,1962
+gc,"Giro d'Italia",2016,,52,,980
+gc,"Giro d'Italia",2017,,31,,957
+gc,"Giro d'Italia",2018,,46,,916
+gc,"Giro d'Italia",2019,,65,,734
+gc,"Giro d'Italia",2020,,39,,665
+gc,"Giro d'Italia",2021,,89,,1115
+gc,"Giro d'Italia",2022,,78,,1120
+gc,"Giro d'Italia",2023,,14,,548
+gc,"Giro d'Italia",2024,,596,,1271
+gc,"Giro d'Italia",2025,,236,,867
+gc,"Vuelta a Espana",2016,,83,,847
+gc,"Vuelta a Espana",2017,,135,,950
+gc,"Vuelta a Espana",2018,,106,,671
+gc,"Vuelta a Espana",2019,,153,,1354
+gc,"Vuelta a Espana",2020,,24,,574
+gc,"Vuelta a Espana",2021,,282,,1342
+gc,"Vuelta a Espana",2022,,122,,721
+gc,"Vuelta a Espana",2023,,17,,698
+gc,"Vuelta a Espana",2024,,156,,679
+gc,"Vuelta a Espana",2025,,76,,736
+gc,"Paris-Nice",2022,,29,,392
+gc,"Paris-Nice",2023,,53,,296
+gc,"Paris-Nice",2024,,30,,333
+gc,"Paris-Nice",2025,,75,,326
+gc,"Tirreno-Adriatico",2022,,112,,243
+gc,"Tirreno-Adriatico",2023,,18,,71
+gc,"Tirreno-Adriatico",2024,,84,,264
+gc,"Tirreno-Adriatico",2025,,35,,98
+gc,"Volta a Catalunya",2022,,16,,115
+gc,"Volta a Catalunya",2023,,6,,233
+gc,"Volta a Catalunya",2024,,221,,447
+gc,"Volta a Catalunya",2025,,28,,119
+gc,"Tour of the Basque Country",2022,,11,,303
+gc,"Tour of the Basque Country",2023,,72,,110
+gc,"Tour of the Basque Country",2024,,42,,187
+gc,"Tour of the Basque Country",2025,,112,,235
+gc,"Tour de Romandie",2022,,50,,133
+gc,"Tour de Romandie",2023,,19,,127
+gc,"Tour de Romandie",2024,,7,,83
+gc,"Tour de Romandie",2025,,26,,178
+gc,"Tour Auvergne-Rhone-Alpes",2022,,40,,231
+gc,"Tour Auvergne-Rhone-Alpes",2023,,143,,337
+gc,"Tour Auvergne-Rhone-Alpes",2024,,8,,253
+gc,"Tour Auvergne-Rhone-Alpes",2025,,59,,601
+gc,"Tour de Suisse",2021,,17,,333
+gc,"Tour de Suisse",2022,,72,,225
+gc,"Tour de Suisse",2023,,9,,297
+gc,"Tour de Suisse",2024,,22,,395
+gc,"Tour de Suisse",2025,,67,,510

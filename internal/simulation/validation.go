@@ -34,6 +34,9 @@ type ValidationSummary struct {
 	// Finish (one-day races): how the race ended over the runs (solo, small
 	// group, bunch) and the winning margin, next to the real race.
 	Finish *FinishShape `json:",omitempty"`
+	// Calib: every starter's simulated chances against what he did (the
+	// whole field, so riders who did well that day carry no selection bias).
+	Calib []CalibPoint `json:",omitempty"`
 }
 
 // FinishShape is how one-day races ended: shares of solo wins (2nd place 5 s
@@ -90,11 +93,12 @@ var ValidationSeedBase int64
 // SeedSetResult is one reference race scored over several seed sets.
 type SeedSetResult struct {
 	Name         string
-	MAE          []float64     // gap error per seed set
-	MedianMAE    []float64     // median-gap error per seed set (stage races)
-	RealWinnerPc float64       // mean share of runs the real winner wins
-	Spread       []GCSpread    // per seed set (stage races)
-	Finish       []FinishShape // per seed set (one-day races)
+	MAE          []float64      // gap error per seed set
+	MedianMAE    []float64      // median-gap error per seed set (stage races)
+	RealWinnerPc float64        // mean share of runs the real winner wins
+	Spread       []GCSpread     // per seed set (stage races)
+	Finish       []FinishShape  // per seed set (one-day races)
+	Calib        [][]CalibPoint // every starter, per seed set
 }
 
 // RunSeedSets scores the 2024 references (the ratings' season) over several
@@ -133,6 +137,7 @@ func RunSeedSets(db *database.DB, sets int, crossSeason bool) []SeedSetResult {
 			if r.Finish != nil {
 				out[i].Finish = append(out[i].Finish, *r.Finish)
 			}
+			out[i].Calib = append(out[i].Calib, r.Calib)
 			for _, c := range r.Riders {
 				if c.RealPos == 1 {
 					out[i].RealWinnerPc += c.WinPct / float64(sets)

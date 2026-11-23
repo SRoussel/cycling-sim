@@ -449,6 +449,7 @@ func RunRealRaceValidationFor(db *database.DB, allRiders []model.Rider, entries 
 			Riders:               checks,
 			Intruders:            intruders,
 			Finish:               &finish,
+			Calib:                calibPoints(posCnt, top10Hits, wins, runs, entry.Top10RiderIDs),
 		})
 	}
 	return results
@@ -667,6 +668,7 @@ func RunRealStageRaceValidationFor(db *database.DB, allRiders []model.Rider, ent
 			Details: fmt.Sprintf("Matched %d | Corr %.2f | GC top-10 overlap %.0f%% (≥%.0f%%) | GC gap MAE %.0fs over %d (≤%.0fs), median-gap MAE %.0fs | Real winner wins %.0f%%",
 				len(matched), corr, overlap, realPassTop10Target, mae, n, realStageRaceGapMAE, medMAE, winPct),
 			Riders: checks, Intruders: intruders, Spread: spread,
+			Calib: calibPoints(gapN, top10, wins, runs, entry.Top10RiderIDs),
 		})
 	}
 	return out

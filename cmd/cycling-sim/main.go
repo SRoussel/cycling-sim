@@ -547,6 +547,7 @@ func cmdValidateSets(db *database.DB, n int, crossSeason, season2026 bool) {
 	if nRaces > 0 {
 		fmt.Printf("  %-26s solo %3.0f%% of races (real %3.0f%%)\n", "All one-day races", nSolo/nRaces*100, realSolo/nRaces*100)
 	}
+	printCalibration(results)
 	fmt.Println("Race shape: how stages are won, averaged per race kind (judge on these); per race as detail")
 	var detail []string
 	for set := 0; set < n; set++ {
@@ -820,4 +821,57 @@ func cmdImportResults(db *database.DB, dir string) {
 	}
 	fmt.Printf("Derived ratings for %d riders -> %s\n", len(ratings), out)
 	fmt.Println("Apply with: cycling-sim clear && cycling-sim seed  (curated rider_overrides.csv still wins)")
+}
+
+// printCalibration reports whether the simulation's probabilities are
+// honest: every starter's top-10 and win chances against what he did, over
+// all reference races and seed sets (calibration.go).
+func printCalibration(results []simulation.SeedSetResult) {
+	var oneDay, stage []simulation.CalibPoint
+	var races [][]simulation.CalibPoint
+	for _, r := range results {
+		for _, set := range r.Calib {
+			if len(set) == 0 {
+				continue
+			}
+			races = append(races, set)
+			if strings.Contains(r.Name, "(GC)") {
+				stage = append(stage, set...)
+			} else {
+				oneDay = append(oneDay, set...)
+			}
+		}
+	}
+	if len(races) == 0 {
+		return
+	}
+	fmt.Println("Calibration: do the simulation's chances come true as often as it says? (every starter, all races)")
+	for _, part := range []struct {
+		name string
+		pts  []simulation.CalibPoint
+	}{{"One-day top 10", oneDay}, {"Stage-race GC top 10", stage}} {
+		if len(part.pts) == 0 {
+			continue
+		}
+		fmt.Printf("  %-22s chance band:", part.name)
+		for _, b := range simulation.Reliability(part.pts, false) {
+			if b.N == 0 {
+				continue
+			}
+			fmt.Printf("  %2.0f-%3.0f%%: said %4.1f%%, happened %4.1f%% (n=%d)", b.Lo*100, b.Hi*100, b.Predicted*100, b.Actual*100, b.N)
+		}
+		fmt.Printf("  | Brier %.4f\n", simulation.Brier10(part.pts))
+	}
+	all := append(append([]simulation.CalibPoint{}, oneDay...), stage...)
+	fmt.Printf("  %-22s chance band:", "Winner")
+	for _, b := range simulation.Reliability(all, true) {
+		if b.N == 0 {
+			continue
+		}
+		fmt.Printf("  %2.0f-%3.0f%%: said %4.1f%%, happened %4.1f%% (n=%d)", b.Lo*100, b.Hi*100, b.Predicted*100, b.Actual*100, b.N)
+	}
+	fmt.Println()
+	score, blind, n := simulation.WinnerLogScore(races)
+	fmt.Printf("  Real winners got on average 2^%.2f = %.1f%% from the simulation (field-blind guess 2^%.2f = %.1f%%; %d races)\n",
+		score, math.Pow(2, score)*100, blind, math.Pow(2, blind)*100, n)
 }

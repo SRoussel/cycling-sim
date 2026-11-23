@@ -175,6 +175,7 @@ func RunSeedSetsFor(db *database.DB, sets int, oneDay, stage []RealRaceEntry) []
 			if r.Finish != nil {
 				out[i].Finish = append(out[i].Finish, *r.Finish)
 			}
+			out[i].Calib = append(out[i].Calib, r.Calib)
 			for _, c := range r.Riders {
 				if c.RealPos == 1 {
 					out[i].RealWinnerPc += c.WinPct / float64(sets)

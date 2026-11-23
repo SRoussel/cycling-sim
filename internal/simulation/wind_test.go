@@ -62,14 +62,20 @@ func TestCrosswindSplitsFlatRace(t *testing.T) {
 		for seed := int64(1); seed <= 10; seed++ {
 			race := &model.Race{ID: 1, Name: "Flat", RaceType: model.RaceTypeRoad, WindSpeedKmh: windKmh, WindDirectionDeg: 0}
 			res := SimulateRoadRace(RaceConfig{Race: race, Course: course, Riders: riders, Seed: seed})
-			total += res[len(res)-1].TimeGapSeconds
+			// Riders left behind the winner's group: echelons cut the bunch
+			// (the last rider's gap measured stragglers and attacks too).
+			for _, r := range res {
+				if r.TimeGapSeconds > 10 {
+					total++
+				}
+			}
 		}
 		return total / 10
 	}
 	calm, windy := spread(0), spread(45)
-	t.Logf("avg last-rider gap: calm %.0fs, 45 km/h crosswind %.0fs", calm, windy)
+	t.Logf("riders behind the winner's group: calm %.1f, 45 km/h crosswind %.1f", calm, windy)
 	if windy <= calm {
-		t.Errorf("crosswind should split the field more than calm air (%.0f vs %.0f)", windy, calm)
+		t.Errorf("crosswind should split the field more than calm air (%.1f vs %.1f riders behind)", windy, calm)
 	}
 }
 

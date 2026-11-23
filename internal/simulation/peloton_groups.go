@@ -451,8 +451,14 @@ func drivingTeams(riders []*RiderState, segment *model.Segment, state *RaceState
 		// on a sector the draft protects the finisher this time, but not
 		// over the whole race.
 		hard := segment.SurfaceType.Unpaved() || climbOf(segment) >= terrainClimb
-		wearDown := !state.IsStageRace && hard && state.isDangerous(rs) &&
-			state.timeToLine([]*RiderState{rs}) < state.timeToLine([]*RiderState{finisher})
+		wearDown := false
+		if !state.IsStageRace && hard && state.isDangerous(rs) {
+			// Only when someone here would beat the leader at the finish
+			// (its terrain, not flat sprint power: see pressPays).
+			if best := state.bestFinisher(riders, rs); best != nil && state.outFinishes(best, rs) {
+				wearDown = state.timeToLine([]*RiderState{rs}) < state.timeToLine([]*RiderState{best})
+			}
+		}
 		if wearDown || state.tempoDrops(rs, finisher, segment, finisherFTP) {
 			r := rs.Rider
 			if cur := out[r.Team]; cur == nil || climbingWKg(r) > climbingWKg(cur.Rider) {
@@ -881,14 +887,13 @@ func (s *RaceState) calmBunch() bool {
 // outsprintsChase reports whether rs is in the faster-finishing half of the
 // riders in his road group chasing a rival.
 func (s *RaceState) outsprintsChase(rs *RiderState) bool {
-	mine := FatiguedSprintPower(rs)
 	faster, chasers := 0, 0
 	for _, o := range s.Road {
 		if o.DNF || !s.rivalAhead(o) {
 			continue
 		}
 		chasers++
-		if o != rs && FatiguedSprintPower(o) > mine {
+		if o != rs && s.outFinishes(o, rs) {
 			faster++
 		}
 	}

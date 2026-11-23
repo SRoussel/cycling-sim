@@ -238,6 +238,7 @@ func simulateStep(riders []*RiderState, segment *model.Segment, isTT bool, dista
 		state.reach = 0
 		state.canFollow = nil
 		state.survivesFinale = nil
+		state.finishTimes = nil
 		state.fastLines = nil
 	}
 	for ci, cluster := range clusters {

@@ -206,7 +206,10 @@ func TestAttackPaysOnClimbsNotFlat(t *testing.T) {
 		strong := stateFor(1, "A", 460, 62, RoleLeader) // 7.4 W/kg
 		rival := stateFor(2, "B", 380, 66, RoleLeader)  // 5.8 W/kg
 		dom := stateFor(3, "B", 380, 70, RoleDomestique)
-		course := []model.Segment{{DistanceKm: 12, GradientPct: c.grade, SurfaceType: model.SurfaceRoad}}
+		// The rival is the faster sprinter and the race ends on the flat:
+		// the climber would lose the finish, so the climb is his chance.
+		strong.Rider.MaxSprintWatts, rival.Rider.MaxSprintWatts = 900, 1800
+		course := []model.Segment{{DistanceKm: 12, GradientPct: c.grade, SurfaceType: model.SurfaceRoad}, {DistanceKm: 3, SurfaceType: model.SurfaceRoad}}
 		s := &RaceState{Phase: PhaseFinal, IsStageRace: c.stage, Road: []*RiderState{strong, rival, dom}, Course: course, SegIndex: 0, SegmentKmLeft: 12}
 		if got := s.attackPays(strong, &course[0]); got != c.want {
 			t.Errorf("%s: attackPays = %v, want %v", c.name, got, c.want)

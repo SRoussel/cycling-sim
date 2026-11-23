@@ -65,6 +65,13 @@ func (s *RaceState) attackPays(rs *RiderState, seg *model.Segment) bool {
 	if !s.escapeEligible(rs) || s.rivalAhead(rs) {
 		return false
 	}
+	// One-day races: the best finisher among the rival leaders here wins if
+	// it comes to the finish, so he waits for it; it's for his rivals to
+	// attack him (Nov 2026: at Flèche the strongest climber attacked on the
+	// first ascent of the Mur, 60 km out, instead of waiting for the last).
+	if !s.IsStageRace && !s.outFinishedByRival(rs) {
+		return false
+	}
 	r := rs.Rider
 	threshold := EffectivePower(r, rs.CurrentFTP(), seg, false)
 	km := s.attackKm(seg)
@@ -97,12 +104,11 @@ func (s *RaceState) attackPays(rs *RiderState, seg *model.Segment) bool {
 	if !dropsThreat {
 		return false
 	}
-	// In a safe front selection, an attack that a faster sprinter can follow
+	// In a safe front selection, an attack that a faster finisher can follow
 	// only tows him to the line: wait for one that drops him.
 	if s.frontSafe(rs) {
-		mine := FatiguedSprintPower(rs)
 		for _, o := range own[1:] {
-			if FatiguedSprintPower(o) > mine {
+			if s.outFinishes(o, rs) {
 				return false
 			}
 		}
@@ -141,16 +147,28 @@ func (s *RaceState) pressPays(rs *RiderState, seg *model.Segment) bool {
 	if !seg.SurfaceType.Unpaved() && climbOf(seg) < terrainClimb {
 		return false
 	}
-	var finisher *RiderState
-	for _, o := range s.Road {
-		if o != rs && !o.DNF && (finisher == nil || SprintPower(o.Rider) > SprintPower(finisher.Rider)) {
-			finisher = o
-		}
-	}
-	if finisher == nil {
+	// Only a rider who'd lose the finish (the group's best finisher beats
+	// him: the sprint, or the climb of an uphill finish) gains from a hard
+	// race, and only against a finisher he outrides over the rest of the
+	// course. Judging the finish by flat sprint power had every climber
+	// pressing at Flèche (a Mur de Huy finish suits them).
+	finisher := s.bestFinisher(s.Road, rs)
+	if finisher == nil || !s.outFinishes(finisher, rs) {
 		return false
 	}
 	return s.timeToLine([]*RiderState{rs}) < s.timeToLine([]*RiderState{finisher})
+}
+
+// bestFinisher is the group's strongest finisher (finishTime) other than
+// except.
+func (s *RaceState) bestFinisher(group []*RiderState, except *RiderState) *RiderState {
+	var best *RiderState
+	for _, o := range group {
+		if o != except && !o.DNF && (best == nil || s.outFinishes(o, best)) {
+			best = o
+		}
+	}
+	return best
 }
 
 // escapeHolds reports whether a leader ahead of their rivals commits to the
@@ -275,10 +293,9 @@ func (s *RaceState) sprintLoserAttacks(rs *RiderState, seg *model.Segment) bool 
 	if !seg.SurfaceType.Unpaved() && climbOf(seg) < terrainClimb {
 		return false
 	}
-	mine := FatiguedSprintPower(rs)
 	faster := false
 	for _, o := range s.Road {
-		if !rivalLeaderOf(rs, o) || FatiguedSprintPower(o) <= mine {
+		if !rivalLeaderOf(rs, o) || !s.outFinishes(o, rs) {
 			continue
 		}
 		faster = true
@@ -405,4 +422,15 @@ func (s *RaceState) attackKm(seg *model.Segment) float64 {
 		km += d
 	}
 	return math.Max(km, seg.DistanceKm)
+}
+
+// outFinishedByRival reports whether a rival leader in rs's road group would
+// beat him at the finish (finishTime).
+func (s *RaceState) outFinishedByRival(rs *RiderState) bool {
+	for _, o := range s.Road {
+		if !o.DNF && rivalLeaderOf(rs, o) && s.outFinishes(o, rs) {
+			return true
+		}
+	}
+	return false
 }

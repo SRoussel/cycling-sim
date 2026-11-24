@@ -42,6 +42,9 @@ const chaseAllIn = 1.0
 
 // chasePlan is a road group's plan for the groups ahead.
 // traceChase, when set (trace harnesses only), sees every planned chase.
+// traceEffort, when set (trace harnesses only), sees every rider's decided
+// effort: action, power, whether his team drives and whether it chases.
+var traceEffort func(s *RaceState, rs *RiderState, action Action, power float64, driving, teamChase bool)
 var traceChase func(s *RaceState, group []*RiderState, plan chasePlan)
 
 type chasePlan struct {

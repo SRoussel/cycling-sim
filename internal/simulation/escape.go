@@ -337,6 +337,12 @@ func (s *RaceState) winGone(rs *RiderState) bool {
 	if !rival {
 		return false
 	}
+	// The win isn't gone to the main field: a group behind a bigger group
+	// rejoins it (behindMainField), it doesn't ride for places. Nov 2026:
+	// at Flèche 50 riders 20 s behind a bunch of 86, 66 km out, gave up.
+	if len(front) > len(s.Road) {
+		return false
+	}
 	var chase []*RiderState
 	for _, o := range s.Road {
 		if !o.DNF && o.TeamRole != RoleSprinter {
@@ -346,15 +352,62 @@ func (s *RaceState) winGone(rs *RiderState) bool {
 	if len(chase) == 0 {
 		return false
 	}
+	// Helpers: everyone here who'd work in the chase (not riders whose own
+	// leader is in front); everyone in the front group works for it.
+	helpers := 0
+	ahead := map[string]bool{}
+	for _, o := range front {
+		if o.TeamRole == RoleLeader {
+			ahead[o.Rider.Team] = true
+		}
+	}
+	for _, o := range chase {
+		if !ahead[o.Rider.Team] {
+			helpers++
+		}
+	}
+	frontHelpers := len(front)
 	sort.Slice(chase, func(i, j int) bool { return wkg(chase[i]) > wkg(chase[j]) })
 	sort.Slice(front, func(i, j int) bool { return wkg(front[i]) > wkg(front[j]) })
 	if len(chase) > maxRotation {
 		chase = chase[:maxRotation]
 	}
-	if len(front) > maxRotation {
-		front = front[:maxRotation]
+	frontK := maxRotation
+	if len(ahead) >= 2 {
+		// A front of rival leaders (two teams or more) watches itself:
+		// nobody tows the others to the finish, so it rides as a
+		// disorganised group (as placings groups do), with no pooling.
+		frontK, frontHelpers = disorganisedRotation, 0
 	}
-	return s.timeToLine(front) < s.timeToLine(chase)+gap
+	if len(front) > frontK {
+		front = front[:frontK]
+	}
+	return s.pooledTimeToLine(front, frontHelpers) < s.pooledTimeToLine(chase, helpers)+gap
+}
+
+// pooledTimeToLine is a pace line's time to the line when helpers riders
+// share the work: each is on the front only k/N of the time, so the line
+// can spend its W' N/k times faster (as the group simulation's pooled
+// chases do: peloton_follow.go), up to maximal aerobic power. Nov 2026: with
+// a bare threshold line, a group of 94 (86 domestiques) judged a 30-rider
+// move 15 s ahead uncatchable 40 km from Milan-San Remo's finish and rode
+// for places.
+func (s *RaceState) pooledTimeToLine(line []*RiderState, helpers int) float64 {
+	t0 := s.timeToLine(line)
+	if len(line) == 0 || t0 <= 0 || helpers <= 0 {
+		return t0
+	}
+	var thr, wp, gap float64
+	for _, rs := range line {
+		thr += rs.CurrentFTP()
+		wp += rs.WPrime.WPrimeCurrent
+		gap += punchGap(rs.Rider)
+	}
+	k := float64(len(line))
+	thr, wp, gap = thr/k, wp/k, gap/k
+	depth := math.Max(1, float64(helpers)/k)
+	f := math.Min(1+gap, 1+depth*wp/t0/thr)
+	return s.timeToLineAt(line, f)
 }
 
 // frontSafe: one-day races, rs is in the front selection of rival leaders

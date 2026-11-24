@@ -172,6 +172,9 @@ func FormGroups(riders []*RiderState, segment *model.Segment, isTT bool, remaini
 			driveFor = nil // sheltered in the bunch, saved for later
 		}
 		power, action = riderEffort(rs, action, segment, remainingDistance, state, driveFor, leaderTeams[rs.Rider.Team], teamChase[rs.Rider.Team] && !holdBack, holdBack, chaseAt, *params)
+		if traceEffort != nil {
+			traceEffort(state, rs, action, power, driveFor != nil, teamChase[rs.Rider.Team] && !holdBack)
+		}
 		if protectBack[rs.Rider.Team] && !commanded && action != ActionAttack && action != ActionChase {
 			if l, _ := state.protectedLeader(rs.Rider.Team); l == rs {
 				// The dropped leader races back with the team (see leaderGoes).

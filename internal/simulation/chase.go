@@ -467,13 +467,17 @@ func (s *RaceState) timeToLineAt(line []*RiderState, f float64) float64 {
 			km = s.SegmentKmLeft
 		}
 		var p, m, cda, handling float64
+		capV := math.Inf(1)
 		for _, rs := range line {
 			p += EffectivePower(rs.Rider, rs.CurrentFTP(), seg, false) * f
 			m += rs.Rider.TotalMassKg()
 			cda += rs.Rider.CdA
 			handling += float64(rs.Rider.Handling)
+			capV = math.Min(capV, SpeedCap(rs.Rider, seg))
 		}
-		v := segmentSpeed(p/n, m/n, cda/n*rotationFactor(len(line), seg.SurfaceType), seg, int(handling/n))
+		// A group descends as fast as its most cautious rider dares (the
+		// race's SpeedCap): projections without it had descents too fast.
+		v := math.Min(capV, segmentSpeed(p/n, m/n, cda/n*rotationFactor(len(line), seg.SurfaceType), seg, int(handling/n)))
 		t += SegmentTime(v, km)
 	}
 	return t

@@ -341,8 +341,15 @@ func (s *RaceState) holdsAttack(rs, o *RiderState, seg *model.Segment, km float6
 	threshold := EffectivePower(r, rs.CurrentFTP(), seg, false)
 	v0 := segmentSpeed(threshold, r.TotalMassKg(), r.CdA, seg, r.Handling)
 	burst := rs.maxPowerFor(threshold, threshold, SegmentTime(v0, km))
-	v := segmentSpeed(burst, r.TotalMassKg(), r.CdA, seg, r.Handling)
+	// Speeds as the race rides them: nobody goes faster than he dares on a
+	// descent (SpeedCap), so a burst there gains only what his descending
+	// does (Nov 2026: uncapped, a 300%-of-threshold "attack" on a 6% descent
+	// looked like it dropped everyone, and leaders burned W' on descents).
+	v := math.Min(SpeedCap(r, seg), segmentSpeed(burst, r.TotalMassKg(), r.CdA, seg, r.Handling))
 	or := o.Rider
+	if v > SpeedCap(or, seg) {
+		return false
+	}
 	need := segmentPower(v, or.TotalMassKg(), or.CdA*groupDraft(2, false, seg, v), seg, or.Handling)
 	thrO := EffectivePower(or, o.CurrentFTP(), seg, false)
 	avail := o.maxPowerFor(thrO, thrO, SegmentTime(v, km))

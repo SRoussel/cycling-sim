@@ -2,6 +2,7 @@ import { useParams, Link } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import * as App from '../../wailsjs/go/main/App'
 import { main } from '../../wailsjs/go/models'
+import { StageStrip, useStageProfiles } from '../components/race/StageStrip'
 import './Results.css'
 
 function StageRaceStages() {
@@ -9,6 +10,7 @@ function StageRaceStages() {
   const stageRaceIdNumber = parseInt(stageRaceId || '0')
   const [stageRace, setStageRace] = useState<main.StageRaceInfo | null>(null)
   const [stages, setStages] = useState<main.StageRaceStageInfo[]>([])
+  const profiles = useStageProfiles(stages)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -55,64 +57,38 @@ function StageRaceStages() {
   }
 
   return (
-    <div className="results">
+    <div className="results page-enter">
       <header className="results-header">
-        <h1>{stageRace?.name || 'Stage Race'}</h1>
-        <p>Stage Results</p>
+        <span className="results-kicker">{stageRace?.name || 'Stage race'}</span>
+        <h1>The stages</h1>
       </header>
-
-      <section className="card full-results">
-        <h2>Stages</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>Stage</th>
-              <th>Race</th>
-              <th>Course</th>
-              <th>Distance</th>
-              <th>Type</th>
-              <th>Date</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {stages.map((stage, index) => (
-              <tr key={stage.raceId}>
-                <td>{stage.stageNumber}</td>
-                <td>{stage.raceName}</td>
-                <td>{stage.courseName || '—'}</td>
-                <td>{stage.distanceKm ? `${stage.distanceKm} km` : '—'}</td>
-                <td>{stage.raceType}</td>
-                <td>{stage.date || '—'}</td>
-                <td>
-                  <Link
-                    to={`/results/${stage.raceId}`}
-                    state={{
-                      stageNav: {
-                        stageRaceId: stageRace?.id || stageRaceIdNumber,
-                        stageRaceName: stageRace?.name || 'Stage Race',
-                        stages,
-                        index,
-                      },
-                    }}
-                  >
-                    <button className="secondary">View Results</button>
-                  </Link>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
-
-      <div className="results-actions">
+      <div className="results-actions top-actions">
         <Link to={`/stage-race-gc/${stageRaceId}`}>
-          <button className="secondary">← GC Standings</button>
+          <button className="secondary">Final standings</button>
         </Link>
         <Link to={`/stage-race/${stageRaceId}`}>
-          <button className="primary">Run Again</button>
+          <button className="primary">Race it again</button>
         </Link>
       </div>
+      <StageStrip
+        stages={stages}
+        profiles={profiles}
+        link={(stage, index) => (
+          <Link
+            to={`/results/${stage.raceId}`}
+            state={{
+              stageNav: {
+                stageRaceId: stageRace?.id || stageRaceIdNumber,
+                stageRaceName: stageRace?.name || 'Stage race',
+                stages,
+                index,
+              },
+            }}
+          >
+            Stage result →
+          </Link>
+        )}
+      />
     </div>
   )
 }

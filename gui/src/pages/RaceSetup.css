@@ -228,3 +228,5 @@ button.primary.setup-start {
 @media (max-width: 900px) {
   .setup-grid { grid-template-columns: minmax(0, 1fr); }
 }
+
+.setup-favs th.num { font-family: inherit; font-size: 0.75rem; }

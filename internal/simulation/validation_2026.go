@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"unicode"
@@ -141,6 +142,27 @@ func Load2026References(referencePath, startListPath string, riders []model.Ride
 			stage = append(stage, e)
 		} else {
 			oneDay = append(oneDay, e)
+		}
+	}
+	// Riders who abandoned (optional file beside the start lists).
+	if ab, err := readCSV(filepath.Join(filepath.Dir(startListPath), "abandons_2026.csv")); err == nil && len(ab) > 1 {
+		ids := map[string]int64{}
+		for _, r := range riders {
+			ids[fieldName(r.Name)] = r.ID
+		}
+		for _, row := range ab[1:] { // Race,Rider,Mark
+			if len(row) < 2 {
+				continue
+			}
+			id, ok := ids[fieldName(row[1])]
+			if !ok {
+				continue
+			}
+			for i := range stage {
+				if strings.HasPrefix(stage[i].DisplayName, row[0]) {
+					stage[i].Abandoned = append(stage[i].Abandoned, id)
+				}
+			}
 		}
 	}
 	return oneDay, stage, nil

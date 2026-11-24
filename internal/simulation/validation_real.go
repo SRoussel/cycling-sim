@@ -59,6 +59,9 @@ type RealRaceEntry struct {
 	// DidNotStart lists riders in the DB who didn't ride the real race; they
 	// are removed from the simulated start list so the field is comparable.
 	DidNotStart []int64
+	// Abandoned lists riders who started the real race but didn't finish it
+	// (data/abandons_2026.csv): they aren't judged as top-10 intruders.
+	Abandoned []int64
 	// StartList, when set, is the real field: only DB riders on it start
 	// (names matched case- and space-insensitively), each for the team they
 	// rode for then (today's rosters differ).
@@ -760,6 +763,9 @@ func findIntruders(entry RealRaceEntry, top10 map[int64]int, wins map[int64]int,
 		} else {
 			unknownSlots++
 		}
+	}
+	for _, id := range entry.Abandoned {
+		known[id] = true
 	}
 	var out []RiderCheck
 	for id, n := range top10 {

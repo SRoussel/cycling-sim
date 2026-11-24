@@ -117,8 +117,14 @@ const (
 	offDayMax    = 0.08
 )
 
+// dailyFormSpread: the day-to-day spread of a rider's power, scaled down by
+// Consistency (Consistency 75: half of it). Nov 2026: was 0.02 (~1% for an
+// average rider); field variability of elite riders' best efforts is closer
+// to 2%, and with 1% near-equal climbers never separated on a long climb.
+const dailyFormSpread = 0.04
+
 func DailyFormFactor(rider *model.Rider, rng *rand.Rand) float64 {
-	stddev := 0.02 * (1.0 - float64(rider.Consistency)/150.0)
+	stddev := dailyFormSpread * (1.0 - float64(rider.Consistency)/150.0)
 	f := 1.0 + rng.NormFloat64()*stddev
 	// Off days (Nov 2026): form isn't only a small symmetric wobble; about
 	// one day in 15 is a bad one (3-8% down) for an average rider, fewer for

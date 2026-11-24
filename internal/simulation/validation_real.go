@@ -745,6 +745,13 @@ const intruderTop10Share = 0.5
 // unknown slots may be theirs).
 func findIntruders(entry RealRaceEntry, top10 map[int64]int, wins map[int64]int, runs int,
 	pos func(int64) float64, gap func(int64) float64) []RiderCheck {
+	// Without the real start list the simulated field is everyone the
+	// selection picks: a rider outside the real top 10 may simply not have
+	// started (Nov 2026: E3 and Gent-Wevelgem 2026 have no list, and the
+	// fit lowered Pogačar for "intruding" in races he likely didn't ride).
+	if len(entry.StartList) == 0 {
+		return nil
+	}
 	known := map[int64]bool{}
 	unknownSlots := 0
 	for _, id := range entry.Top10RiderIDs {

@@ -580,17 +580,24 @@ func (s *RaceState) highOnGC(rs *RiderState) bool {
 
 // gcPlace is a rider's place on GC (0 before any GC or if unclassified).
 func (s *RaceState) gcPlace(rs *RiderState) int {
-	mine, ok := s.GCGaps[rs.Rider.ID]
-	if !ok {
-		return 0
-	}
-	better := 0
-	for id, g := range s.GCGaps {
-		if g < mine || (g == mine && id < rs.Rider.ID) {
-			better++
+	if s.gcPlaces == nil || s.gcPlacesFor != len(s.GCGaps) {
+		// GC before the stage is fixed for the stage: rank it once (it was
+		// a scan of the whole GC on every call, ~9% of a Grand Tour's time).
+		ids := make([]int64, 0, len(s.GCGaps))
+		for id := range s.GCGaps {
+			ids = append(ids, id)
 		}
+		sort.Slice(ids, func(i, j int) bool {
+			gi, gj := s.GCGaps[ids[i]], s.GCGaps[ids[j]]
+			return gi < gj || gi == gj && ids[i] < ids[j]
+		})
+		s.gcPlaces = make(map[int64]int, len(ids))
+		for i, id := range ids {
+			s.gcPlaces[id] = i + 1
+		}
+		s.gcPlacesFor = len(s.GCGaps)
 	}
-	return better + 1
+	return s.gcPlaces[rs.Rider.ID]
 }
 
 // leaderGoes reports whether a leader chasing a rival should ride the chase

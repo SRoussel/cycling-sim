@@ -4,6 +4,8 @@
 A cycling race simulator in Go that produces realistic race results for men's WorldTour and ProSeries level racing. Uses a hybrid physics-based model with abstract ability modifiers.
 
 ## Build & Test
+Speed (Nov 2026, the user: slow test runs are a concern): a Liège + a Giro run took 25.6 s, now 13.8 s. Profile: `data/local/zz_prof_test.go.txt` (BenchmarkZZRaces, ZZ_PROF=1 ZZ_GT=1 with -cpuprofile). Exact changes only: the speed solver is a bracketed Newton (`solveSpeed`; same speeds to 5e-9 m/s over 200k cases, was ~45% of time as bisection), gravity/rolling without trig, `DraftFactor` from a table, GC places ranked once per stage; the race-shape check reuses the GC validation runs (`ShapesFromSummaries`). Rejected: caching `sprinterCanFollow` across steps (approximate, and the bunch's make-up changes nearly every step so it rarely hit). `validate --quick`: 2026, one seed set, a third of the runs, for iterating.
+
 ```bash
 go build ./cmd/cycling-sim/       # build binary
 go test ./...                      # run all tests

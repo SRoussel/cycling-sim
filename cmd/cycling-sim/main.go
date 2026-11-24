@@ -61,6 +61,12 @@ func main() {
 		srID := idArg(args, 0, "Usage: cycling-sim run-stage-race <stage-race-id> [--seed N]")
 		cmdRunStageRace(db, srID, seedVal)
 	case "validate":
+		if len(args) > 0 && args[0] == "--quick" {
+			// A fast look (one seed set, a third of the runs) at the 2026 season.
+			simulation.QuickValidation()
+			cmdValidateSets(db, 1, false, true)
+			break
+		}
 		if len(args) > 1 && args[0] == "--sets" {
 			n, err := strconv.Atoi(args[1])
 			if err != nil || n < 1 {
@@ -190,6 +196,7 @@ Commands:
                                  WorldTeam/ProTeam riders) into data/local/
   validate --sets N [--cross-season]  2024 references over N seed sets (judge changes);
   validate --sets N --season 2026     2026 references (data/reference_2026.csv, start lists);
+  validate --quick                    2026 references, one seed set, a third of the runs (iterating);
                                  --cross-season adds the 2023 races
   import-results [dir]           Derive ratings from saved result pages in
                                  dir/<sprint|hilly|mountain|cobbles|tt>/
@@ -480,13 +487,14 @@ func cmdValidateSets(db *database.DB, n int, crossSeason, season2026 bool) {
 	var total float64
 	var results []simulation.SeedSetResult
 	shapeRefs, shapeField := simulation.KnownRealShapes(), simulation.StageRaceField
+	var setShapes [][]simulation.ShapeResult // 2026: shapes from the GC runs
 	if season2026 {
 		riders, _ := db.ListRiders()
 		oneDay, stage, err := simulation.Load2026References(seed.DataPath("reference_2026.csv"), seed.DataPath("startlists_2026.csv"), riders)
 		if err != nil {
 			fatalf("Error reading the 2026 references: %v\n", err)
 		}
-		results = simulation.RunSeedSetsFor(db, n, oneDay, stage)
+		results, setShapes = simulation.RunSeedSetsFor(db, n, oneDay, stage, simulation.KnownRealShapes2026())
 		shapeRefs, shapeField = simulation.KnownRealShapes2026(), simulation.FieldOf(stage)
 	} else {
 		results = simulation.RunSeedSets(db, n, crossSeason)
@@ -553,7 +561,12 @@ func cmdValidateSets(db *database.DB, n int, crossSeason, season2026 bool) {
 	var detail []string
 	for set := 0; set < n; set++ {
 		simulation.ValidationSeedBase = int64(set) * 1000
-		shapes := simulation.RunShapeValidationFor(db, shapeRefs, shapeField)
+		var shapes []simulation.ShapeResult
+		if set < len(setShapes) {
+			shapes = setShapes[set]
+		} else {
+			shapes = simulation.RunShapeValidationFor(db, shapeRefs, shapeField)
+		}
 		for _, a := range simulation.ShapeAverages(shapes) {
 			fmt.Printf("  set %d %-16s (%d) %s\n", set+1, a.Kind, a.Races, a.Summary())
 		}

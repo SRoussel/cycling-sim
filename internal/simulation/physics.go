@@ -38,14 +38,31 @@ func DraftFactor(position int) float64 {
 	if position <= 1 {
 		return 1.0
 	}
+	if position < len(draftTable) {
+		return draftTable[position]
+	}
+	return draftFactorAt(position)
+}
+
+func draftFactorAt(position int) float64 {
 	return draftDeepBunch + (draftSecondWheel-draftDeepBunch)*math.Exp(-float64(position-2)/draftDecayRiders)
 }
+
+// draftTable: DraftFactor by position, computed once (the exponential was
+// recomputed on every call).
+var draftTable = func() []float64 {
+	t := make([]float64, 256)
+	for p := 2; p < len(t); p++ {
+		t[p] = draftFactorAt(p)
+	}
+	return t
+}()
 
 // ForceGravity returns the gravitational force component along the slope.
 // Positive = uphill resistance, negative = downhill assistance.
 func ForceGravity(totalMassKg float64, gradientPct float64) float64 {
-	angle := math.Atan(gradientPct / 100.0)
-	return totalMassKg * gravity * math.Sin(angle)
+	g := gradientPct / 100.0
+	return totalMassKg * gravity * g / math.Sqrt(1+g*g) // sin(atan g), without the trig
 }
 
 // ForceRolling returns the rolling resistance force.
@@ -56,7 +73,7 @@ func ForceRolling(totalMassKg float64, gradientPct float64, surface model.Surfac
 // forceRolling is ForceRolling with cobbles' resistance scaled by roughness
 // (see cobbleRoughness).
 func forceRolling(totalMassKg float64, gradientPct float64, surface model.SurfaceType, handling int, roughness float64) float64 {
-	angle := math.Atan(gradientPct / 100.0)
+	g := gradientPct / 100.0
 	c := crr
 
 	switch surface {
@@ -67,7 +84,7 @@ func forceRolling(totalMassKg float64, gradientPct float64, surface model.Surfac
 		c = crrGravel * roughness * HandlingFactor(handling)
 	}
 
-	return c * totalMassKg * gravity * math.Cos(angle)
+	return c * totalMassKg * gravity / math.Sqrt(1+g*g) // cos(atan g)
 }
 
 // cobbleRoughness scales cobbles' rolling resistance by a sector's star
@@ -174,23 +191,45 @@ func speedFromPowerRough(powerWatts float64, totalMassKg float64, cda float64, g
 		return speedFromPowerCalmRough(powerWatts, totalMassKg, cda, gradientPct, surface, handling, roughness)
 	}
 	fStatic := ForceGravity(totalMassKg, gradientPct) + forceRolling(totalMassKg, gradientPct, surface, handling, roughness)
-	f := func(v float64) float64 {
+	k := 0.5 * cda * airDensity
+	return solveSpeed(func(v float64) (float64, float64) {
 		air := v + headwindMPS
-		return (0.5*cda*airDensity*air*math.Abs(air)+fStatic)*v - powerWatts
-	}
+		return (k*air*math.Abs(air)+fStatic)*v - powerWatts, k*(air*math.Abs(air)+2*math.Abs(air)*v) + fStatic
+	})
+}
+
+// solveSpeed finds the speed where power balance f(v) (with derivative)
+// crosses zero: Newton steps kept inside a bisection bracket (falling back
+// to bisection when a step would leave it), to the bisection's tolerance.
+// Power from speed is convex and negative at rest, so the positive root is
+// unique and both methods find it; Newton takes ~5 steps where bisection
+// took ~30 (the solver was ~45% of all simulation time, Nov 2026).
+func solveSpeed(f func(v float64) (float64, float64)) float64 {
 	lo, hi := minSpeedMPS, 40.0
-	for f(hi) < 0 && hi < 200 {
+	if fl, _ := f(lo); fl >= 0 {
+		return lo
+	}
+	for fh, _ := f(hi); fh < 0 && hi < 200; fh, _ = f(hi) {
 		hi *= 2
 	}
-	for i := 0; i < 100 && hi-lo > 1e-8; i++ {
-		mid := (lo + hi) / 2
-		if f(mid) < 0 {
-			lo = mid
+	v := (lo + hi) / 2
+	for i := 0; i < 100; i++ {
+		fv, d := f(v)
+		if fv < 0 {
+			lo = v
 		} else {
-			hi = mid
+			hi = v
 		}
+		if hi-lo < 1e-8 || math.Abs(fv) < 1e-9 {
+			return v
+		}
+		next := v - fv/d
+		if d <= 0 || next <= lo || next >= hi {
+			next = (lo + hi) / 2
+		}
+		v = next
 	}
-	return (lo + hi) / 2
+	return v
 }
 
 func speedFromPowerCalm(powerWatts float64, totalMassKg float64, cda float64, gradientPct float64, surface model.SurfaceType, handling int) float64 {
@@ -198,43 +237,12 @@ func speedFromPowerCalm(powerWatts float64, totalMassKg float64, cda float64, gr
 }
 
 func speedFromPowerCalmRough(powerWatts float64, totalMassKg float64, cda float64, gradientPct float64, surface model.SurfaceType, handling int, roughness float64) float64 {
-	fGrav := ForceGravity(totalMassKg, gradientPct)
-	fRoll := forceRolling(totalMassKg, gradientPct, surface, handling, roughness)
-
-	// f(v) = 0.5 * cda * rho * v³ + (fGrav + fRoll) * v - P = 0
-	// f'(v) = 1.5 * cda * rho * v² + (fGrav + fRoll)
+	// aeroCoeff·v³ + staticForce·v = P (calm air)
 	aeroCoeff := 0.5 * cda * airDensity
-	staticForce := fGrav + fRoll
-
-	// Use bisection for robustness: find v where aeroCoeff*v³ + staticForce*v - P = 0
-	// f(v) is monotonically increasing for v>0 (since aeroCoeff>0)
-	lo := minSpeedMPS
-	hi := 40.0 // ~144 km/h
-	// On descents (staticForce < 0), terminal velocity can be high; expand upper bound
-	for {
-		fHi := aeroCoeff*hi*hi*hi + staticForce*hi - powerWatts
-		if fHi > 0 {
-			break
-		}
-		hi *= 2
-		if hi > 200 { // cap at ~720 km/h, unreachable
-			break
-		}
-	}
-
-	for i := 0; i < 100; i++ {
-		mid := (lo + hi) / 2
-		fMid := aeroCoeff*mid*mid*mid + staticForce*mid - powerWatts
-		if math.Abs(fMid) < 1e-6 || (hi-lo) < 1e-8 {
-			return mid
-		}
-		if fMid < 0 {
-			lo = mid
-		} else {
-			hi = mid
-		}
-	}
-	return (lo + hi) / 2
+	staticForce := ForceGravity(totalMassKg, gradientPct) + forceRolling(totalMassKg, gradientPct, surface, handling, roughness)
+	return solveSpeed(func(v float64) (float64, float64) {
+		return aeroCoeff*v*v*v + staticForce*v - powerWatts, 3*aeroCoeff*v*v + staticForce
+	})
 }
 
 // SpeedCap is the fastest a rider dares to go on this segment, set by

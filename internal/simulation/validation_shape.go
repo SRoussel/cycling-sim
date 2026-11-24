@@ -180,22 +180,7 @@ func RunShapeValidationFor(db *database.DB, refs []RealShape, field func(string,
 			}
 			return o
 		})
-		res := ShapeResult{Name: ref.DisplayName, Kind: ref.Kind, Real: map[Outcome]float64{}, Sim: map[Outcome]float64{}, Stages: ref.Stages}
-		match := 0.0
-		for i, want := range ref.Stages {
-			res.Real[want]++
-			per := map[Outcome]float64{}
-			for _, o := range runs {
-				per[o[i]] += 1 / float64(len(runs))
-				res.Sim[o[i]] += 1 / float64(len(runs))
-				if o[i] == want {
-					match++
-				}
-			}
-			res.PerStage = append(res.PerStage, per)
-		}
-		res.Agreement = match / float64(len(runs)*len(ref.Stages))
-		out = append(out, res)
+		out = append(out, shapeFromRuns(ref, runs))
 	}
 	return out
 }
@@ -252,4 +237,51 @@ func (a ShapeAverage) Summary() string {
 	return fmt.Sprintf("per race: sprints %s (real %s), breakaways %s (real %s), selections %s (real %s)",
 		f(a.Sim, OutcomeSprint), f(a.Real, OutcomeSprint), f(a.Sim, OutcomeBreakaway), f(a.Real, OutcomeBreakaway),
 		f(a.Sim, OutcomeSelection), f(a.Real, OutcomeSelection))
+}
+
+// shapeFromRuns sets a stage race's simulated outcomes (one slice per run)
+// against the real ones.
+func shapeFromRuns(ref RealShape, runs [][]Outcome) ShapeResult {
+	res := ShapeResult{Name: ref.DisplayName, Kind: ref.Kind, Real: map[Outcome]float64{}, Sim: map[Outcome]float64{}, Stages: ref.Stages}
+	if len(runs) == 0 {
+		return res
+	}
+	match := 0.0
+	for i, want := range ref.Stages {
+		res.Real[want]++
+		per := map[Outcome]float64{}
+		for _, o := range runs {
+			if i >= len(o) {
+				continue
+			}
+			per[o[i]] += 1 / float64(len(runs))
+			res.Sim[o[i]] += 1 / float64(len(runs))
+			if o[i] == want {
+				match++
+			}
+		}
+		res.PerStage = append(res.PerStage, per)
+	}
+	res.Agreement = match / float64(len(runs)*len(ref.Stages))
+	return res
+}
+
+// ShapesFromSummaries builds the race-shape results of refs from stage-race
+// validation runs already done (ValidationSummary.Outcomes), and reports the
+// refs no summary covered (to simulate separately).
+func ShapesFromSummaries(refs []RealShape, summaries []ValidationSummary) (done []ShapeResult, missing []RealShape) {
+	for _, ref := range refs {
+		found := false
+		for _, s := range summaries {
+			if s.StageRace == ref.InternalName && len(s.Outcomes) > 0 && len(s.Outcomes[0]) == len(ref.Stages) {
+				done = append(done, shapeFromRuns(ref, s.Outcomes))
+				found = true
+				break
+			}
+		}
+		if !found {
+			missing = append(missing, ref)
+		}
+	}
+	return done, missing
 }

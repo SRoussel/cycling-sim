@@ -37,10 +37,10 @@ const (
 	// realMinMatchedRiders is the minimum number of known-ID riders before the
 	// validation case is considered meaningful.
 	realMinMatchedRiders = 3
-
-	// realValidationRuns is the number of simulation runs (seeds) per race.
-	realValidationRuns = 60
 )
+
+// realValidationRuns is the number of simulation runs (seeds) per race.
+var realValidationRuns = 60
 
 // gapUnknown marks a reference slot whose time gap is not known.
 const gapUnknown = -1
@@ -460,7 +460,13 @@ func RunRealRaceValidationFor(db *database.DB, allRiders []model.Rider, entries 
 }
 
 // realStageRaceRuns is the number of full stage-race simulations per case.
-const realStageRaceRuns = 32
+var realStageRaceRuns = 32
+
+// QuickValidation lowers the run counts for a fast look at a change (about a
+// third of the runs: noisy, for iterating; judge decisions on the full check).
+func QuickValidation() {
+	realValidationRuns, realStageRaceRuns = 20, 12
+}
 
 // realStageRaceGapMAE is the pass bar for GC gap error (seconds); Grand Tour
 // gaps are an order of magnitude larger than one-day gaps.
@@ -567,10 +573,33 @@ func RunRealStageRaceValidationFor(db *database.DB, allRiders []model.Rider, ent
 		gapN := map[int64]int{}
 		gapAll := map[int64][]float64{} // every run's gap, for medians
 		posSum := map[int64]float64{}
-		allRuns := parallelRuns(runs, func(run int) [][]model.GCStanding {
-			_, standings := SimulateStageRace(sr, stages, riders, ValidationSeedBase+int64(run+1))
-			return standings
+		// Each run also classifies how every stage was won (race shape), so
+		// the shape check reuses these runs instead of simulating again.
+		type stageRun struct {
+			standings [][]model.GCStanding
+			outcomes  []Outcome
+		}
+		raw := parallelRuns(runs, func(run int) stageRun {
+			own := make([]StageConfig, len(stages))
+			copy(own, stages)
+			for i := range own {
+				own[i].Shape = &RaceShape{}
+			}
+			results, standings := SimulateStageRace(sr, own, riders, ValidationSeedBase+int64(run+1))
+			o := make([]Outcome, len(own))
+			for i := range own {
+				if i < len(results) {
+					o[i] = own[i].Shape.Classify(results[i], own[i].Race.RaceType == model.RaceTypeTT)
+				}
+			}
+			return stageRun{standings, o}
 		})
+		allRuns := make([][][]model.GCStanding, len(raw))
+		var outcomes [][]Outcome
+		for i, r := range raw {
+			allRuns[i] = r.standings
+			outcomes = append(outcomes, r.outcomes)
+		}
 		for _, standings := range allRuns {
 			if len(standings) == 0 || len(standings[len(standings)-1]) == 0 {
 				continue
@@ -672,7 +701,8 @@ func RunRealStageRaceValidationFor(db *database.DB, allRiders []model.Rider, ent
 			Details: fmt.Sprintf("Matched %d | Corr %.2f | GC top-10 overlap %.0f%% (≥%.0f%%) | GC gap MAE %.0fs over %d (≤%.0fs), median-gap MAE %.0fs | Real winner wins %.0f%%",
 				len(matched), corr, overlap, realPassTop10Target, mae, n, realStageRaceGapMAE, medMAE, winPct),
 			Riders: checks, Intruders: intruders, Spread: spread,
-			Calib: calibPoints(gapN, top10, wins, runs, entry.Top10RiderIDs),
+			Calib:     calibPoints(gapN, top10, wins, runs, entry.Top10RiderIDs),
+			StageRace: entry.InternalName, Outcomes: outcomes,
 		})
 	}
 	return out

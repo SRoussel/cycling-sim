@@ -148,18 +148,27 @@ func Load2026References(referencePath, startListPath string, riders []model.Ride
 
 // RunSeedSetsFor scores given references over several seed sets (as
 // RunSeedSets does for the 2024 ones).
-func RunSeedSetsFor(db *database.DB, sets int, oneDay, stage []RealRaceEntry) []SeedSetResult {
+// The race shapes of shapeRefs come per seed set from the same stage-race
+// runs (a ref no GC reference runs on is simulated on its own).
+func RunSeedSetsFor(db *database.DB, sets int, oneDay, stage []RealRaceEntry, shapeRefs []RealShape) ([]SeedSetResult, [][]ShapeResult) {
 	riders, err := db.ListRiders()
 	if err != nil || len(riders) == 0 {
-		return nil
+		return nil, nil
 	}
 	defer func(b int64) { ValidationSeedBase = b }(ValidationSeedBase)
 	var out []SeedSetResult
+	var shapes [][]ShapeResult
 	index := map[string]int{}
 	for set := 0; set < sets; set++ {
 		ValidationSeedBase = int64(set) * 1000
 		rows := RunRealRaceValidationFor(db, riders, oneDay, realValidationRuns)
-		rows = append(rows, RunRealStageRaceValidationFor(db, riders, stage, realStageRaceRuns)...)
+		stageRows := RunRealStageRaceValidationFor(db, riders, stage, realStageRaceRuns)
+		rows = append(rows, stageRows...)
+		done, missing := ShapesFromSummaries(shapeRefs, stageRows)
+		if len(missing) > 0 {
+			done = append(done, RunShapeValidationFor(db, missing, FieldOf(stage))...)
+		}
+		shapes = append(shapes, done)
 		for _, r := range rows {
 			i, ok := index[r.Name]
 			if !ok {
@@ -183,7 +192,7 @@ func RunSeedSetsFor(db *database.DB, sets int, oneDay, stage []RealRaceEntry) []
 			}
 		}
 	}
-	return out
+	return out, shapes
 }
 
 // nameResolver finds a database rider for a name as another source spells

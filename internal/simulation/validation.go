@@ -37,6 +37,10 @@ type ValidationSummary struct {
 	// Calib: every starter's simulated chances against what he did (the
 	// whole field, so riders who did well that day carry no selection bias).
 	Calib []CalibPoint `json:",omitempty"`
+	// Stage races: the stage race simulated and how each run's stages were
+	// won (reused by the race-shape check).
+	StageRace string      `json:",omitempty"`
+	Outcomes  [][]Outcome `json:",omitempty"`
 }
 
 // FinishShape is how one-day races ended: shares of solo wins (2nd place 5 s

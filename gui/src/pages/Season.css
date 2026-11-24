@@ -1,5 +1,5 @@
 /* Season mode: the hub, squad picker, tables. Same language as the rest of
-   the app: flat panels, hairlines, orange only for ours and for actions. */
+   the app: raised panels, hairlines, yellow only for ours and for actions. */
 
 .season-cols {
   display: grid;
@@ -94,58 +94,110 @@ button.link.danger:hover {
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
-  gap: 16px;
-  margin-bottom: 12px;
+  gap: 16px 24px;
+  margin-bottom: 14px;
   flex-wrap: wrap;
 }
+
+.season-title .muted { font-size: 0.85rem; }
 
 .season-head h1 {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 14px;
+  font-size: 2.4rem;
+  margin-top: 4px;
+}
+
+.team-bar {
+  width: 6px;
+  height: 0.9em;
+  display: inline-block;
+  flex: none;
 }
 
 .season-money {
   display: flex;
-  gap: 18px;
+  flex-wrap: wrap;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-panel);
 }
 
 .season-money div {
   display: grid;
-  font-size: 0.72rem;
+  gap: 2px;
+  padding: 10px 20px;
+  font-size: 0.75rem;
   color: var(--color-text-muted);
 }
 
+.season-money div + div { border-left: 1px solid var(--color-line); }
+
 .season-money b {
-  font-size: 0.95rem;
+  font-size: 1.9rem;
+  font-weight: 600;
+  font-stretch: var(--font-display-stretch);
+  letter-spacing: -0.02em;
+  line-height: 1;
   color: var(--color-text);
   font-variant-numeric: tabular-nums;
 }
 
-.season-money b.warn {
-  color: var(--color-warning);
-}
+.season-money b.warn { color: var(--color-warning); }
+.season-money b.accent { color: var(--color-primary); }
 
 .season-tabs {
   display: flex;
-  gap: 4px;
+  flex-wrap: wrap;
+  gap: 18px;
   border-bottom: 1px solid var(--color-line);
-  margin-bottom: 14px;
+  margin-bottom: 16px;
 }
 
 .season-tabs button {
   background: none;
   border: none;
-  border-bottom: 2px solid transparent;
+  border-bottom: 3px solid transparent;
   border-radius: 0;
   color: var(--color-text-muted);
-  padding: 8px 12px;
+  padding: 10px 2px;
+  min-height: 44px;
+  font-size: 0.95rem;
 }
+
+.season-tabs button:hover { color: var(--color-text); }
 
 .season-tabs button.on {
   color: var(--color-text);
   border-bottom-color: var(--color-primary);
 }
+
+/* The season strip */
+
+.season-strip {
+  margin: 0 0 14px;
+  padding: 8px 18px 2px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-panel);
+}
+
+.season-strip svg { display: block; overflow: visible; }
+.ss-line { stroke: #2b3038; stroke-width: 2; }
+.ss-done { stroke: #8a929c; stroke-width: 2; }
+.ss-gt { fill: #3a404a; }
+.ss-gt.won { fill: var(--color-primary); }
+.ss-label { font-size: 12px; fill: var(--color-text-soft); }
+.ss-ev { fill: #4a515b; }
+.ss-ev.done { fill: #8a929c; }
+.ss-ev.won { fill: var(--color-primary); }
+.ss-ev.next { fill: var(--color-surface); stroke: var(--color-primary); stroke-width: 2; }
+.ss-today { stroke: var(--color-text); stroke-width: 1.5; }
+.ss-today-label { font-size: 11px; fill: var(--color-text); }
+.ss-month { font-family: var(--font-numeric); font-size: 10.5px; fill: var(--color-text-faint); }
 
 /* Overview */
 
@@ -164,10 +216,26 @@ button.link.danger:hover {
   margin-bottom: 8px;
 }
 
-.next-race h2 {
-  font-size: 1.05rem;
+.next-kicker {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-primary);
+  margin-bottom: 4px;
+}
+
+.season .card.next-race h2 {
+  font-size: 1.6rem;
+  font-weight: 650;
+  font-stretch: var(--font-display-stretch);
+  letter-spacing: -0.01em;
   color: var(--color-text);
   margin-bottom: 4px;
+}
+
+.season .card h2 {
+  font-size: 1rem;
+  color: var(--color-text);
 }
 
 .next-race .muted {
@@ -309,8 +377,18 @@ table.squad tr.unavailable {
   border-top: 1px solid var(--color-line);
 }
 
+.obj-mark { display: inline-flex; align-items: center; padding-top: 2px; }
+
+.obj-open {
+  width: 11px;
+  height: 11px;
+  border: 1.5px solid #6d7580;
+  border-radius: 50%;
+  display: inline-block;
+}
+
 .objectives li.met .obj-mark {
-  color: var(--color-success);
+  color: var(--color-text);
 }
 
 .objectives li.missed {
@@ -332,7 +410,7 @@ table.squad tr.unavailable {
 .confidence i {
   display: block;
   height: 100%;
-  background: var(--color-success);
+  background: var(--color-primary);
 }
 
 .confidence i.low {
@@ -398,8 +476,12 @@ table td.num {
 }
 
 table tr.mine td {
-  color: var(--color-primary);
+  color: var(--color-text);
+  font-weight: 600;
+  background: rgba(242, 194, 48, 0.05);
 }
+
+table tr.mine td.pos { color: var(--color-primary); }
 
 /* Calendar */
 
@@ -469,13 +551,65 @@ table tr.mine td {
 
 /* Team & contracts */
 
+.roster-wrap { overflow-x: auto; margin: 0 -18px; }
+
 table.roster {
-  font-size: 0.82rem;
+  font-size: 0.85rem;
+  min-width: 880px;
 }
 
-table.roster td,
-table.roster th {
-  white-space: nowrap;
+table.roster th,
+table.roster td { padding: 10px 10px; vertical-align: middle; }
+table.roster td:first-child,
+table.roster td.num { white-space: nowrap; }
+table.roster th:first-child,
+table.roster td:first-child { padding-left: 18px; }
+table.roster th:last-child,
+table.roster td:last-child { padding-right: 18px; }
+
+table.roster td.num { text-align: right; font-family: var(--font-numeric); font-size: 0.8rem; }
+table.roster th.num { text-align: right; }
+
+table.roster small.sub {
+  display: block;
+  font-family: Archivo, system-ui, sans-serif;
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+  margin-top: 1px;
+}
+
+table.roster td.num small.sub { font-family: var(--font-numeric); }
+
+.strengths {
+  display: grid;
+  grid-template-columns: repeat(4, 40px);
+  gap: 8px;
+}
+
+.strength { display: flex; flex-direction: column; gap: 3px; }
+
+.strength-label {
+  font-size: 0.62rem;
+  color: var(--color-text-faint);
+}
+
+.strength-track {
+  height: 4px;
+  border-radius: 2px;
+  background: #22272e;
+  overflow: hidden;
+}
+
+.strength-track i { display: block; height: 100%; background: #c9ced6; }
+
+.season-cell { font-size: 0.8rem; color: var(--color-text-soft); white-space: nowrap; }
+.season-cell b { color: var(--color-primary); font-weight: 600; }
+
+.programme-cell {
+  font-size: 0.78rem;
+  color: var(--color-text-soft);
+  line-height: 1.45;
+  min-width: 200px;
 }
 
 .card-head {
@@ -528,7 +662,8 @@ td.offer button {
 }
 
 table.standings td,
-table.squad td:nth-child(3),
-table.roster td {
+table.squad td:nth-child(3) {
   white-space: nowrap;
 }
+
+table.standings td.num { font-family: var(--font-numeric); font-size: 0.8rem; }

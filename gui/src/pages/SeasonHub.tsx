@@ -7,6 +7,7 @@ import { RiderLink } from '../components/RiderProfile'
 import { PlanForm, PlanValue } from '../components/race/PlanForm'
 import { formatGap } from '../sim/shared'
 import './Season.css'
+import { teamColor } from '../sim/teamColors'
 
 type Tab = 'overview' | 'calendar' | 'team' | 'standings' | 'contracts'
 
@@ -86,23 +87,21 @@ function SeasonHub() {
   return (
     <div className="season page-enter" key={id}>
       <header className="season-head">
-        <div>
-          <h1><Jersey team={s.team} size={20} /> {s.name}</h1>
-          <p className="muted">
-            {s.team} · {offseason ? `transfer window before ${s.year}` : `${s.year} · ${s.date}`} · {hub.roster} riders
-          </p>
+        <div className="season-title">
+          <span className="muted">{s.name} · {offseason ? `transfer window before ${s.year}` : `${s.year} · ${s.date}`} · {hub.roster} riders</span>
+          <h1><i className="team-bar" style={{ background: teamColor(s.team) }} />{s.team}</h1>
         </div>
         <div className="season-money">
           <div title="Your wage budget for the year"><span>Budget</span><b>{money(s.budget)}</b></div>
           <div title="Salaries of the riders under contract now"><span>Wages</span><b className={hub.wages > s.budget ? 'warn' : ''}>{money(hub.wages)}</b></div>
           {!offseason && (
             <div title="Committed for next year: riders under contract beyond this year and riders signed for next year">
-              <span>Next year</span><b>{money(hub.nextCommitted)} · {hub.nextRiders} riders</b>
+              <span>Next year · {hub.nextRiders} riders</span><b>{money(hub.nextCommitted)}</b>
             </div>
           )}
           {!offseason && (
             <div title="The board's confidence in you: objectives met add to it, objectives missed take away">
-              <span>Board</span><b className={hub.confidence < 35 ? 'warn' : ''}>{Math.round(hub.confidence)}%</b>
+              <span>Board</span><b className={hub.confidence < 35 ? 'warn' : 'accent'}>{Math.round(hub.confidence)}%</b>
             </div>
           )}
         </div>
@@ -158,6 +157,8 @@ function Overview({ hub, reload, openTab, justRaced, onRaced }: {
   }
 
   return (
+    <>
+    {!offseason && <SeasonStrip hub={hub} />}
     <div className="season-grid">
       <div className="season-main">
         {justRaced > 0 && <RaceSummary hub={hub} eventId={justRaced} onClose={() => onRaced(0)} />}
@@ -220,6 +221,53 @@ function Overview({ hub, reload, openTab, justRaced, onRaced }: {
         </section>
       </aside>
     </div>
+    </>
+  )
+}
+
+/** The year at a glance: every event on a January–October line, Grand Tours
+ * as bars, our wins in yellow, today marked. */
+function SeasonStrip({ hub }: { hub: main.SeasonHub }) {
+  const year = hub.season.year
+  const t0 = Date.UTC(year, 0, 1)
+  const t1 = Date.UTC(year, 9, 31)
+  const W = 1000
+  // Event dates come as "8 Mar" (the season's year), today as "6 Apr 2026".
+  const x = (d: string) => {
+    const t = Date.parse(/\d{4}/.test(d) ? `${d} UTC` : `${d} ${year} UTC`)
+    return isNaN(t) ? -1 : Math.max(0, Math.min(W, ((t - t0) / (t1 - t0)) * W))
+  }
+  const today = x(hub.season.date)
+  const won = (e: main.SeasonEventInfo) => e.mine.startsWith('1st')
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct']
+  const big = hub.events.filter((e) => e.days >= 21)
+  return (
+    <section className="season-strip" aria-label="The season">
+      <svg viewBox={`0 -26 ${W} 80`} width="100%" role="img" aria-label={`${hub.events.filter((e) => e.done).length} of ${hub.events.length} races done, ${hub.events.filter(won).length} won`}>
+        <line x1={0} x2={W} y1={10} y2={10} className="ss-line" />
+        {today >= 0 && <line x1={0} x2={today} y1={10} y2={10} className="ss-done" />}
+        {big.map((e) => (
+          <g key={e.id}>
+            <rect x={x(e.start)} y={3} width={Math.max(8, x(e.end) - x(e.start))} height={14} rx={7} className={`ss-gt${won(e) ? ' won' : ''}`} />
+            <text x={(x(e.start) + x(e.end)) / 2} y={-6} textAnchor="middle" className="ss-label">{e.name}</text>
+          </g>
+        ))}
+        {hub.events.filter((e) => e.days < 21).map((e) => (
+          <circle key={e.id} cx={x(e.start)} cy={10} r={won(e) ? 5 : 3} className={`ss-ev${e.done ? ' done' : ''}${won(e) ? ' won' : ''}${hub.next?.id === e.id ? ' next' : ''}`}>
+            <title>{`${e.name}${e.mine ? `: ${e.mine}` : ''}`}</title>
+          </circle>
+        ))}
+        {today >= 0 && (
+          <g>
+            <line x1={today} x2={today} y1={-4} y2={24} className="ss-today" />
+            <text x={today} y={36} textAnchor="middle" className="ss-today-label">today</text>
+          </g>
+        )}
+        {months.map((m) => (
+          <text key={m} x={x(`1 ${m}`)} y={50} className="ss-month">{m}</text>
+        ))}
+      </svg>
+    </section>
   )
 }
 
@@ -237,7 +285,7 @@ function Objectives({ hub }: { hub: main.SeasonHub }) {
           if (o.kind === 'stage_win' && o.decided) now = o.met ? 'won' : 'no stage'
           return (
             <li key={i} className={state}>
-              <span className="obj-mark">{o.met ? '✓' : o.decided ? '✗' : '·'}</span>
+              <span className="obj-mark" aria-label={state}>{o.met ? <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="m5 12 5 5 9-10" /></svg> : o.decided ? <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round"><path d="M6 6l12 12M18 6 6 18" /></svg> : <i className="obj-open" />}</span>
               <span>{o.text}</span>
               <span className="muted">{now}</span>
             </li>
@@ -322,13 +370,14 @@ function NextRace({ hub, reload, onRaced }: { hub: main.SeasonHub; reload: () =>
     <section className="card next-race">
       <div className="next-head">
         <div>
-          <h2>Next: {next.name}</h2>
-          <p className="muted"><CategoryBadge category={next.category} /> {eventDates(next)} · {next.days} {next.days > 1 ? 'days' : 'day'}</p>
+          <span className="next-kicker">Next · {eventDates(next)} · {next.days} {next.days > 1 ? 'days' : 'day'}</span>
+          <h2>{next.name}</h2>
+          <p className="muted"><CategoryBadge category={next.category} /></p>
         </div>
         <div className="actions">
           <button className="secondary" onClick={simulate} disabled={busy || picked.length === 0}>{busy ? 'Racing…' : 'Simulate'}</button>
           <button className="primary" onClick={raceLive} disabled={busy || picked.length === 0}>
-            {next.kind === 'oneday' && planning ? 'Start the race →' : 'Race it live'}
+            {next.kind === 'oneday' && planning ? 'Start the race' : 'Race it live'}
           </button>
         </div>
       </div>
@@ -524,57 +573,61 @@ function Team({ hub, reload }: { hub: main.SeasonHub; reload: () => Promise<void
   return (
     <section className="card">
       <h2>{hub.season.team}: {roster.length} riders · wages {money(roster.reduce((a, r) => a + r.salary, 0))}</h2>
-      <table className="roster">
-        <thead>
-          <tr>
-            <th>Rider</th>
-            <th>Age</th>
-            <th>Type</th>
-            <th title="Threshold power">FTP</th>
-            <th>W/kg</th>
-            <th title="Peak sprint power">Sprint</th>
-            <th title="Short climbs (1-5 min): how far above threshold he can go">Punch</th>
-            <th title="How fast he recovers between efforts within a race">Repeat</th>
-            <th title="Riding the cobbles and gravel">Cobbles</th>
-            <th title="How little he fades over a long, hard day">Endur.</th>
-            <th>Salary</th>
-            <th title="Last year of his contract">Contract</th>
-            <th>Morale</th>
-            <th>Days</th>
-            <th>Pts</th>
-            <th>Wins</th>
-            <th>Programme</th>
-          </tr>
-        </thead>
-        <tbody>
-          {roster.map((r) => (
-            <tr key={r.id}>
-              <td><RiderLink id={r.id} name={r.name} seasonId={sid} bold /></td>
-              <td>{r.age}</td>
-              <td className="muted">{r.specialty}</td>
-              <td>{r.ftp} W</td>
-              <td>{r.wkg.toFixed(2)}</td>
-              <td>{r.sprintW} W</td>
-              <td>{r.punch}</td>
-              <td>{r.repeatability}</td>
-              <td>{r.handling}</td>
-              <td>{r.endurance}</td>
-              <td>{money(r.salary)}</td>
-              <td className={r.contractEnd <= year && !r.nextTeam ? 'warn' : ''}>
-                {r.nextTeam ? (r.nextTeam === hub.season.team ? `renewed to ${r.contractEnd > year ? r.contractEnd : ''}` : `→ ${r.nextTeam}`) : r.contractEnd}
-              </td>
-              <td className={r.morale < 45 ? 'warn' : ''}>{Math.round(r.morale)}</td>
-              <td>{r.raceDays}</td>
-              <td>{r.points || ''}</td>
-              <td>{r.wins || ''}</td>
-              <td className="muted programme">{r.programme.slice(0, 4).join(', ')}{r.programme.length > 4 ? ` +${r.programme.length - 4}` : ''}</td>
+      <div className="roster-wrap">
+        <table className="roster">
+          <thead>
+            <tr>
+              <th>Rider</th>
+              <th className="num" title="Threshold power and per kg">Power</th>
+              <th title="Peak sprint power, punch (short climbs), cobbles, endurance: each against the riders of the season">Strengths</th>
+              <th title="Racing days, points and wins this season">Season</th>
+              <th title="Morale (0–100)">Morale</th>
+              <th>Programme</th>
+              <th className="num">Contract</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {roster.map((r) => (
+              <tr key={r.id}>
+                <td>
+                  <RiderLink id={r.id} name={r.name} seasonId={sid} bold />
+                  <small className="sub">{r.age} · {r.specialty}</small>
+                </td>
+                <td className="num">{r.ftp} W<small className="sub">{r.wkg.toFixed(2)} W/kg</small></td>
+                <td>
+                  <span className="strengths">
+                    <Strength label="Spr" value={(r.sprintW - 900) / 9} title={`Sprint ${r.sprintW} W`} />
+                    <Strength label="Pun" value={r.punch} title={`Punch ${r.punch}`} />
+                    <Strength label="Cob" value={r.handling} title={`Cobbles ${r.handling}`} />
+                    <Strength label="End" value={r.endurance} title={`Endurance ${r.endurance}`} />
+                  </span>
+                </td>
+                <td className="season-cell">{r.raceDays} days{r.points ? ` · ${r.points} pts` : ''}{r.wins ? <b> · {r.wins} {r.wins === 1 ? 'win' : 'wins'}</b> : ''}</td>
+                <td className={r.morale < 45 ? 'warn' : ''}>{Math.round(r.morale)}</td>
+                <td className="programme-cell">{r.programme.length ? r.programme.join(', ') : <span className="muted">—</span>}</td>
+                <td className={`num${r.contractEnd <= year && !r.nextTeam ? ' warn' : ''}`}>
+                  {r.nextTeam ? (r.nextTeam === hub.season.team ? `renewed${r.contractEnd > year ? ` to ${r.contractEnd}` : ''}` : `→ ${r.nextTeam}`) : `to ${r.contractEnd}`}
+                  <small className="sub">{money(r.salary)}</small>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
       <p className="muted small">Programmes are the team's plan for each rider; change a race's squad on the overview before it starts.</p>
       <button className="link" onClick={() => { load(); reload() }}>Refresh</button>
     </section>
+  )
+}
+
+/** A small strength bar (rating 0–100). */
+function Strength({ label, value, title }: { label: string; value: number; title: string }) {
+  const w = Math.max(0, Math.min(100, value))
+  return (
+    <span className="strength" title={title}>
+      <span className="strength-label">{label}</span>
+      <span className="strength-track"><i style={{ width: `${w}%` }} /></span>
+    </span>
   )
 }
 

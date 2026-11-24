@@ -65,13 +65,7 @@ func (s *RaceState) attackPays(rs *RiderState, seg *model.Segment) bool {
 	if !s.escapeEligible(rs) || s.rivalAhead(rs) {
 		return false
 	}
-	// One-day races: the best finisher among the rival leaders here wins if
-	// it comes to the finish, so he waits for it; it's for his rivals to
-	// attack him (Nov 2026: at Flèche the strongest climber attacked on the
-	// first ascent of the Mur, 60 km out, instead of waiting for the last).
-	if !s.IsStageRace && !s.outFinishedByRival(rs) {
-		return false
-	}
+	bestFinisher := !s.IsStageRace && !s.outFinishedByRival(rs)
 	km := s.attackKm(seg)
 	// holdsOver: can a rival hold an attack ridden over the last km of this
 	// climb or sector (his threshold and W' against the attacker's burst)?
@@ -114,6 +108,18 @@ func (s *RaceState) attackPays(rs *RiderState, seg *model.Segment) bool {
 		}
 	}
 	if !dropsThreat {
+		return false
+	}
+	// One-day races: the best finisher among the rival leaders here wins if
+	// it comes to the finish, so he waits for it while a rival could follow
+	// his attack; it's for his rivals to attack him (Nov 2026: at Flèche the
+	// strongest climber attacked on the first ascent of the Mur, 60 km out).
+	// One who rides every rival leader off his wheel takes the sure win
+	// rather than gamble on the finish (Lombardia with Pogačar: nobody could
+	// hold him on the Ganda, 49 km out, and he waited for a group finish he
+	// lost a third of the time); the chase projection below still decides
+	// whether the attack can stay away.
+	if bestFinisher && len(own) > 1 {
 		return false
 	}
 	// In a safe front selection, an attack that a faster finisher can follow

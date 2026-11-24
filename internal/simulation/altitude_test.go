@@ -99,13 +99,18 @@ func TestTierCorrelation(t *testing.T) {
 }
 
 func TestFindIntrudersSkipsUnnamedPlaces(t *testing.T) {
-	entry := RealRaceEntry{Top10RiderIDs: []int64{1, 2, 0, 0, 0, 0, 0, 0, 0, 0}}
+	entry := RealRaceEntry{Top10RiderIDs: []int64{1, 2, 0, 0, 0, 0, 0, 0, 0, 0}, StartList: []Starter{{Name: "A", Team: "T"}}}
 	top10 := map[int64]int{1: 10, 2: 10, 10: 10, 11: 9, 12: 8, 13: 8, 14: 8, 15: 8, 16: 8, 17: 8, 18: 6}
 	pos := func(id int64) float64 { return float64(id) }
 	got := findIntruders(entry, top10, map[int64]int{}, 10, pos, pos)
 	// 9 frequent non-reference riders, 8 unnamed places: only the last is judged.
 	if len(got) != 1 || got[0].RiderID != 18 {
 		t.Errorf("intruders %+v, want only rider 18", got)
+	}
+	// Without the real start list nobody is judged: he may not have started.
+	entry.StartList = nil
+	if got := findIntruders(entry, top10, map[int64]int{}, 10, pos, pos); len(got) != 0 {
+		t.Errorf("intruders without a start list %+v, want none", got)
 	}
 }
 

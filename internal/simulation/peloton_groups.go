@@ -604,7 +604,18 @@ func riderEffort(rs *RiderState, action Action, segment *model.Segment, remainin
 	if driveFor != nil && rs.TeamRole == RoleDomestique {
 		v := leaderTempoSpeed(driveFor, segment, IntensityForPhase(phase))
 		need := segmentPower(v, r.TotalMassKg(), r.CdA, segment, r.Handling)
-		return math.Min(need, burstOver(segmentLeft)), ActionChase
+		// The pace is the leader's (he sits in the draft), but the front
+		// rider has to hold it to the end of his job: until the finale
+		// mid-race, until the lead-out in the finale. Nov 2026: capped by
+		// his W' over the current segment only, domestiques drove at
+		// 107-114% of threshold 70 km from Flèche's finish and the bunch
+		// kept splitting.
+		jobKm := remainingKm - finalKm
+		if phase == PhaseFinal {
+			jobKm = remainingKm - leadOutKm
+		}
+		jobKm = math.Max(jobKm, segmentLeft)
+		return math.Min(need, burstOver(jobKm)), ActionChase
 	}
 	// Committed chases and racing to the line are sustained to the finish.
 	// A committed chase needs something to chase: a dangerous rider up the

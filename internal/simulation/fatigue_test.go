@@ -61,15 +61,21 @@ func TestWPrimeFloorAtZero(t *testing.T) {
 	}
 }
 
-// W' goes with peak power (anaerobic capacity), not with endurance.
-func TestWPrimeFollowsPeakPower(t *testing.T) {
+// W' goes with punchiness and body mass (anaerobic capacity), not with
+// endurance or sprint power alone.
+func TestWPrimeFollowsPunch(t *testing.T) {
 	climber := testRider()
-	climber.MaxSprintWatts = 1200
+	climber.Punch = 66
 	puncheur := testRider()
-	puncheur.MaxSprintWatts = 1700
+	puncheur.Punch = 84
 	wc, wp := NewWPrimeState(climber).WPrimeMax, NewWPrimeState(puncheur).WPrimeMax
-	if wp <= wc || wc < 15000 || wp > 28000 {
-		t.Errorf("W' climber %.0f J, puncheur %.0f J; want puncheur > climber within 15-28 kJ", wc, wp)
+	if wp <= wc || wc < 10000 || wp > 35000 {
+		t.Errorf("W' climber %.0f J, puncheur %.0f J; want puncheur > climber within 10-35 kJ", wc, wp)
+	}
+	heavier := *puncheur
+	heavier.WeightKg *= 1.2
+	if NewWPrimeState(&heavier).WPrimeMax <= wp {
+		t.Error("more muscle mass should mean more W'")
 	}
 	enduring := *climber
 	enduring.Endurance = 95

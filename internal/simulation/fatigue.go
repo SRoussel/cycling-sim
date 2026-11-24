@@ -22,35 +22,21 @@ type WPrimeState struct {
 // recovery time constant scales with baseReconRate/ReconRate.
 const baseReconRate = 0.03
 
-// W' (anaerobic work capacity above threshold) is a physiological trait that
-// goes with peak power: riders with a big sprint or punch carry more of it,
-// pure climbers less, independent of endurance (which is durability, see
-// DurabilityFactor). wPrimeSeconds scales peak power to W': 14 s gives the
-// 15-28 kJ range reported for trained and pro cyclists (~21 kJ at a typical
-// 1550 W). It decides short climbs, where W' matters as much as threshold.
-//
-// Since Nov 2026 (the user: sprint power shouldn't drive anaerobic capacity
-// so much) W' is mostly a share of the rider's power: wPrimeSprintShare of
-// it from peak power, the rest wPrimeThresholdSeconds of threshold power
-// (W' runs ~50-70 s of critical power in trained cyclists). The field's mean
-// is unchanged (21.1 kJ); pure sprinters lose a few kJ (Philipsen 26.6 ->
-// 22.0), riders strong at threshold gain (Van der Poel 23.6, above Pedersen).
-const (
-	wPrimeSeconds          = 14.0
-	wPrimeSprintShare      = 0.3
-	wPrimeThresholdSeconds = 54.8
-	defaultWPrime          = 20000.0 // no peak power known
-)
+// W' (anaerobic work capacity above threshold) is a physiological trait,
+// independent of endurance (durability, see DurabilityFactor). History: it
+// was 14 s of peak power (pure sprinters carried the most), then, Nov 2026
+// (the user: sprint power shouldn't drive anaerobic capacity so much), 30%
+// peak power and 70% 54.8 s of threshold, which made it follow threshold;
+// now it comes from body mass and punchiness (NewWPrimeState).
+const defaultWPrime = 20000.0 // no weight known
 
 // Punch: maximal aerobic power over threshold, punchGapMean + punchPerPoint
-// per Punch point around the field's mean rating punchMean (~12-19% for
-// Punch 60-86). W' runs with the gap above threshold (the threshold part of
-// W' scales by gap/punchGapMean), so a puncheur carries more for short
-// climbs than a diesel climber with the same threshold; the field's mean W'
-// is unchanged.
+// per Punch point around the field's mean rating punchMean: ~1.10 × threshold
+// for a diesel climber (Punch 65) to ~1.24 for a puncheur (85). It sets the
+// short-effort ceiling (powerCeiling) and, with body mass, W'.
 const (
 	punchGapMean  = 0.17
-	punchPerPoint = 0.002
+	punchPerPoint = 0.007 // Nov 2026: 0.002 moved the aerobic ceiling ±1%; now ~1.10-1.24 × threshold (Punch 65-85)
 	punchMean     = 75
 )
 
@@ -59,11 +45,25 @@ func punchGap(r *model.Rider) float64 {
 	return math.Max(0.08, punchGapMean+float64(r.PunchRating()-punchMean)*punchPerPoint)
 }
 
+// W' from muscle mass and punchiness (Nov 2026; the user agreed): W' was
+// 70% threshold × 54.8 s, so per kilo the best climbers carried the biggest
+// reserves (Pogačar 395 J/kg, Vingegaard 378, Alaphilippe 342, Hirschi 328)
+// and the field's spread was only ±15% (17-23 kJ, p5-p95), where measured
+// W' in trained and pro riders varies ~10-35 kJ and is largest in punchy,
+// fast-twitch riders. Now W' = body mass × wPrimePerKg × (1 + wPrimePerPunch
+// × (Punch - punchMean)), Punch ranking riders' specialisation (hill and
+// acceleration against mountain, seed); the field's mean is unchanged.
+const (
+	wPrimePerKg    = 300.0 // J/kg at Punch punchMean (field mean W' ~20.5 kJ)
+	wPrimePerPunch = 0.03  // ±30% between the field's 5th and 95th Punch percentiles (~65-85)
+	wPrimeMinShare = 0.5
+)
+
 func NewWPrimeState(rider *model.Rider) *WPrimeState {
 	wMax := defaultWPrime
-	if rider.MaxSprintWatts > 0 {
-		wMax = wPrimeSprintShare*wPrimeSeconds*float64(rider.MaxSprintWatts) +
-			(1-wPrimeSprintShare)*wPrimeThresholdSeconds*float64(rider.FTPWatts)*punchGap(rider)/punchGapMean
+	if rider.WeightKg > 0 {
+		f := math.Max(wPrimeMinShare, 1+wPrimePerPunch*float64(rider.PunchRating()-punchMean))
+		wMax = rider.WeightKg * wPrimePerKg * f
 	}
 	// Repeatability (within a race) sets the reconstitution rate:
 	// 70 → rate 0.03, higher = faster reconstitution. (Recovery, between

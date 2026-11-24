@@ -349,15 +349,23 @@ func withWorldDB(riders, train []model.Rider, wdb []wdbRider) []model.Rider {
 var rankedRatings = []struct {
 	charac  int // index into wdbRider.Charac (see ImportWorldDB's attribute list)
 	charac2 int // a second attribute summed with the first (-1: none)
+	minus   int // an attribute subtracted (-1: none): ranks specialisation
 	get     func(*model.Rider) *int
+	// spread > 0: deal values from a normal spread (mean 75, this standard
+	// deviation) by rank instead of the rating's current values (Punch's pool
+	// was 92 riders at 77 and 200 at 75: ties lost the ranking).
+	spread float64
 }{
-	{10, -1, func(r *model.Rider) *int { return &r.Endurance }},         // endurance: fading over a long race
-	{12, -1, func(r *model.Rider) *int { return &r.Recovery }},          // recuperation: between days
-	{5, -1, func(r *model.Rider) *int { return &r.Handling }},           // cobble: rough surfaces
-	{4, -1, func(r *model.Rider) *int { return &r.DescendingAbility }},  // downhilling
-	{13, -1, func(r *model.Rider) *int { return &r.TacticalAwareness }}, // baroudeur: going in breaks
-	{3, 9, func(r *model.Rider) *int { return &r.Punch }},               // hill + acceleration: short climbs
-	{11, -1, func(r *model.Rider) *int { return &r.Repeatability }},     // resistance: repeated efforts in a race
+	{10, -1, -1, func(r *model.Rider) *int { return &r.Endurance }, 0},         // endurance: fading over a long race
+	{12, -1, -1, func(r *model.Rider) *int { return &r.Recovery }, 0},          // recuperation: between days
+	{5, -1, -1, func(r *model.Rider) *int { return &r.Handling }, 0},           // cobble: rough surfaces
+	{4, -1, -1, func(r *model.Rider) *int { return &r.DescendingAbility }, 0},  // downhilling
+	{13, -1, -1, func(r *model.Rider) *int { return &r.TacticalAwareness }, 0}, // baroudeur: going in breaks
+	// Punch: hill + acceleration against mountain, i.e. how punchy a rider
+	// is for his level (Nov 2026: hill + acceleration alone ranked the big
+	// climbers punchiest, Vingegaard 85 against Hirschi 80).
+	{3, 9, 1, func(r *model.Rider) *int { return &r.Punch }, 6},
+	{11, -1, -1, func(r *model.Rider) *int { return &r.Repeatability }, 0}, // resistance: repeated efforts in a race
 }
 
 // rankRatings re-deals each ranked rating among the riders WorldDB covers:
@@ -388,13 +396,22 @@ func rankRatings(riders []model.Rider, matched map[int]wdbRider) {
 				ca += matched[order[a]].Charac[rr.charac2]
 				cb += matched[order[b]].Charac[rr.charac2]
 			}
+			if rr.minus >= 0 {
+				ca -= matched[order[a]].Charac[rr.minus]
+				cb -= matched[order[b]].Charac[rr.minus]
+			}
 			if ca != cb {
 				return ca < cb
 			}
 			return riders[order[a]].Name < riders[order[b]].Name
 		})
 		for k, i := range order {
-			*rr.get(&riders[i]) = vals[k]
+			v := vals[k]
+			if rr.spread > 0 {
+				p := (float64(k) + 0.5) / float64(len(order))
+				v = int(math.Round(75 + rr.spread*math.Sqrt2*math.Erfinv(2*p-1)))
+			}
+			*rr.get(&riders[i]) = v
 		}
 	}
 }

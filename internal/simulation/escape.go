@@ -72,21 +72,10 @@ func (s *RaceState) attackPays(rs *RiderState, seg *model.Segment) bool {
 	if !s.IsStageRace && !s.outFinishedByRival(rs) {
 		return false
 	}
-	r := rs.Rider
-	threshold := EffectivePower(r, rs.CurrentFTP(), seg, false)
 	km := s.attackKm(seg)
 	// holdsOver: can a rival hold an attack ridden over the last km of this
 	// climb or sector (his threshold and W' against the attacker's burst)?
-	holdsOver := func(o *RiderState, km float64) bool {
-		v0 := segmentSpeed(threshold, r.TotalMassKg(), r.CdA, seg, r.Handling)
-		burst := rs.maxPowerFor(threshold, threshold, SegmentTime(v0, km))
-		v := segmentSpeed(burst, r.TotalMassKg(), r.CdA, seg, r.Handling)
-		or := o.Rider
-		need := segmentPower(v, or.TotalMassKg(), or.CdA*groupDraft(2, false, seg, v), seg, or.Handling)
-		thrO := EffectivePower(or, o.CurrentFTP(), seg, false)
-		avail := o.maxPowerFor(thrO, thrO, SegmentTime(v, km))
-		return need <= avail
-	}
+	holdsOver := func(o *RiderState, km float64) bool { return s.holdsAttack(rs, o, seg, km) }
 	holds := func(o *RiderState) bool { return holdsOver(o, km) }
 	// One-day races: attack as late on the climb as it still works. If an
 	// attack over the last half of what's left would drop as many rival
@@ -151,6 +140,19 @@ func (s *RaceState) attackPays(rs *RiderState, seg *model.Segment) bool {
 	// attack only has to beat the strongest of them alone.
 	if s.frontSafe(rs) {
 		chase = chase[:1]
+		return s.timeToLine([]*RiderState{rs}) < s.timeToLine(chase)
+	}
+	// One-day races: the group left behind chases with all its legs, as the
+	// group simulation's pooled chases do (Nov 2026: against a bare threshold
+	// line, favourites attacked a full bunch 64 km from Flèche's finish).
+	if !s.IsStageRace {
+		helpers := 0
+		for _, o := range rest {
+			if !o.DNF && o.Rider.Team != rs.Rider.Team {
+				helpers++
+			}
+		}
+		return s.timeToLine([]*RiderState{rs}) < s.pooledTimeToLine(chase, helpers)
 	}
 	return s.timeToLine([]*RiderState{rs}) < s.timeToLine(chase)
 }
@@ -242,6 +244,23 @@ func (s *RaceState) escapeHolds(rs *RiderState) bool {
 			own = append(own, o)
 		}
 	}
+	if !s.IsStageRace {
+		// The chase pools its riders' legs (pooledTimeToLine), except those
+		// whose leader is up here with rs.
+		here := map[string]bool{}
+		for _, o := range s.Road {
+			if o.TeamRole == RoleLeader {
+				here[o.Rider.Team] = true
+			}
+		}
+		helpers := 0
+		for _, c := range chasers {
+			if !c.DNF && !here[c.Rider.Team] {
+				helpers++
+			}
+		}
+		return s.timeToLine(own) < s.pooledTimeToLine(chase, helpers)+gap
+	}
 	return s.timeToLine(own) < s.timeToLine(chase)+gap
 }
 
@@ -309,6 +328,21 @@ func wkg(rs *RiderState) float64 { return rs.CurrentFTP() / rs.Rider.TotalMassKg
 // they do: it is his only chance, and each attack costs everyone who answers
 // it. Riders who can't follow are dropped (FormGroups); repeated attacks
 // wear the sprinters down.
+// holdsAttack reports whether o can hold rs's attack ridden over km here
+// (o on the wheel with his threshold and W' against rs's burst).
+func (s *RaceState) holdsAttack(rs, o *RiderState, seg *model.Segment, km float64) bool {
+	r := rs.Rider
+	threshold := EffectivePower(r, rs.CurrentFTP(), seg, false)
+	v0 := segmentSpeed(threshold, r.TotalMassKg(), r.CdA, seg, r.Handling)
+	burst := rs.maxPowerFor(threshold, threshold, SegmentTime(v0, km))
+	v := segmentSpeed(burst, r.TotalMassKg(), r.CdA, seg, r.Handling)
+	or := o.Rider
+	need := segmentPower(v, or.TotalMassKg(), or.CdA*groupDraft(2, false, seg, v), seg, or.Handling)
+	thrO := EffectivePower(or, o.CurrentFTP(), seg, false)
+	avail := o.maxPowerFor(thrO, thrO, SegmentTime(v, km))
+	return need <= avail
+}
+
 func (s *RaceState) sprintLoserAttacks(rs *RiderState, seg *model.Segment) bool {
 	if !s.escapeEligible(rs) || s.IsStageRace {
 		return false
@@ -316,7 +350,12 @@ func (s *RaceState) sprintLoserAttacks(rs *RiderState, seg *model.Segment) bool 
 	if !seg.SurfaceType.Unpaved() && climbOf(seg) < terrainClimb {
 		return false
 	}
-	faster := false
+	// Only an attack that drops someone who'd beat him at the finish (over
+	// the rest of this climb or sector) is worth it (Nov 2026: attacks that
+	// dropped nobody went on every small climb from 60 km out at Flèche and
+	// split the whole bunch).
+	km := s.attackKm(seg)
+	faster, drops := false, false
 	for _, o := range s.Road {
 		if !rivalLeaderOf(rs, o) || !s.outFinishes(o, rs) {
 			continue
@@ -325,8 +364,9 @@ func (s *RaceState) sprintLoserAttacks(rs *RiderState, seg *model.Segment) bool 
 		if o.WPrime.FractionRemaining() > rs.WPrime.FractionRemaining() {
 			return false // he has more left: wait for a better moment
 		}
+		drops = drops || !s.holdsAttack(rs, o, seg, km)
 	}
-	return faster
+	return faster && drops
 }
 
 // winGone: one-day races, a group behind the front of the race (which holds

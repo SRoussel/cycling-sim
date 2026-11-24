@@ -81,6 +81,9 @@ type Adjustment struct {
 	WKg      float64 // fitted threshold W/kg
 	ClimbWKg float64 // fitted W/kg on a climb (climbing ability applied)
 	Evidence []string
+	// Spread: the scale's standard deviation over the averaged passes (how
+	// firmly the data pin the rider down; 0 without averaging).
+	Spread float64
 	// Implausible is set when the fit pushes a rider more than
 	// plausibleMarginPct above the strongest unfitted rider's climbing W/kg:
 	// the fit is then compensating for something the model gets wrong
@@ -100,6 +103,12 @@ func Fit(db *database.DB, base []model.Rider, opt Options) ([]Adjustment, error)
 	}
 	scale := map[int64]float64{}
 	evidence := map[int64][]string{}
+	// history holds each pass's scales: with a prior the result is the
+	// average of the last half of the passes (Polyak averaging), since each
+	// pass judges riders on fresh random runs and the last one alone keeps
+	// whichever swing came last (Nov 2026: a 20-pass fit ended still taking
+	// 0.3% steps).
+	var history []map[int64]float64
 	for it := 1; it <= opt.Iterations; it++ {
 		riders := applyScales(base, scale)
 		var results []simulation.ValidationSummary
@@ -183,9 +192,36 @@ func Fit(db *database.DB, base []model.Rider, opt Options) ([]Adjustment, error)
 			it, mae/float64(max(1, len(results))), len(results), len(steps), meanStep, largest)
 		// A rider far off keeps asking for big steps while the many riders
 		// near their rating pull the mean down: settle on both.
+		snap := make(map[int64]float64, len(scale))
+		for id, v := range scale {
+			snap[id] = v
+		}
+		history = append(history, snap)
 		if meanStep < settledPct && largest < settledMaxPct {
 			break
 		}
+	}
+	spread := map[int64]float64{}
+	if opt.Prior > 0 && len(history) >= 4 {
+		tail := history[len(history)/2:]
+		avg := map[int64]float64{}
+		for id := range scale {
+			var sum, sq float64
+			for _, h := range tail {
+				v := h[id]
+				if v == 0 {
+					v = 1
+				}
+				sum += v
+				sq += v * v
+			}
+			n := float64(len(tail))
+			m := sum / n
+			avg[id] = m
+			spread[id] = math.Sqrt(math.Max(0, sq/n-m*m))
+		}
+		scale = avg
+		logf("averaged the last %d passes (Polyak)\n", len(tail))
 	}
 	climb := func(r model.Rider, ftp float64) float64 {
 		return ftp * simulation.ModifierFactor(r.ClimbingAbility) / r.WeightKg
@@ -205,7 +241,7 @@ func Fit(db *database.DB, base []model.Rider, opt Options) ([]Adjustment, error)
 		}
 		s = math.Round(s*1e4) / 1e4 // the precision Write stores, so seeding reproduces it
 		r := byID[id]
-		a := Adjustment{RiderID: id, Name: r.Name, Scale: s, Evidence: evidence[id]}
+		a := Adjustment{RiderID: id, Name: r.Name, Scale: s, Evidence: evidence[id], Spread: spread[id]}
 		if r.WeightKg > 0 {
 			a.WKg = float64(r.FTPWatts) * s / r.WeightKg
 			a.ClimbWKg = climb(r, float64(r.FTPWatts)*s)

@@ -762,7 +762,11 @@ func cmdFitRatings(db *database.DB, path string, classics, season2026 bool) {
 			flag = "  ← clearly out-climbs the strongest rider: likely compensating for a model gap"
 			implausible++
 		}
-		fmt.Printf("  %-28s %+5.1f%%  (%d W, %.2f W/kg, %.2f on climbs)%s\n", a.Name, (a.Scale-1)*100, ftp[a.RiderID], a.WKg, a.ClimbWKg, flag)
+		spread := ""
+		if a.Spread > 0 {
+			spread = fmt.Sprintf(" ±%.1f", a.Spread*100)
+		}
+		fmt.Printf("  %-28s %+5.1f%%%s  (%d W, %.2f W/kg, %.2f on climbs)%s\n", a.Name, (a.Scale-1)*100, spread, ftp[a.RiderID], a.WKg, a.ClimbWKg, flag)
 	}
 	if implausible > 0 {
 		fmt.Printf("Warning: %d rider(s) fitted to implausible W/kg; review before keeping %s.\n", implausible, path)

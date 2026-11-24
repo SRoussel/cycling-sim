@@ -75,15 +75,38 @@ func (s *RaceState) attackPays(rs *RiderState, seg *model.Segment) bool {
 	r := rs.Rider
 	threshold := EffectivePower(r, rs.CurrentFTP(), seg, false)
 	km := s.attackKm(seg)
-	v0 := segmentSpeed(threshold, r.TotalMassKg(), r.CdA, seg, r.Handling)
-	burst := rs.maxPowerFor(threshold, threshold, SegmentTime(v0, km))
-	v := segmentSpeed(burst, r.TotalMassKg(), r.CdA, seg, r.Handling)
-	holds := func(o *RiderState) bool {
+	// holdsOver: can a rival hold an attack ridden over the last km of this
+	// climb or sector (his threshold and W' against the attacker's burst)?
+	holdsOver := func(o *RiderState, km float64) bool {
+		v0 := segmentSpeed(threshold, r.TotalMassKg(), r.CdA, seg, r.Handling)
+		burst := rs.maxPowerFor(threshold, threshold, SegmentTime(v0, km))
+		v := segmentSpeed(burst, r.TotalMassKg(), r.CdA, seg, r.Handling)
 		or := o.Rider
 		need := segmentPower(v, or.TotalMassKg(), or.CdA*groupDraft(2, false, seg, v), seg, or.Handling)
 		thrO := EffectivePower(or, o.CurrentFTP(), seg, false)
 		avail := o.maxPowerFor(thrO, thrO, SegmentTime(v, km))
 		return need <= avail
+	}
+	holds := func(o *RiderState) bool { return holdsOver(o, km) }
+	// One-day races: attack as late on the climb as it still works. If an
+	// attack over the last half of what's left would drop as many rival
+	// leaders, wait (Nov 2026: favourites went from the foot of the Poggio,
+	// riding 3.8 km at their burst, and the whole bunch shattered; real
+	// attacks come near the top, unless only a long effort drops a punchy
+	// rival).
+	if !s.IsStageRace && km/2 >= fineStepKm {
+		dropped := func(km float64) int {
+			n := 0
+			for _, o := range s.Road {
+				if rivalLeaderOf(rs, o) && !holdsOver(o, km) {
+					n++
+				}
+			}
+			return n
+		}
+		if now := dropped(km); now > 0 && dropped(km/2) >= now {
+			return false
+		}
 	}
 	own := []*RiderState{rs}
 	inOwn := map[*RiderState]bool{rs: true}
@@ -474,7 +497,10 @@ func (s *RaceState) attackKm(seg *model.Segment) float64 {
 		}
 		km += d
 	}
-	return math.Max(km, seg.DistanceKm)
+	// What's left of the climb from here, at least one fine step (Nov 2026:
+	// this was at least the whole course segment, so near the top of a
+	// one-segment climb an attack was judged as if from its foot).
+	return math.Max(km, fineStepKm)
 }
 
 // outFinishedByRival reports whether a rival leader in rs's road group would

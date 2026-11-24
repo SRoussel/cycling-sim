@@ -61,12 +61,16 @@ const lineShelterPosition = 5
 // riders off into the gutter when the front rides hard (Nov 2026: applying
 // it at any pace cost the whole bunch ~55 W for hours in an 18-20 km/h wind,
 // ~7200 kJ in Flanders and Roubaix against a real 5500-6500).
+//
+// A hard pace no longer caps shelter at the 5th wheel (Nov 2026, the user:
+// "the bunch effect is exactly the problem"): a bunch at speed strings out
+// at the front but stays several riders wide behind, so riders deep in it
+// keep a packed bunch's shelter; capping it whenever the front rode 95% of
+// threshold made every hard climb or run-in after a one-day race opened a
+// selection of the whole bunch. Single file is gravel's (draftFor) and the
+// crosswind echelon's (crosswindDraft).
 func groupDraft(position int, linedOut bool, seg *model.Segment, speed float64) float64 {
-	p := position
-	if linedOut && p > lineShelterPosition {
-		p = lineShelterPosition
-	}
-	d := draftFor(p, seg.SurfaceType)
+	d := draftFor(position, seg.SurfaceType)
 	if !linedOut {
 		return d
 	}

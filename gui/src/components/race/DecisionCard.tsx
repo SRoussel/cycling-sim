@@ -7,7 +7,7 @@ export function DecisionCard({ tc }: { tc: TeamControl }) {
   return (
     <section className={`decision-card kind-${m.kind}`} role="dialog" aria-label={m.title}>
       <div className="decision-head">
-        <h2>{m.title}</h2>
+        <h2>{m.title.replace(/^[\p{Extended_Pictographic}\u{FE0F}\u{200D}\s]+/u, '')}</h2>
         <span className="decision-km">{m.kmRemaining.toFixed(1)} km to go</span>
       </div>
       <p className="decision-text">{m.text}</p>

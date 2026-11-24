@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { RouteProfile, clamp01, formatRaceClock, sectorIcon, sectorNoun } from '../../sim/shared'
+import { RaceGroup, RouteProfile, clamp01, formatGap, formatRaceClock, sectorNoun } from '../../sim/shared'
 import { GroupMark, ProfileView, findClimbs, stars } from './ProfileView'
 import { DecisionLevel } from '../../sim/useTeamControl'
 import { PlaybackControls } from './RacePanels'
@@ -28,6 +28,7 @@ export function RaceTopBar({
   decisionLevel,
   onDecisionLevel,
   marks,
+  groups,
 }: {
   title: string
   subtitle?: string
@@ -48,51 +49,98 @@ export function RaceTopBar({
   decisionLevel?: DecisionLevel
   onDecisionLevel?: (level: DecisionLevel) => void
   marks?: GroupMark[]
+  /** The groups on the road, for the gap between the first two. */
+  groups?: RaceGroup[]
 }) {
   const total = profile?.totalKm || kmTotal
+  const avg = elapsed > 120 ? kmCovered / (elapsed / 3600) : null
+  const gap = groups && groups.length > 1 ? groups[1].gapS : undefined
   return (
     <header className="dash-top">
       <div className="dash-top-row">
         <div className="dash-title">
           <h1>{title}</h1>
-          {goal && <span className="dash-goal" title="Today's goal for your team">🎯 {goal}</span>}
-          {subtitle && <span className="dash-subtitle">{subtitle}</span>}
+          {goal ? <span className="dash-goal" title="Today's goal for your team">Goal: {goal}</span>
+            : subtitle ? <span className="dash-subtitle">{subtitle}</span> : null}
+        <div className="dash-controls">
+          {decisionLevel && onDecisionLevel && (
+            <label className="dash-stopfor" title="When the race stops to ask you: at every decision, only the moments that decide the race, or never">
+              <span>Stop for</span>
+              <select value={decisionLevel} onChange={(e) => onDecisionLevel(e.target.value as DecisionLevel)}>
+                <option value="all">every decision</option>
+                <option value="key">key moments</option>
+                <option value="off">nothing</option>
+              </select>
+            </label>
+          )}
+          {onSkip && (
+            <button className={`dash-skip${skipping ? ' on' : ''}`} onClick={onSkip} disabled={playbackDisabled}
+              title="Fast-forward until the next decision moment">
+              {skipping ? 'Stop skipping' : 'Next decision'}
+            </button>
+          )}
+          <PlaybackControls
+            paused={paused}
+            speed={speed}
+            disabled={playbackDisabled}
+            onTogglePause={onTogglePause}
+            onSpeedChange={onSpeedChange}
+          />
+          </div>
         </div>
-        <div className="dash-stat dash-km">
-          <span className="dash-stat-value">{kmRemaining.toFixed(1)}</span>
-          <span className="dash-stat-label">km to go</span>
+        <div className="dash-figures">
+          <Figure label="To go" value={kmRemaining.toFixed(1)} unit="km" accent />
+          <Figure label="Race time" value={formatRaceClock(elapsed)} />
+          {avg !== null && <Figure label="Average" value={avg.toFixed(1)} unit="km/h" />}
+          {gap !== undefined && gap > 0 && <Figure label="Gap to the next group" value={formatGap(gap)} />}
+          {extra}
         </div>
-        <div className="dash-stat">
-          <span className="dash-stat-value">{formatRaceClock(elapsed)}</span>
-          <span className="dash-stat-label">race time</span>
-        </div>
-        {extra}
-        {decisionLevel && onDecisionLevel && (
-          <label className="dash-stopfor" title="When the race stops to ask you: at every decision, only the moments that decide the race, or never">
-            <span>Stop for</span>
-            <select value={decisionLevel} onChange={(e) => onDecisionLevel(e.target.value as DecisionLevel)}>
-              <option value="all">every decision</option>
-              <option value="key">key moments</option>
-              <option value="off">nothing</option>
-            </select>
-          </label>
-        )}
-        {onSkip && (
-          <button className={`dash-skip${skipping ? ' on' : ''}`} onClick={onSkip} disabled={playbackDisabled}
-            title="Fast-forward until the next decision moment">
-            {skipping ? '⏹ Stop skipping' : '⏩ Next decision'}
-          </button>
-        )}
-        <PlaybackControls
-          paused={paused}
-          speed={speed}
-          disabled={playbackDisabled}
-          onTogglePause={onTogglePause}
-          onSpeedChange={onSpeedChange}
-        />
+        <NextUp profile={profile} km={kmCovered} />
       </div>
       <RouteStrip profile={profile} km={kmCovered} kmTotal={total} marks={marks} />
     </header>
+  )
+}
+
+/** One of the top bar's big live figures. */
+function Figure({ label, value, unit, accent }: { label: string; value: string; unit?: string; accent?: boolean }) {
+  return (
+    <div className={`dash-fig${accent ? ' accent' : ''}`}>
+      <span className="dash-fig-label">{label}</span>
+      <span className="dash-fig-value">{value}{unit && <small>{unit}</small>}</span>
+    </div>
+  )
+}
+
+/** What's next on the road: the climb or sector the riders are on, or the
+ * next one (sectors within 30 km). */
+function NextUp({ profile, km }: { profile: RouteProfile | null; km: number }) {
+  const climbs = useMemo(() => findClimbs(profile), [profile])
+  if (!profile) return null
+  const sectors = profile.sectors || []
+  const onSector = sectors.find((sec) => km >= sec.startKm && km < sec.startKm + sec.lengthKm)
+  const nextSector = sectors.find((sec) => sec.startKm > km && sec.startKm - km <= 30)
+  const current = climbs.find((c) => km >= c.startKm && km < c.startKm + c.lengthKm)
+  const next = climbs.find((c) => c.startKm > km)
+  const lines: Array<{ head: React.ReactNode; sub: string; on: boolean }> = []
+  if (current) {
+    lines.push({ head: <>On {current.name || 'a climb'} <em>{(current.startKm + current.lengthKm - km).toFixed(1)} km to the top</em></>, sub: `${current.lengthKm.toFixed(1)} km at ${current.avgPct.toFixed(1)}%`, on: true })
+  } else if (next) {
+    lines.push({ head: <>{next.name || 'Climb'} <em>in {(next.startKm - km).toFixed(1)} km</em></>, sub: `${next.lengthKm.toFixed(1)} km at ${next.avgPct.toFixed(1)}%${next.surface ? `, ${sectorNoun(next.surface)}` : ''}`, on: false })
+  }
+  if (onSector && onSector.name !== current?.name) {
+    lines.push({ head: <>{onSector.name} {stars(onSector.stars)} <em>{(onSector.startKm + onSector.lengthKm - km).toFixed(1)} km left</em></>, sub: sectorNoun(onSector.surface), on: true })
+  } else if (!onSector && nextSector && nextSector.name !== next?.name) {
+    lines.push({ head: <>{nextSector.name} {stars(nextSector.stars)} <em>in {(nextSector.startKm - km).toFixed(1)} km</em></>, sub: `${nextSector.lengthKm.toFixed(1)} km of ${sectorNoun(nextSector.surface)}`, on: false })
+  }
+  if (lines.length === 0) return null
+  return (
+    <div className="dash-next">
+      <span className="dash-fig-label">{lines.some((l) => l.on) ? 'Now' : 'Next'}</span>
+      {lines.slice(0, 2).map((l, i) => (
+        <span key={i} className={`dash-next-line${l.on ? ' on' : ''}`}>{l.head}<small>{l.sub}</small></span>
+      ))}
+    </div>
   )
 }
 
@@ -115,41 +163,21 @@ function RouteStrip({ profile, km, kmTotal, marks }: { profile: RouteProfile | n
   const total = profile.totalKm
   const span = Math.min(ZOOM_SPAN_KM, total)
   const from = Math.max(0, Math.min(km - ZOOM_BEHIND_KM, total - span))
-  const current = climbs.find((c) => km >= c.startKm && km < c.startKm + c.lengthKm)
-  const next = climbs.find((c) => c.startKm > km)
   const sectors = profile.sectors || []
-  const onSector = sectors.find((sec) => km >= sec.startKm && km < sec.startKm + sec.lengthKm)
-  const nextSector = sectors.find((sec) => sec.startKm > km)
-  const climbName = (c: { name?: string }) => c.name || 'climb'
   return (
     <div className="route-strip">
       <div className="route-zoom">
         <div className="route-zoom-head">
           <span className="route-zoom-title">Road ahead · km to go</span>
-          <span className="route-next">
-            {onSector ? (
-              <span className="route-cobbles on">
-                {sectorIcon(onSector.surface)} {onSector.name} {stars(onSector.stars)}: {(onSector.startKm + onSector.lengthKm - km).toFixed(1)} km of {sectorNoun(onSector.surface)} left
-              </span>
-            ) : nextSector && nextSector.startKm - km <= 30 ? (
-              <span className="route-cobbles">
-                {sectorIcon(nextSector.surface)} {nextSector.name} {stars(nextSector.stars)} in {(nextSector.startKm - km).toFixed(1)} km ({nextSector.lengthKm.toFixed(1)} km of {sectorNoun(nextSector.surface)})
-              </span>
-            ) : null}
-            {current ? (
-              <span className="route-climb on">
-                ⛰ On {current.name || 'a climb'}: {(current.startKm + current.lengthKm - km).toFixed(1)} km to the top at {current.avgPct.toFixed(1)}%
-              </span>
-            ) : next ? (
-              <span className="route-climb">
-                ⛰ Next {climbName(next)} in {(next.startKm - km).toFixed(1)} km: {next.lengthKm.toFixed(1)} km at {next.avgPct.toFixed(1)}%
-              </span>
-            ) : climbs.length > 0 ? (
-              <span className="route-climb">No climbs left</span>
-            ) : null}
+          <span className="route-legend" aria-label="Gradient colours">
+            <span><i className="pv-g1" />under 3%</span>
+            <span><i className="pv-g2" />3–6%</span>
+            <span><i className="pv-g3" />6–9%</span>
+            <span><i className="pv-g4" />9% and up</span>
+            {sectors.length > 0 && <span><i className="cob" />{sectors.every((x) => x.surface === 'gravel') ? 'gravel' : 'cobbles'}</span>}
           </span>
         </div>
-        <ProfileView profile={profile} km={km} fromKm={from} toKm={from + span} tickEvery={span > 15 ? 5 : 2} className="zoom" showSectorNames />
+        <ProfileView profile={profile} km={km} fromKm={from} toKm={from + span} tickEvery={span > 15 ? 5 : 2} className="zoom" showSectorNames detail />
       </div>
       <button className="route-mini" onClick={() => setOpen(true)} title="Show the whole course">
         <ProfileView profile={profile} km={km} fromKm={0} toKm={total} tickEvery={total > 150 ? 50 : 25} minElevRange={600} labels="km" className="mini" marks={marks} />
@@ -162,7 +190,7 @@ function RouteStrip({ profile, km, kmTotal, marks }: { profile: RouteProfile | n
               <h2>Course profile · {total.toFixed(0)} km · {Math.max(0, total - km).toFixed(1)} km to go</h2>
               <button className="secondary" onClick={() => setOpen(false)}>Close</button>
             </div>
-            <ProfileView profile={profile} km={km} fromKm={0} toKm={total} tickEvery={total > 150 ? 20 : 10} minElevRange={600} className="large" marks={marks} />
+            <ProfileView profile={profile} km={km} fromKm={0} toKm={total} tickEvery={total > 150 ? 20 : 10} minElevRange={600} className="large" marks={marks} detail showSectorNames />
             {climbs.length > 0 && (
               <table className="route-climbs">
                 <thead>
@@ -189,7 +217,7 @@ function RouteStrip({ profile, km, kmTotal, marks }: { profile: RouteProfile | n
                 <tbody>
                   {sectors.map((sec) => (
                     <tr key={sec.startKm} className={sec.startKm + sec.lengthKm < km ? 'done' : ''}>
-                      <td>{sectorIcon(sec.surface)} {sec.name}</td>
+                      <td>{sec.name}</td>
                       <td>{(total - sec.startKm).toFixed(1)}</td>
                       <td>{sec.lengthKm.toFixed(1)} km</td>
                       <td className="stars">{stars(sec.stars)}</td>

@@ -1,11 +1,14 @@
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Source+Serif+4:wght@400;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,300..800&family=JetBrains+Mono:wght@400;500&display=swap');
 
 /*
- * The app's design system (shared with the race screen):
- * - flat panels on a plain background, rows split by hairlines;
- * - quiet headings, 0.875rem body, tabular numbers;
- * - orange only for the player's things and primary actions; amber/red only
- *   for values that need attention; everything else neutral.
+ * The app's design system (shared with the race screen), "broadcast":
+ * - near-black page, slightly raised panels (hairline border, soft shadow),
+ *   rows split by hairlines;
+ * - Archivo in sentence case, medium weights; numbers in JetBrains Mono;
+ *   big live figures in Archivo, slightly narrowed;
+ * - one accent, timing-graphic yellow, only for the player's things, the race
+ *   front and the main action; team colours only as thin bars beside names;
+ *   orange/red only for values that need attention.
  */
 
 * {
@@ -15,23 +18,30 @@
 }
 
 :root {
-  --color-bg: #0f1216;
-  --color-surface: #141920;
-  --color-surface-2: #1a2029;
-  --color-line: rgba(255, 255, 255, 0.06);
-  --color-primary: #e86f37;
-  --color-secondary: #1a2029;
-  --color-text: #f2f4f8;
-  --color-text-soft: #c3cad4;
-  --color-text-muted: #8b95a3;
-  --color-success: #4ade80;
-  --color-warning: #fbbf24;
-  --color-danger: #f87171;
-  --font-numeric: 'Source Serif 4', serif;
+  --color-bg: #090b0e;
+  --color-surface: #12151a;
+  --color-surface-2: #171b21;
+  --color-surface-sunk: #0b0d10;
+  --color-border: #1e232a;
+  --color-line: #1c2026;
+  --color-primary: #f2c230;
+  --color-primary-ink: #0c0e11;
+  --color-primary-tint: rgba(242, 194, 48, 0.12);
+  --color-secondary: #1c2026;
+  --color-text: #e8eaed;
+  --color-text-soft: #b5bbc3;
+  --color-text-muted: #8a929c;
+  --color-text-faint: #6d7580;
+  --color-success: #c9ced6;
+  --color-warning: #d98a2b;
+  --color-danger: #e0573a;
+  --shadow-panel: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 8px 24px rgba(0, 0, 0, 0.25);
+  --font-numeric: 'JetBrains Mono', ui-monospace, monospace;
+  --font-display-stretch: 88%;
 }
 
 body {
-  font-family: 'Space Grotesk', 'Segoe UI', system-ui, sans-serif;
+  font-family: 'Archivo', 'Segoe UI', system-ui, sans-serif;
   background: var(--color-bg);
   color: var(--color-text);
   line-height: 1.55;
@@ -40,9 +50,11 @@ body {
 }
 
 h1 {
-  font-size: 1.4rem;
-  font-weight: 700;
-  letter-spacing: -0.01em;
+  font-size: 1.75rem;
+  font-weight: 650;
+  font-stretch: var(--font-display-stretch);
+  letter-spacing: -0.02em;
+  line-height: 1.1;
 }
 
 h2 {
@@ -65,9 +77,9 @@ a {
 button {
   cursor: pointer;
   border: 1px solid transparent;
-  border-radius: 6px;
-  padding: 0.45rem 0.9rem;
-  font-size: 0.85rem;
+  border-radius: 8px;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
   font-family: inherit;
   font-weight: 500;
   transition: background-color 0.15s, border-color 0.15s, color 0.15s;
@@ -78,18 +90,24 @@ button:disabled {
   cursor: not-allowed;
 }
 
+button.primary,
+button.secondary {
+  min-height: 38px;
+}
+
 button.primary {
   background-color: var(--color-primary);
-  color: #fff;
+  color: var(--color-primary-ink);
+  font-weight: 650;
 }
 
 button.primary:hover:not(:disabled) {
-  background-color: #d85e29;
+  background-color: #ffd447;
 }
 
 button.secondary {
-  background-color: var(--color-surface-2);
-  border-color: var(--color-line);
+  background-color: var(--color-secondary);
+  border-color: #2b3038;
   color: var(--color-text);
 }
 
@@ -102,9 +120,9 @@ input[type='text'],
 input[type='number'] {
   background: var(--color-surface-2);
   color: var(--color-text);
-  border: 1px solid var(--color-line);
-  border-radius: 6px;
-  padding: 0.35rem 0.5rem;
+  border: 1px solid #2b3038;
+  border-radius: 8px;
+  padding: 0.4rem 0.6rem;
   font: inherit;
   font-size: 0.85rem;
 }
@@ -117,7 +135,9 @@ input[type='checkbox'] {
 
 .card {
   background-color: var(--color-surface);
-  border-radius: 10px;
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-panel);
+  border-radius: 12px;
   padding: 16px 18px;
   margin-bottom: 14px;
 }
@@ -181,7 +201,7 @@ tbody tr:hover {
 
 .badge.cobbles::before { background: #b07a3a; }
 .badge.gravel::before { background: #d6b36a; }
-.badge.climb::before { background: #e86f37; }
+.badge.climb::before { background: #d98a2b; }
 .badge.hilly::before { background: #84cc16; }
 .badge.flat::before,
 .badge.sprint::before { background: #7c8794; }
@@ -243,10 +263,10 @@ tbody tr:hover {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #263040;
+  background: #2b3038;
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #33405a;
+  background: #3a404a;
 }

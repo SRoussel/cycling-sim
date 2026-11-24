@@ -1,7 +1,7 @@
 import { main } from '../../../wailsjs/go/models'
 import { formatGap } from '../../sim/shared'
 import { RaceGoal } from '../../sim/useTeamControl'
-import { Jersey } from './Jersey'
+import { teamColor } from '../../sim/teamColors'
 
 const ordinal = (n: number) => {
   const s = ['th', 'st', 'nd', 'rd']
@@ -49,40 +49,41 @@ export function Debrief({
     verdict = breakMade ? 'We had a rider in the break.' : 'Nobody of ours made the break.'
     if (best) verdict += ` Best of ours: ${best.riderName}, ${ordinal(best.position)}.`
   }
+  const winner = results.results[0]
+  const goalLine = !goal
+    ? null
+    : met && goal.kind === 'place' && best && goal.riderId !== best.riderId
+      ? `Goal met by ${best.riderName}: ${goal.text}`
+      : `Goal ${met ? 'met' : 'missed'}: ${goal.text}`
   return (
     <section className={`debrief ${goal ? (met ? 'met' : 'missed') : ''}`}>
       <div className="debrief-head">
-        <h2>
-          {!goal
-            ? '🏁 Race over'
-            : met && goal.kind === 'place' && best && goal.riderId !== best.riderId
-              ? `✅ Goal met by ${best.riderName}: ${goal.text}`
-              : `${met ? '✅ Goal met' : '❌ Goal missed'}: ${goal.text}`}
-        </h2>
-        <button className="primary" onClick={onResults}>{resultsLabel ?? 'Full results →'}</button>
+        <div>
+          {goalLine && <span className={`debrief-goal ${met ? 'met' : 'missed'}`}>{goalLine}</span>}
+          <h2>{winner ? `${winner.riderName} wins` : 'Race over'}</h2>
+        </div>
+        <button className="primary" onClick={onResults}>{resultsLabel ?? 'Full results'}</button>
       </div>
       {verdict && <p className="debrief-verdict">{verdict}</p>}
-      <ol className="debrief-podium" aria-label="Podium">
-        {[1, 0, 2].map((i) => {
-          const r = results.results[i]
-          if (!r) return null
-          return (
-            <li key={i} className={`step p${i + 1}${r.team === team ? ' mine' : ''}`}>
-              <span className="who"><Jersey team={r.team} />{r.riderName}</span>
-              <span className="place">{i + 1}</span>
-              {i > 0 && r.gap > 0 && <span className="gap">+{formatGap(r.gap)}</span>}
-            </li>
-          )
-        })}
-      </ol>
       <div className="debrief-cols">
         <div>
+          <h3>Podium</h3>
+          <ol className="debrief-list">
+            {results.results.slice(0, 3).map((r) => (
+              <li key={r.riderId} className={r.team === team ? 'mine' : ''}>
+                <span className="pos">{r.position}</span>
+                <span className="who"><i style={{ background: teamColor(r.team) }} />{r.riderName}</span>
+                <span className="gap">{r.gap > 0 ? `+${formatGap(r.gap)}` : ''}</span>
+              </li>
+            ))}
+          </ol>
           <h3>Our riders</h3>
-          <ol className="debrief-riders">
+          <ol className="debrief-list">
             {ours.slice(0, 7).map((r) => (
-              <li key={r.riderId}>
-                <span>{ordinal(r.position)}</span> {r.riderName}
-                {r.gap > 0 && <span className="debrief-gap"> +{formatGap(r.gap)}</span>}
+              <li key={r.riderId} className="mine">
+                <span className="pos">{ordinal(r.position)}</span>
+                <span className="who">{r.riderName}</span>
+                <span className="gap">{r.gap > 0 ? `+${formatGap(r.gap)}` : ''}</span>
               </li>
             ))}
           </ol>

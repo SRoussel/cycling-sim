@@ -180,12 +180,13 @@ function StageRaceSimulation() {
           onSkip={interactiveMode ? tc.skipToDecision : undefined}
           decisionLevel={interactiveMode ? tc.decisionLevel : undefined}
           marks={groupMarks(groups, tc)}
+          groups={groups}
           onDecisionLevel={tc.setDecisionLevel}
           skipping={tc.skipping}
           extra={
-            <div className="dash-stat" title={`Overall ${formatRaceClock(overallElapsed)}`}>
-              <span className="dash-stat-value">{Math.round(progress)}%</span>
-              <span className="dash-stat-label">of {stageRace.stageCount} stages</span>
+            <div className="dash-fig" title={`Overall ${formatRaceClock(overallElapsed)}`}>
+              <span className="dash-fig-label">Of {stageRace.stageCount} stages</span>
+              <span className="dash-fig-value">{Math.round(progress)}<small>%</small></span>
             </div>
           }
         />

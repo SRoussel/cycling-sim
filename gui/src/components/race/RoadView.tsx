@@ -3,11 +3,12 @@ import { RaceGroup } from '../../sim/shared'
 import { TeamControl } from '../../sim/useTeamControl'
 import { GroupMark } from './ProfileView'
 import { GroupSheet } from './GroupSheet'
+import { teamColor } from '../../sim/teamColors'
 
 /** A group's dot: the front of the race white, the rest grey (groups with
  * the player's riders get an orange ring where drawn). */
 export function groupTone(index: number): string {
-  return index === 0 ? '#f2f4f8' : '#7c8794'
+  return index === 0 ? '#f2c230' : '#8a929c'
 }
 
 
@@ -45,20 +46,22 @@ export function RoadView({ groups, tc, emptyText }: { groups: RaceGroup[]; tc?: 
                   onClick={tc ? () => setOpen(g.name) : undefined}
                   title={tc ? 'Show every rider in this group' : undefined}
                 >
-                  <span className="g-name">{g.name}</span>
-                  <span className="g-size">{size}</span>
-                  <span className="g-gap">{(g.gapS ?? 0) > 0 ? g.gap : ''}</span>
+                  <span className="g-label">
+                    <span className={`g-name${i === 0 ? ' front' : ''}`}>{g.name}</span>
+                    <span className="g-size">{size} {size === 1 ? 'rider' : 'riders'}</span>
+                  </span>
                   <div className="g-riders">
                     {mine.map((r) => (
-                      <span key={r.id} className="g-rider g-ours">{r.name}</span>
+                      <span key={r.id} className="g-rider g-ours"><i style={{ background: teamColor(tc!.controlledTeam) }} />{r.name}</span>
                     ))}
                     {shown.map((n, j) => (
                       <span key={j} className="g-rider" title={tc?.teamByName[n]}>
-                        {n}
+                        {tc?.teamByName[n] && <i style={{ background: teamColor(tc.teamByName[n]) }} />}{n}
                       </span>
                     ))}
-                    {rest > 0 && <span className="g-more">+{rest}</span>}
+                    {rest > 0 && <span className="g-more">+{rest} more</span>}
                   </div>
+                  <span className="g-gap">{(g.gapS ?? 0) > 0 ? g.gap : ''}</span>
                 </li>
               )
             })}
@@ -107,12 +110,22 @@ function GapGraphic({ groups, tc, onPick }: { groups: RaceGroup[]; tc?: TeamCont
   const maxGap = Math.max(30, ...shown.map((g) => g.gapS ?? 0))
   const mineIn = new Set(tc ? tc.teamRiders.map((r) => tc.riderGroups[r.id]) : [])
   const ticks = [0, 0.25, 0.5, 0.75, 1].map((f) => f * maxGap)
+  // Name the first groups, skipping one too close to the last one named.
+  const labelled = new Set<number>()
+  let lastPos = -Infinity
+  shown.forEach((g, i) => {
+    const pos = ((g.gapS ?? 0) / maxGap) * 94
+    if (i < 5 && pos - lastPos >= 9) {
+      labelled.add(i)
+      lastPos = pos
+    }
+  })
   return (
     <div className="gap-graphic" aria-label="Gaps between groups">
       <div className="gap-axis" />
       {ticks.map((t, i) => (
         <span key={i} className="gap-tick" style={{ right: `${(t / maxGap) * 94 + 3}%` }}>
-          {t === 0 ? '🏁' : `-${t >= 60 ? `${Math.floor(t / 60)}:${String(Math.round(t % 60)).padStart(2, '0')}` : `${Math.round(t)}s`}`}
+          {t === 0 ? 'Front' : `-${t >= 60 ? `${Math.floor(t / 60)}:${String(Math.round(t % 60)).padStart(2, '0')}` : `${Math.round(t)}s`}`}
         </span>
       ))}
       {shown.map((g, i) => {
@@ -127,6 +140,7 @@ function GapGraphic({ groups, tc, onPick }: { groups: RaceGroup[]; tc?: TeamCont
             style={{ right: `${(((g.gapS ?? 0) / maxGap) * 94 + 3)}%`, width: d, height: d, background: groupTone(i) }}
           >
             {d >= 16 ? size : ''}
+            {labelled.has(i) && <span className="gap-dot-label">{g.name}</span>}
           </span>
         )
       })}

@@ -188,6 +188,7 @@ function Simulation() {
           onSkip={interactiveMode ? tc.skipToDecision : undefined}
           decisionLevel={interactiveMode ? tc.decisionLevel : undefined}
           marks={groupMarks(groups, tc)}
+          groups={groups}
           onDecisionLevel={tc.setDecisionLevel}
           goal={tc.goal?.text}
           skipping={tc.skipping}

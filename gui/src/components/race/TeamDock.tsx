@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useLocation } from 'react-router-dom'
-import { EFFORT_MAX_PCT, EFFORT_MIN_PCT, RaceGroup, RiderTelemetryPoint, formatGap } from '../../sim/shared'
+import { EFFORT_MAX_PCT, EFFORT_MIN_PCT, RaceGroup, formatGap } from '../../sim/shared'
 import { LiveOrder, LiveRider, TEAM_ORDER_KINDS, TEAM_ORDERS, TeamControl, TeamOrderValue } from '../../sim/useTeamControl'
 import { Jersey } from './Jersey'
 import { RiderLink } from '../RiderProfile'
@@ -37,24 +37,12 @@ function whereIs(groups: RaceGroup[], name: string | undefined): string {
 
 const level = (pct: number, low: number, empty: number) => (pct < empty ? 'empty' : pct < low ? 'low' : 'ok')
 
-/** Reserve (thick, the one to act on) and effort (thin, 100% marked). */
-function Bars({ tel }: { tel: RiderTelemetryPoint | null }) {
-  const reserve = Math.max(0, Math.min(100, tel?.wPrimePct ?? 100))
-  const fuel = Math.max(0, Math.min(100, tel?.fuelPct ?? 100))
-  const effort = Math.max(0, tel?.effortPct ?? 0)
-  const effortCls = effort > 100 ? 'over' : effort >= 80 ? 'work' : 'easy'
+/** A labelled meter: a bar and its number (reserve thick, fuel thin). */
+function Meter({ pct, cls, thin, title }: { pct: number; cls: string; thin?: boolean; title: string }) {
   return (
-    <div className="crew-bars">
-      <div className="bar reserve" title={`Reserve ${Math.round(reserve)}%: the punch for attacks and surges; refills when riding easier`}>
-        <i className={level(reserve, 50, 20)} style={{ width: `${reserve}%` }} />
-      </div>
-      <div className="bar fuel" title={`Fuel ${Math.round(fuel)}%: carbohydrate left. Hard riding burns it fast, eating tops it up; under 30% his threshold starts to fall`}>
-        <i className={level(fuel, 50, 30)} style={{ width: `${fuel}%` }} />
-      </div>
-      <div className="bar effort" title={`Effort ${Math.round(effort)}%: power now vs what he can sustain; over 100% burns reserve`}>
-        <i className={effortCls} style={{ width: `${Math.min(100, (effort / 150) * 100)}%` }} />
-        <b style={{ left: `${(100 / 150) * 100}%` }} />
-      </div>
+    <div className={`meter${thin ? ' thin' : ''}`} title={title}>
+      <div className="meter-track"><i className={cls} style={{ width: `${pct}%` }} /></div>
+      <span className={`meter-num ${cls}`}>{Math.round(pct)}</span>
     </div>
   )
 }
@@ -66,8 +54,7 @@ function Bars({ tel }: { tel: RiderTelemetryPoint | null }) {
  * control folds away.
  */
 export function TeamDock({ tc, groups }: { tc: TeamControl; kmRemaining: number; groups: RaceGroup[] }) {
-  const [ordersOpen, setOrdersOpen] = useState(false)
-  const [manual, setManual] = useState<number | null>(null)
+    const [manual, setManual] = useState<number | null>(null)
   // In a season race the panel compares within the season's field.
   const seasonId = (useLocation().state as { season?: { seasonId: number } } | null)?.season?.seasonId ?? 0
   if (!tc.sessionId) {
@@ -78,68 +65,52 @@ export function TeamDock({ tc, groups }: { tc: TeamControl; kmRemaining: number;
   return (
     <section className="panel team">
       <header className="panel-head">
-        <h2><Jersey team={tc.controlledTeam} size={14} />{tc.controlledTeam}</h2>
-        <button type="button" className="link" onClick={() => setOrdersOpen((o) => !o)} aria-expanded={ordersOpen}>
-          {ordersOpen ? 'Done' : 'Team orders'}
-        </button>
+        <h2><Jersey team={tc.controlledTeam} size={16} />{tc.controlledTeam}</h2>
+        {active.length === 0 ? <span className="panel-meta">The team decides everything</span> : <span className="panel-meta">{active.length} {active.length === 1 ? 'order' : 'orders'} set</span>}
       </header>
 
-      {!ordersOpen && (
-        <div className="orders-summary">
-          {active.length === 0 ? (
-            <span className="muted">The team decides everything</span>
-          ) : (
-            active.map((k) => {
-              const why = provenance(tc.live?.orders[k])
-              return (
-                <button key={k} type="button" className="chip" onClick={() => setOrdersOpen(true)} title={why ? `Set by ${why}` : undefined}>
-                  {TEAM_ORDERS[k].label}: <b>{TEAM_ORDERS[k].options[tc.teamOrders[k]]?.label}</b>
-                  {why && <small> · {why}</small>}
-                </button>
-              )
-            })
-          )}
-        </div>
-      )}
-
-      {ordersOpen && (
-        <div className="orders-grid">
-          {kinds.map((kind) => {
-            const spec = TEAM_ORDERS[kind]
-            const current = tc.teamOrders[kind]
-            const why = provenance(tc.live?.orders[kind])
-            return (
-              <div key={kind} className={`order${current !== 'auto' ? ' set' : ''}`} title={spec.options[current]?.help}>
-                <label>
-                  <span>{spec.label}</span>
-                  <select value={current} onChange={(e) => tc.handleTeamOrder(kind, e.target.value as TeamOrderValue)}>
-                    {(['auto', 'yes', 'no'] as TeamOrderValue[])
-                      .filter((v) => spec.options[v])
-                      .map((v) => (
-                        <option key={v} value={v}>{spec.options[v]!.label}</option>
-                      ))}
-                  </select>
-                </label>
-                {why && <small className="order-why">{why}</small>}
-                {kind === 'leadout' && current === 'yes' && (
-                  <details className="train">
-                    <summary>Train order</summary>
-                    <ol>
-                      {tc.normalizedSprintOrder.map((id, idx) => (
-                        <li key={id}>
-                          <span>{tc.teamRiderByID[id]?.name || `Rider ${id}`}</span>
-                          <button type="button" onClick={() => tc.moveSprintTrainRider(id, -1)} disabled={idx === 0} aria-label="Move up">↑</button>
-                          <button type="button" onClick={() => tc.moveSprintTrainRider(id, 1)} disabled={idx === tc.normalizedSprintOrder.length - 1} aria-label="Move down">↓</button>
-                        </li>
-                      ))}
-                    </ol>
-                  </details>
-                )}
+      {/* Team orders, always in view: one segmented switch each. */}
+      <div className="orders-grid">
+        {kinds.map((kind) => {
+          const spec = TEAM_ORDERS[kind]
+          const current = tc.teamOrders[kind]
+          const why = provenance(tc.live?.orders[kind])
+          const values = (['auto', 'yes', 'no'] as TeamOrderValue[]).filter((v) => spec.options[v])
+          return (
+            <div key={kind} className={`order${current !== 'auto' ? ' set' : ''}`}>
+              <span className="order-label">{spec.label}</span>
+              <div className="seg" role="radiogroup" aria-label={spec.label}>
+                {values.map((v) => (
+                  <button
+                    key={v}
+                    type="button"
+                    role="radio"
+                    aria-checked={current === v}
+                    className={current === v ? 'on' : ''}
+                    title={spec.options[v]!.help}
+                    onClick={() => tc.handleTeamOrder(kind, v)}
+                  >{v === 'auto' ? 'Team' : spec.options[v]!.label}</button>
+                ))}
               </div>
-            )
-          })}
-        </div>
-      )}
+              {why && <small className="order-why">{why}</small>}
+              {kind === 'leadout' && current === 'yes' && (
+                <details className="train">
+                  <summary>Train order</summary>
+                  <ol>
+                    {tc.normalizedSprintOrder.map((id, idx) => (
+                      <li key={id}>
+                        <span>{tc.teamRiderByID[id]?.name || `Rider ${id}`}</span>
+                        <button type="button" onClick={() => tc.moveSprintTrainRider(id, -1)} disabled={idx === 0} aria-label="Move up">↑</button>
+                        <button type="button" onClick={() => tc.moveSprintTrainRider(id, 1)} disabled={idx === tc.normalizedSprintOrder.length - 1} aria-label="Move down">↓</button>
+                      </li>
+                    ))}
+                  </ol>
+                </details>
+              )}
+            </div>
+          )
+        })}
+      </div>
 
       {tc.gc.length > 0 && (
         <div className="gc-strip" title="Live GC: the classification if the stage ended now (place before the stage in brackets)">
@@ -155,6 +126,9 @@ export function TeamDock({ tc, groups }: { tc: TeamControl; kmRemaining: number;
         </div>
       )}
 
+      <div className="crew-head" aria-hidden="true">
+        <span>Rider</span><span className="r">Power</span><span>Reserve · fuel</span><span className="r">Legs</span><span>Order</span>
+      </div>
       {/* Fixed order (the roster), so a row never moves under the cursor. */}
       <ul className="crew">
         {tc.teamRiders.map((r) => {
@@ -164,50 +138,53 @@ export function TeamDock({ tc, groups }: { tc: TeamControl; kmRemaining: number;
           const locked = tc.isRiderLocked(r.id)
           const why = provenance(liveCmd)
           const legs = tel?.legsPct
-          const reserve = Math.round(tel?.wPrimePct ?? 100)
+          const reserve = Math.max(0, Math.min(100, tel?.wPrimePct ?? 100))
+          const fuel = Math.max(0, Math.min(100, tel?.fuelPct ?? 100))
+          const kg = tc.riderById[r.id]?.weight
+          const watts = tel ? Math.round(tel.powerWatts) : null
+          const effort = Math.max(0, tel?.effortPct ?? 0)
           const open = manual === r.id
           return (
             <li key={r.id} className={`crew-row${liveCmd ? ' commanded' : ''}${open ? ' open' : ''}`}>
               <div className="crew-who">
-                <span className="crew-name" title={tel ? `${r.name}: ${Math.round(tel.speedKph)} km/h, ${Math.round(tel.powerWatts)} W` : r.name}><RiderLink id={r.id} name={r.name} seasonId={seasonId} /></span>
-                <span className={`crew-status ${mode}`}>
-                  <span className="crew-where">{whereIs(groups, tc.riderGroups[r.id])}</span>
-                  {' · '}
-                  {ACTION_WORDS[mode] ?? mode}
-                  {why && <> · {why}</>}
-                </span>
+                <span className="crew-name"><RiderLink id={r.id} name={r.name} seasonId={seasonId} /></span>
+                <span className="crew-where">{whereIs(groups, tc.riderGroups[r.id])}</span>
+                <span className={`crew-status ${mode}`}>{ACTION_WORDS[mode] ?? mode}{why && <> · {why}</>}</span>
               </div>
-              <Bars tel={tel} />
-              <span className={`crew-num ${level(reserve, 50, 20)}`} title="Reserve">{reserve}%</span>
+              <div className={`crew-power${effort > 100 ? ' over' : ''}`} title={tel ? `Effort ${Math.round(effort)}% of what he can sustain; ${Math.round(tel.speedKph)} km/h` : ''}>
+                {watts !== null ? <>{watts} W<small>{kg ? `${(watts / kg).toFixed(1)} W/kg` : ''}</small></> : '—'}
+              </div>
+              <div className="crew-meters">
+                <Meter pct={reserve} cls={level(reserve, 50, 20)} title={`Reserve ${Math.round(reserve)}%: the punch for attacks and surges; refills when riding easier`} />
+                <Meter pct={fuel} cls={level(fuel, 50, 30)} thin title={`Fuel ${Math.round(fuel)}%: carbohydrate left. Hard riding burns it fast, eating tops it up; under 30% his threshold starts to fall`} />
+              </div>
               <span
                 className={`crew-legs ${legs === undefined ? '' : legs < 86 ? 'empty' : legs < 89 ? 'low' : ''}`}
                 title={legs === undefined ? '' : `Fade: his threshold is ${Math.round(100 - legs)}% below this morning's${tc.riderById[r.id]?.ftp ? ` (${Math.round((tc.riderById[r.id].ftp * legs) / 100)} W of ${tc.riderById[r.id].ftp} W)` : ''}. It grows with the work he does and never comes back in a race.`}
               >
                 {legs === undefined ? '' : `−${Math.max(0, Math.round(100 - legs))}%`}
               </span>
-              <button
-                className={`crew-attack ${tc.buttonClass(r.id, 'attack', 'oneshot')}`}
-                onClick={() => tc.sendCommand(r.id, 'attack', 'oneshot')}
-                disabled={locked}
-                title={`${r.name}: attack now`}
-                aria-label={`${r.name}: attack now`}
-              >⚡</button>
-              <button type="button" className="crew-more" onClick={() => setManual(open ? null : r.id)} aria-expanded={open} title="Manual control">⋯</button>
+              <div className="crew-order">
+                <select
+                  value={mode}
+                  onChange={(e) => tc.handleTacticChange(r.id, e.target.value)}
+                  disabled={locked}
+                  aria-label={`${r.name}: order`}
+                >
+                  {MODES.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
+                </select>
+                <button
+                  className={`crew-attack ${tc.buttonClass(r.id, 'attack', 'oneshot')}`}
+                  onClick={() => tc.sendCommand(r.id, 'attack', 'oneshot')}
+                  disabled={locked}
+                  title={`${r.name}: attack now`}
+                >Attack</button>
+                <button type="button" className="crew-more" onClick={() => setManual(open ? null : r.id)} aria-expanded={open} aria-label={`${r.name}: effort and sprint`} title="Effort and sprint">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="2" /><circle cx="12" cy="12" r="2" /><circle cx="19" cy="12" r="2" /></svg>
+                </button>
+              </div>
               {open && (
                 <div className="crew-manual">
-                  <div className="modes" role="radiogroup" aria-label={`${r.name} mode`}>
-                    {MODES.map((m) => (
-                      <button
-                        key={m.value}
-                        role="radio"
-                        aria-checked={mode === m.value}
-                        className={mode === m.value ? 'on' : ''}
-                        onClick={() => tc.handleTacticChange(r.id, m.value)}
-                        disabled={locked}
-                        title={m.title}
-                      >{m.label}</button>
-                    ))}
-                  </div>
                   <label className="effort" title="Scales how hard he rides whatever he's doing (100% = normal)">
                     <span>Effort</span>
                     <input
@@ -239,7 +216,7 @@ export function TeamDock({ tc, groups }: { tc: TeamControl; kmRemaining: number;
           )
         })}
       </ul>
-      <p className="crew-key">Bars: reserve (thick), fuel, effort (thin, line at 100%). −%: how far his threshold has faded today.</p>
+      <p className="crew-key">Power: now, and per kg. Reserve: the anaerobic reserve left (thin bar: fuel). Legs: how far his threshold has faded today.</p>
     </section>
   )
 }

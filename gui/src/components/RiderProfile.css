@@ -342,8 +342,7 @@
   color: inherit;
   cursor: pointer;
   text-align: left;
-  text-decoration: underline;
-  text-decoration-color: rgba(255, 255, 255, 0.18);
+  text-decoration: none;
   text-underline-offset: 3px;
 }
 
@@ -352,7 +351,7 @@
 }
 
 .rider-link:hover {
-  text-decoration-color: currentColor;
+  text-decoration: underline;
 }
 
 @media (max-width: 640px) {

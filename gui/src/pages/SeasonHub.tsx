@@ -393,46 +393,52 @@ function NextRace({ hub, reload, onRaced }: { hub: main.SeasonHub; reload: () =>
         <div className="empty-state">Loading the squad…</div>
       ) : (
         <>
-          <p className="squad-count">
-            Squad {picked.length}/{squad.size}
-            <span className="muted"> · riders sorted by how well the race suits them; fresh = threshold kept with recent racing, form = seasonal form on the day</span>
-          </p>
-          <table className="squad">
-            <thead>
-              <tr>
-                <th />
-                <th>Rider</th>
-                <th>Type</th>
-                <th title="How well the race suits him (standard deviations above the field)">Suits</th>
-                <th title="Seasonal form on the day (100% = at his peak)">Form</th>
-                <th title="Threshold kept with his recent racing load (100% = fresh)">Fresh</th>
-                <th>Morale</th>
-                <th>Days</th>
-                <th>Next in his programme</th>
-              </tr>
-            </thead>
-            <tbody>
-              {squad.riders.map((r) => {
-                const on = picked.includes(r.id)
-                return (
-                  <tr key={r.id} className={`${on ? 'picked' : ''}${r.available ? '' : ' unavailable'}`} onClick={() => r.available && toggle(r.id)}>
-                    <td><input type="checkbox" checked={on} disabled={!r.available || (!on && picked.length >= squad.size)} readOnly /></td>
-                    <td className="rider-cell" title={ratingsTitle(r)}>
-                      <RiderLink id={r.id} name={r.name} seasonId={sid} bold /> <span className="muted">{r.age}</span>
-                      {!r.available && <span className="why"> {r.why}</span>}
-                    </td>
-                    <td className="muted">{r.specialty}</td>
-                    <td><FitBar fit={r.fit} /></td>
-                    <td className={r.formPct < 98 ? 'warn' : ''}>{r.formPct.toFixed(0)}%</td>
-                    <td className={r.loadPct < 98 ? 'warn' : ''}>{r.loadPct.toFixed(0)}%</td>
-                    <td className={r.morale < 45 ? 'warn' : ''}>{Math.round(r.morale)}</td>
-                    <td>{r.raceDays}</td>
-                    <td className="muted programme">{r.programme.filter((p) => p !== next.name).slice(0, 2).join(', ')}</td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+          <div className="squad-count">
+            <b>Squad {picked.length} of {squad.size}</b>
+            <span className="muted">Riders sorted by how well the race suits them. Click a rider to pick or drop him.</span>
+          </div>
+          <div className="squad-wrap">
+            <table className="squad">
+              <thead>
+                <tr>
+                  <th aria-label="Picked" />
+                  <th>Rider</th>
+                  <th title="How well the race suits him, against the field">Suits the race</th>
+                  <th className="num" title="Seasonal form on the day (100% = at his peak)">Form</th>
+                  <th className="num" title="Threshold kept with his recent racing load (100% = fresh)">Fresh</th>
+                  <th className="num">Morale</th>
+                  <th className="num">Days</th>
+                  <th>Next in his programme</th>
+                </tr>
+              </thead>
+              <tbody>
+                {squad.riders.map((r) => {
+                  const on = picked.includes(r.id)
+                  const full = !on && picked.length >= squad.size
+                  return (
+                    <tr
+                      key={r.id}
+                      className={`${on ? 'picked' : ''}${r.available ? '' : ' unavailable'}${full && r.available ? ' full' : ''}`}
+                      onClick={() => r.available && toggle(r.id)}
+                      aria-selected={on}
+                    >
+                      <td><span className={`pick-mark${on ? ' on' : ''}`} aria-hidden="true">{on && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round"><path d="m5 12 5 5 9-10" /></svg>}</span></td>
+                      <td className="rider-cell" title={ratingsTitle(r)}>
+                        <RiderLink id={r.id} name={r.name} seasonId={sid} bold />
+                        <small className="sub">{r.age} · {r.specialty}{!r.available && <span className="why"> · {r.why}</span>}</small>
+                      </td>
+                      <td><FitBar fit={r.fit} /></td>
+                      <td className={`num${r.formPct < 98 ? ' warn' : ''}`}>{r.formPct.toFixed(0)}%</td>
+                      <td className={`num${r.loadPct < 98 ? ' warn' : ''}`}>{r.loadPct.toFixed(0)}%</td>
+                      <td className={`num${r.morale < 45 ? ' warn' : ''}`}>{Math.round(r.morale)}</td>
+                      <td className="num">{r.raceDays}</td>
+                      <td className="programme-cell">{r.programme.filter((p) => p !== next.name).slice(0, 3).join(', ') || <span className="muted">—</span>}</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
         </>
       )}
     </section>
@@ -467,9 +473,11 @@ function RaceSummary({ hub, eventId, onClose }: { hub: main.SeasonHub; eventId: 
 
 function FitBar({ fit }: { fit: number }) {
   const w = Math.max(0, Math.min(100, ((fit + 1) / 4) * 100))
+  const word = fit >= 2 ? 'ideal' : fit >= 1 ? 'good' : fit >= 0 ? 'fair' : 'poor'
   return (
-    <span className="fitbar" title={`${fit.toFixed(1)} σ above the field`}>
-      <i style={{ width: `${w}%` }} className={fit >= 2 ? 'top' : fit >= 1 ? 'good' : ''} />
+    <span className="fit" title={`${fit.toFixed(1)} σ above the field`}>
+      <span className="fitbar"><i style={{ width: `${w}%` }} className={fit >= 2 ? 'top' : fit >= 1 ? 'good' : ''} /></span>
+      <span className="fit-word">{word}</span>
     </span>
   )
 }

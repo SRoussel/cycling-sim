@@ -185,9 +185,9 @@ function StageRaceSimulation() {
           onDecisionLevel={tc.setDecisionLevel}
           skipping={tc.skipping}
           extra={
-            <div className="dash-fig" title={`Overall ${formatRaceClock(overallElapsed)}`}>
-              <span className="dash-fig-label">Of {stageRace.stageCount} stages</span>
-              <span className="dash-fig-value">{Math.round(progress)}<small>%</small></span>
+            <div className="dash-fig" title={`Overall ${formatRaceClock(overallElapsed)}, ${Math.round(progress)}% of the race`}>
+              <span className="dash-fig-label">Stage</span>
+              <span className="dash-fig-value">{currentStageNumber ?? '—'}<small>of {stageRace.stageCount}</small></span>
             </div>
           }
         />

@@ -284,37 +284,64 @@ button.link.danger:hover {
 }
 
 .squad-count {
-  font-size: 0.85rem;
-  margin: 6px 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  margin: 14px 0 8px;
+  font-size: 0.875rem;
 }
 
-.squad-count .muted {
-  font-size: 0.75rem;
-}
+.squad-count .muted { font-size: 0.78rem; }
 
-table.squad tr {
-  cursor: pointer;
-}
+.squad-wrap { overflow-x: auto; margin: 0 -18px; }
+
+table.squad { min-width: 760px; }
+
+table.squad tr { cursor: pointer; }
+table.squad tr.full { cursor: default; }
 
 table.squad td,
-table.squad th {
-  padding: 6px 6px;
+table.squad th { padding: 9px 8px; vertical-align: middle; }
+table.squad th:first-child,
+table.squad td:first-child { padding-left: 18px; width: 40px; }
+table.squad th.num,
+table.squad td.num { text-align: right; }
+table.squad td.num { font-family: var(--font-numeric); font-size: 0.8rem; }
+
+table.squad small.sub {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
 }
 
-.rider-cell {
-  white-space: nowrap;
+.pick-mark {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  border: 1.5px solid #4a515b;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-primary-ink);
 }
+
+.pick-mark.on { background: var(--color-primary); border-color: var(--color-primary); }
+
+table.squad tr:hover:not(.unavailable):not(.full) .pick-mark { border-color: var(--color-primary); }
+
+.fit { display: inline-flex; align-items: center; gap: 8px; }
+
+.fit-word { font-size: 0.75rem; color: var(--color-text-muted); }
+
+.rider-cell { white-space: nowrap; }
 
 .next-race {
   overflow-x: auto;
 }
 
 table.squad tr.picked td {
-  background: rgba(242, 194, 48, 0.07);
-}
-
-table.squad tr.picked td:first-child {
-  box-shadow: inset 2px 0 0 var(--color-primary);
+  background: rgba(242, 194, 48, 0.05);
 }
 
 table.squad tr.unavailable {
@@ -327,20 +354,14 @@ table.squad tr.unavailable {
   font-size: 0.75rem;
 }
 
-.programme {
-  font-size: 0.75rem;
-  max-width: 13rem;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
+
 
 .fitbar {
   display: inline-block;
   width: 64px;
   height: 6px;
   border-radius: 3px;
-  background: var(--color-surface-2);
+  background: #22272e;
   overflow: hidden;
   vertical-align: middle;
 }
@@ -348,11 +369,11 @@ table.squad tr.unavailable {
 .fitbar i {
   display: block;
   height: 100%;
-  background: #7c8794;
+  background: #6d7580;
 }
 
 .fitbar i.good {
-  background: #c3cad4;
+  background: #c9ced6;
 }
 
 .fitbar i.top {

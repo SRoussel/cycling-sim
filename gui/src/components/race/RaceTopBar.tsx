@@ -64,8 +64,8 @@ export function RaceTopBar({
       <div className="dash-top-row">
         <div className="dash-title">
           <h1>{title}</h1>
-          {goal ? <span className="dash-goal" title="Today's goal for your team">Goal: {goal}</span>
-            : subtitle ? <span className="dash-subtitle">{subtitle}</span> : null}
+          {subtitle && <span className="dash-subtitle">{subtitle}</span>}
+          {goal && <span className="dash-goal" title="Today's goal for your team">Goal: {goal}</span>}
         <div className="dash-controls">
           {decisionLevel && onDecisionLevel && (
             <label className="dash-stopfor" title="When the race stops to ask you: at every decision, only the moments that decide the race, or never">

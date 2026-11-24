@@ -7,7 +7,7 @@ import { RaceGroup, formatRaceClock, toDisplayGroups } from '../sim/shared'
 import { LiveProgressPayload, RaceGoal, useTeamControl } from '../sim/useTeamControl'
 import { RaceDashboard } from '../components/race/RaceDashboard'
 import { RaceTopBar } from '../components/race/RaceTopBar'
-import { groupMarks } from '../components/race/RoadView'
+import { GapGraphic, groupMarks } from '../components/race/RoadView'
 import { StagePlanCard } from '../components/race/StagePlanCard'
 import './Simulation.css'
 import './RaceSetup.css'
@@ -181,6 +181,7 @@ function StageRaceSimulation() {
           decisionLevel={interactiveMode ? tc.decisionLevel : undefined}
           marks={groupMarks(groups, tc)}
           groups={groups}
+          road={groups.length > 0 ? <GapGraphic groups={groups} tc={interactiveMode ? tc : undefined} large /> : undefined}
           onDecisionLevel={tc.setDecisionLevel}
           skipping={tc.skipping}
           extra={

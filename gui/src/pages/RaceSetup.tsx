@@ -6,6 +6,7 @@ import { PlanForm } from '../components/race/PlanForm'
 import { ProfileView } from '../components/race/ProfileView'
 import { RouteProfile } from '../sim/shared'
 import { teamColor } from '../sim/teamColors'
+import { RiderLink } from '../components/RiderProfile'
 import './RaceSetup.css'
 
 const wkg = (r: main.RiderInfo) => (r.weight > 0 ? r.ftp / r.weight : 0)
@@ -197,7 +198,7 @@ function RaceSetup() {
                   <td>
                     <span className="fav-who">
                       <i style={{ background: teamColor(r.team) }} />
-                      <span>{r.name}<small>{r.team}</small></span>
+                      <span><RiderLink id={r.id} name={r.name} /><small>{r.team}</small></span>
                     </span>
                   </td>
                   <td className="num">{wkg(r).toFixed(2)}</td>

@@ -29,14 +29,6 @@ type App struct {
 	seasonMu sync.Mutex // one season change at a time (racing, signing, year end)
 }
 
-// SimParams holds simulation parameters
-type SimParams struct {
-	HandlingEffect  float64 `json:"handlingEffect"`
-	DraftFactor     float64 `json:"draftFactor"`
-	FatigueRate     float64 `json:"fatigueRate"`
-	AttackThreshold float64 `json:"attackThreshold"`
-}
-
 // NewApp creates a new App instance
 func NewApp() *App {
 	dbPath := "cycling_sim.db"
@@ -706,21 +698,6 @@ func (a *App) RunValidation() []ValidationResult {
 		}
 	}
 	return output
-}
-
-// GetSimulationParams returns current simulation parameters
-func (a *App) GetSimulationParams() SimParams {
-	return SimParams{
-		HandlingEffect:  0.018,
-		DraftFactor:     0.25,
-		FatigueRate:     1.0,
-		AttackThreshold: 0.7,
-	}
-}
-
-// SaveSimulationParams saves simulation parameters
-func (a *App) SaveSimulationParams(params SimParams) error {
-	return nil
 }
 
 // Helper functions

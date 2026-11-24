@@ -208,27 +208,8 @@ tr.podium-row td:first-child {
 .results .card.standings-card { padding: 14px 0 0; overflow: hidden; }
 .standings-card .seg-tabs { margin: 0 16px 10px; }
 
-.seg-tabs {
-  display: inline-flex;
-  flex-wrap: wrap;
-  background: var(--color-surface-sunk);
-  border: 1px solid #22272e;
-  border-radius: 9px;
-  padding: 3px;
-  gap: 2px;
-}
 
-.seg-tabs button {
-  min-height: 36px;
-  padding: 0 14px;
-  border: 0;
-  border-radius: 7px;
-  background: transparent;
-  color: var(--color-text-muted);
-  font-weight: 600;
-}
 
-.seg-tabs button.on { background: #2a2f37; color: var(--color-text); }
 
 .standings-list { list-style: none; }
 

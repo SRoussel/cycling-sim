@@ -8,7 +8,7 @@ import { LiveProgressPayload, RaceGoal, useTeamControl } from '../sim/useTeamCon
 import { Debrief } from '../components/race/Debrief'
 import { RaceDashboard } from '../components/race/RaceDashboard'
 import { RaceTopBar } from '../components/race/RaceTopBar'
-import { groupMarks } from '../components/race/RoadView'
+import { GapGraphic, groupMarks } from '../components/race/RoadView'
 import './Simulation.css'
 
 interface SimulationProgressEvent extends LiveProgressPayload {
@@ -189,6 +189,7 @@ function Simulation() {
           decisionLevel={interactiveMode ? tc.decisionLevel : undefined}
           marks={groupMarks(groups, tc)}
           groups={groups}
+          road={groups.length > 0 ? <GapGraphic groups={groups} tc={interactiveMode ? tc : undefined} large /> : undefined}
           onDecisionLevel={tc.setDecisionLevel}
           goal={tc.goal?.text}
           skipping={tc.skipping}

@@ -3,10 +3,11 @@ import * as App from '../../wailsjs/go/main/App'
 import { main } from '../../wailsjs/go/models'
 import './Validation.css'
 
-interface ValidationTest {
-  id: string
+type Status = 'passed' | 'failed' | 'skipped'
+
+interface Check {
   name: string
-  status: 'pending' | 'running' | 'passed' | 'warning' | 'failed' | 'skipped'
+  status: Status
   correlation?: number
   top10Accuracy?: number
   timeGapMAE?: number
@@ -15,210 +16,116 @@ interface ValidationTest {
   details?: string
 }
 
-// Derive release-gate status from a list of results.
-function deriveGateStatus(tests: ValidationTest[]): 'ready' | 'not-ready' | 'limited' | 'idle' {
-  if (tests.length === 0) return 'idle'
-  const synthetic = tests.filter((t) => !t.isRealRace)
-  const allSyntheticPass = synthetic.length > 0 && synthetic.every((t) => t.status === 'passed')
-  if (!allSyntheticPass) return 'not-ready'
-  const realTests = tests.filter((t) => t.isRealRace && t.status !== 'skipped')
-  if (realTests.length === 0) return 'limited' // no FC data fetched
-  const anyRealFail = realTests.some((t) => t.status === 'failed')
-  return anyRealFail ? 'limited' : 'ready'
-}
+const STATUS_LABEL: Record<Status, string> = { passed: 'Pass', failed: 'Fail', skipped: 'No data' }
 
-function formatGapMAE(secs: number | undefined): string {
-  if (secs === undefined || secs === 0) return '—'
-  return `${Math.round(secs)}s`
-}
-
+/**
+ * Quick model checks from inside the app: synthetic benchmarks (physics and
+ * race-shape sanity) and the older real-race cases. The check that decides
+ * model changes is the CLI's 2026 run (calibration and race history).
+ */
 function Validation() {
-  const [tests, setTests] = useState<ValidationTest[]>([])
+  const [checks, setChecks] = useState<Check[]>([])
   const [notice, setNotice] = useState<string | null>(null)
-  const [isRunning, setIsRunning] = useState(false)
-  const [activeTab, setActiveTab] = useState<'synthetic' | 'real'>('synthetic')
+  const [running, setRunning] = useState(false)
+  const [tab, setTab] = useState<'synthetic' | 'real'>('synthetic')
 
-  const runTests = async () => {
-    setIsRunning(true)
+  const run = async () => {
+    setRunning(true)
     setNotice(null)
     try {
       const results = await App.RunValidation()
-      if (results.length === 0) {
-        setTests([])
-        setNotice('No validation results returned.')
-      } else {
-        setTests(results.map((r, i) => mapResult(r, i)))
-      }
+      setChecks((results || []).map(toCheck))
+      if (!results || results.length === 0) setNotice('No results came back.')
     } catch (err) {
       console.error('Failed to run validation:', err)
-      setTests([])
-      setNotice('Validation failed to run. Check the backend logs.')
+      setChecks([])
+      setNotice('The checks failed to run. See the backend log.')
     }
-    setIsRunning(false)
+    setRunning(false)
   }
 
-  const mapResult = (r: main.ValidationResult, index: number): ValidationTest => {
-    let status: ValidationTest['status']
-    if (r.isRealRace && r.matchedRiders < 3 && !r.passed) {
-      status = 'skipped'
-    } else {
-      status = r.passed ? 'passed' : 'failed'
-    }
-    return {
-      id: `test-${index + 1}`,
-      name: r.testName,
-      status,
-      correlation: r.correlation,
-      top10Accuracy: r.top10Accuracy,
-      timeGapMAE: r.timeGapMAE,
-      matchedRiders: r.matchedRiders,
-      isRealRace: r.isRealRace,
-      details: r.details,
-    }
-  }
-
-  const getStatusIcon = (status: ValidationTest['status']) => {
-    switch (status) {
-      case 'passed': return '✅'
-      case 'warning': return '⚠️'
-      case 'failed': return '❌'
-      case 'running': return '🔄'
-      case 'skipped': return '—'
-      default: return '○'
-    }
-  }
-
-  const gateStatus = deriveGateStatus(tests)
-  const syntheticTests = tests.filter((t) => !t.isRealRace)
-  const realTests = tests.filter((t) => t.isRealRace)
-  const visibleTests = activeTab === 'synthetic' ? syntheticTests : realTests
+  const synthetic = checks.filter((c) => !c.isRealRace)
+  const real = checks.filter((c) => c.isRealRace)
+  const shown = tab === 'synthetic' ? synthetic : real
+  const count = (list: Check[], s: Status) => list.filter((c) => c.status === s).length
 
   return (
     <div className="validation page-enter">
       <header className="validation-header">
-        <h1>Validation Dashboard</h1>
-        <p>Validate simulation accuracy against synthetic benchmarks and real-race reference results</p>
-      </header>
-
-      {/* ── Release Gate ───────────────────────────────────────── */}
-      {tests.length > 0 && (
-        <div className={`release-gate card gate-${gateStatus}`}>
-          <div className="gate-indicator">
-            {gateStatus === 'ready' && <>
-              <span className="gate-icon">✓</span>
-              <span className="gate-title">Release Ready</span>
-              <span className="gate-badge">v1.0.0-rc1</span>
-            </>}
-            {gateStatus === 'not-ready' && <>
-              <span className="gate-icon">✗</span>
-              <span className="gate-title">Not Release Ready</span>
-              <span className="gate-sub">Synthetic test failures must be resolved first</span>
-            </>}
-            {gateStatus === 'limited' && <>
-              <span className="gate-icon">⚠</span>
-              <span className="gate-title">Synthetic Pass — Limited Calibration</span>
-              <span className="gate-sub">
-                Resolve real-race test issues for full confidence
-              </span>
-            </>}
-          </div>
-          <div className="gate-stats">
-            <span>{syntheticTests.filter((t) => t.status === 'passed').length}/{syntheticTests.length} synthetic pass</span>
-            <span>{realTests.filter((t) => t.status === 'passed').length}/{realTests.filter((t) => t.status !== 'skipped').length} real-race pass</span>
-          </div>
+        <div>
+          <h1>Quick checks</h1>
+          <p>
+            Synthetic benchmarks and older real-race cases, run from here in a minute or two. The check that decides model
+            changes is the 2026 run from the command line: <code>cycling-sim validate --sets 2 --season 2026</code> (calibration
+            and each race's history).
+          </p>
         </div>
-      )}
-
-      {/* ── Controls ────────────────────────────────────────────── */}
-      <div className="validation-controls card">
-        <button className="primary" onClick={runTests} disabled={isRunning}>
-          {isRunning ? 'Running Tests...' : 'Run All Tests'}
-        </button>
-        <span className="controls-hint">
-          Synthetic: ~5s &nbsp;·&nbsp; Real-race cases: ~30s each
-        </span>
-      </div>
+        <button className="primary" onClick={run} disabled={running}>{running ? 'Running…' : 'Run the checks'}</button>
+      </header>
 
       {notice && <div className="empty-state">{notice}</div>}
 
-      {/* ── Test Results ─────────────────────────────────────────── */}
-      <section className="card tests-list">
-        <div className="tests-header">
-          <h2>Test Results</h2>
-          {tests.length > 0 && (
-            <div className="comp-tabs" role="tablist">
-              <button
-                type="button" role="tab"
-                className={activeTab === 'synthetic' ? 'tab active' : 'tab'}
-                onClick={() => setActiveTab('synthetic')}
-              >
-                Synthetic ({syntheticTests.length})
-              </button>
-              <button
-                type="button" role="tab"
-                className={activeTab === 'real' ? 'tab active' : 'tab'}
-                onClick={() => setActiveTab('real')}
-              >
-                Real Race ({realTests.length})
-              </button>
-            </div>
-          )}
+      {checks.length > 0 && (
+        <div className="val-figures">
+          <div><span>Synthetic</span><b>{count(synthetic, 'passed')}<small>/{synthetic.length} pass</small></b></div>
+          <div><span>Real races</span><b>{count(real, 'passed')}<small>/{real.length - count(real, 'skipped')} pass</small></b></div>
+          <div><span>Failing</span><b className={count(checks, 'failed') > 0 ? 'warn' : ''}>{count(checks, 'failed')}</b></div>
         </div>
+      )}
 
-        {tests.length === 0 ? (
-          <div className="empty-state">No validation results yet. Run tests to populate this table.</div>
-        ) : visibleTests.length === 0 ? (
-          <div className="empty-state">No {activeTab === 'synthetic' ? 'synthetic' : 'real-race'} tests available.</div>
+      <section className="card val-list">
+        <div className="val-head">
+          <div className="seg-tabs" role="tablist" aria-label="Kind of check">
+            <button type="button" role="tab" aria-selected={tab === 'synthetic'} className={tab === 'synthetic' ? 'on' : ''} onClick={() => setTab('synthetic')}>Synthetic ({synthetic.length})</button>
+            <button type="button" role="tab" aria-selected={tab === 'real'} className={tab === 'real' ? 'on' : ''} onClick={() => setTab('real')}>Real races ({real.length})</button>
+          </div>
+        </div>
+        {checks.length === 0 ? (
+          <div className="empty-state">{running ? 'Running the checks…' : 'Nothing run yet.'}</div>
         ) : (
           <table>
             <thead>
               <tr>
-                <th>Status</th>
-                <th>Test Name</th>
-                <th>Corr</th>
-                <th>Top-10 %</th>
-                {activeTab === 'real' && <th>Gap MAE</th>}
-                {activeTab === 'real' && <th>Matched</th>}
+                <th>Result</th>
+                <th>Check</th>
+                <th className="num" title="Rank correlation with the reference">Corr.</th>
+                <th className="num" title="Share of the reference top 10 found in the simulated top 10">Top 10</th>
+                {tab === 'real' && <th className="num" title="Mean gap error (a diagnostic)">Gap err.</th>}
+                {tab === 'real' && <th className="num">Riders</th>}
                 <th>Details</th>
               </tr>
             </thead>
             <tbody>
-              {visibleTests.map((test) => (
-                <tr key={test.id} className={`status-${test.status}`}>
-                  <td className="status-cell">{getStatusIcon(test.status)}</td>
-                  <td>{test.name}</td>
-                  <td className="num-cell">{test.correlation !== undefined && test.correlation !== 0 ? test.correlation.toFixed(2) : '—'}</td>
-                  <td className="num-cell">{test.top10Accuracy ? `${test.top10Accuracy.toFixed(0)}%` : '—'}</td>
-                  {activeTab === 'real' && <td className="num-cell">{formatGapMAE(test.timeGapMAE)}</td>}
-                  {activeTab === 'real' && <td className="num-cell">{test.matchedRiders || '—'}</td>}
-                  <td className="details-cell">{test.details ?? '—'}</td>
+              {shown.map((c, i) => (
+                <tr key={i}>
+                  <td><span className={`val-status ${c.status}`}>{STATUS_LABEL[c.status]}</span></td>
+                  <td className="val-name">{c.name}</td>
+                  <td className="num">{c.correlation ? c.correlation.toFixed(2) : '—'}</td>
+                  <td className="num">{c.top10Accuracy ? `${c.top10Accuracy.toFixed(0)}%` : '—'}</td>
+                  {tab === 'real' && <td className="num">{c.timeGapMAE ? `${Math.round(c.timeGapMAE)} s` : '—'}</td>}
+                  {tab === 'real' && <td className="num">{c.matchedRiders || '—'}</td>}
+                  <td className="val-details">{c.details || '—'}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         )}
       </section>
-
-      {/* ── Summary Metrics ─────────────────────────────────────── */}
-      <section className="card metrics-summary">
-        <h2>Summary Metrics</h2>
-        <div className="metrics-grid">
-          <div className="metric">
-            <span className="metric-value">{tests.filter((t) => t.status === 'passed').length}</span>
-            <span className="metric-label">Passed</span>
-          </div>
-          <div className="metric warning">
-            <span className="metric-value">{tests.filter((t) => t.status === 'warning').length}</span>
-            <span className="metric-label">Warnings</span>
-          </div>
-          <div className="metric danger">
-            <span className="metric-value">{tests.filter((t) => t.status === 'failed').length}</span>
-            <span className="metric-label">Failed</span>
-          </div>
-        </div>
-      </section>
     </div>
   )
+}
+
+function toCheck(r: main.ValidationResult): Check {
+  return {
+    name: r.testName,
+    status: r.isRealRace && r.matchedRiders < 3 && !r.passed ? 'skipped' : r.passed ? 'passed' : 'failed',
+    correlation: r.correlation,
+    top10Accuracy: r.top10Accuracy,
+    timeGapMAE: r.timeGapMAE,
+    matchedRiders: r.matchedRiders,
+    isRealRace: r.isRealRace,
+    details: r.details,
+  }
 }
 
 export default Validation

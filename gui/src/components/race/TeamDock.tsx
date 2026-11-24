@@ -35,6 +35,15 @@ function whereIs(groups: RaceGroup[], name: string | undefined): string {
   return g && (g.gapS ?? 0) > 0 ? `${name} ${g.gap}` : name
 }
 
+/** ", on the front" / ", 14th in line" (nothing for a rider alone). */
+function linePlace(pos: number | undefined, g: RaceGroup | undefined): string {
+  const size = g?.size ?? g?.riders.length ?? 0
+  if (!pos || size <= 1) return ''
+  if (pos === 1) return ', on the front'
+  const s = pos % 100 >= 11 && pos % 100 <= 13 ? 'th' : ({ 1: 'st', 2: 'nd', 3: 'rd' } as Record<number, string>)[pos % 10] ?? 'th'
+  return `, ${pos}${s} in line`
+}
+
 const level = (pct: number, low: number, empty: number) => (pct < empty ? 'empty' : pct < low ? 'low' : 'ok')
 
 /** A labelled meter: a bar and its number (reserve thick, fuel thin). */
@@ -148,7 +157,7 @@ export function TeamDock({ tc, groups }: { tc: TeamControl; kmRemaining: number;
             <li key={r.id} className={`crew-row${liveCmd ? ' commanded' : ''}${open ? ' open' : ''}`}>
               <div className="crew-who">
                 <span className="crew-name"><RiderLink id={r.id} name={r.name} seasonId={seasonId} /></span>
-                <span className="crew-where">{whereIs(groups, tc.riderGroups[r.id])}</span>
+                <span className="crew-where">{whereIs(groups, tc.riderGroups[r.id])}{linePlace(tel?.groupPos, groups.find((g) => g.name === tc.riderGroups[r.id]))}</span>
                 <span className={`crew-status ${mode}`}>{ACTION_WORDS[mode] ?? mode}{why && <> · {why}</>}</span>
               </div>
               <div className={`crew-power${effort > 100 ? ' over' : ''}`} title={tel ? `Effort ${Math.round(effort)}% of what he can sustain; ${Math.round(tel.speedKph)} km/h` : ''}>

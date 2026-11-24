@@ -1,6 +1,7 @@
 /* Rider panel: power curve and ratings against the field (dataviz palette:
-   blue = this rider, aqua = comparison, validated on the dark surface;
-   the field is neutral gray; orange stays for the player's things). */
+   blue = this rider, aqua = comparison, validated on the dark surface, used
+   for the curve lines only; the field and the rating bars are neutral gray;
+   yellow stays for the player's things). */
 .rp-overlay {
   --rp-rider: #3987e5;
   --rp-compare: #199e70;
@@ -102,7 +103,7 @@
 
 .rp-toggle button.on {
   color: var(--color-text);
-  background: #232b36;
+  background: #2a2f37;
 }
 
 .rp-section {
@@ -230,8 +231,8 @@
   top: 8px;
   transform: translateX(-50%);
   pointer-events: none;
-  background: #0b0e12;
-  border: 1px solid var(--color-line);
+  background: var(--color-surface-sunk);
+  border: 1px solid var(--color-border);
   border-radius: 6px;
   padding: 0.4rem 0.6rem;
   font-size: 0.78rem;
@@ -310,7 +311,7 @@
 .rp-fill {
   height: 100%;
   border-radius: 4px;
-  background: var(--rp-rider);
+  background: #c9ced6;
 }
 
 .rp-mark {

@@ -131,6 +131,30 @@ input[type='checkbox'] {
   accent-color: var(--color-primary);
 }
 
+/* Segmented tabs: a sunk track, the chosen option raised. */
+.seg-tabs {
+  display: inline-flex;
+  flex-wrap: wrap;
+  background: var(--color-surface-sunk);
+  border: 1px solid #22272e;
+  border-radius: 9px;
+  padding: 3px;
+  gap: 2px;
+}
+
+.seg-tabs button {
+  min-height: 36px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-weight: 600;
+}
+
+.seg-tabs button:hover { color: var(--color-text); }
+.seg-tabs button.on { background: #2a2f37; color: var(--color-text); }
+
 /* ─── Panels ───────────────────────────────────────── */
 
 .card {

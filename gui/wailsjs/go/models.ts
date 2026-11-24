@@ -699,24 +699,6 @@ export namespace main {
 	        this.ask = source["ask"];
 	    }
 	}
-	export class SimParams {
-	    handlingEffect: number;
-	    draftFactor: number;
-	    fatigueRate: number;
-	    attackThreshold: number;
-	
-	    static createFrom(source: any = {}) {
-	        return new SimParams(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.handlingEffect = source["handlingEffect"];
-	        this.draftFactor = source["draftFactor"];
-	        this.fatigueRate = source["fatigueRate"];
-	        this.attackThreshold = source["attackThreshold"];
-	    }
-	}
 	
 	export class SquadRider {
 	    id: number;

@@ -105,8 +105,8 @@ export function groupMarks(groups: RaceGroup[], tc: TeamControl): GroupMark[] {
  * The TV gap graphic: the leaders on the right, every group placed by its
  * time gap (scale fits the groups shown), sized by riders; ours ringed.
  */
-function GapGraphic({ groups, tc, onPick }: { groups: RaceGroup[]; tc?: TeamControl; onPick?: (name: string) => void }) {
-  const shown = groups.slice(0, 8)
+export function GapGraphic({ groups, tc, onPick, large = false }: { groups: RaceGroup[]; tc?: TeamControl; onPick?: (name: string) => void; large?: boolean }) {
+  const shown = groups.slice(0, large ? 12 : 8)
   const maxGap = Math.max(30, ...shown.map((g) => g.gapS ?? 0))
   const mineIn = new Set(tc ? tc.teamRiders.map((r) => tc.riderGroups[r.id]) : [])
   const ticks = [0, 0.25, 0.5, 0.75, 1].map((f) => f * maxGap)
@@ -115,13 +115,13 @@ function GapGraphic({ groups, tc, onPick }: { groups: RaceGroup[]; tc?: TeamCont
   let lastPos = -Infinity
   shown.forEach((g, i) => {
     const pos = ((g.gapS ?? 0) / maxGap) * 94
-    if (i < 5 && pos - lastPos >= 9) {
+    if ((large || i < 5) && pos - lastPos >= (large ? 7 : 9)) {
       labelled.add(i)
       lastPos = pos
     }
   })
   return (
-    <div className="gap-graphic" aria-label="Gaps between groups">
+    <div className={`gap-graphic${large ? ' large' : ''}`} aria-label="Gaps between groups">
       <div className="gap-axis" />
       {ticks.map((t, i) => (
         <span key={i} className="gap-tick" style={{ right: `${(t / maxGap) * 94 + 3}%` }}>
@@ -130,7 +130,7 @@ function GapGraphic({ groups, tc, onPick }: { groups: RaceGroup[]; tc?: TeamCont
       ))}
       {shown.map((g, i) => {
         const size = g.size ?? g.riders.length
-        const d = Math.max(10, Math.min(26, 8 + Math.sqrt(size) * 2.4))
+        const d = large ? Math.max(14, Math.min(40, 10 + Math.sqrt(size) * 3.6)) : Math.max(10, Math.min(26, 8 + Math.sqrt(size) * 2.4))
         return (
           <span
             key={i}
@@ -140,7 +140,7 @@ function GapGraphic({ groups, tc, onPick }: { groups: RaceGroup[]; tc?: TeamCont
             style={{ right: `${(((g.gapS ?? 0) / maxGap) * 94 + 3)}%`, width: d, height: d, background: groupTone(i) }}
           >
             {d >= 16 ? size : ''}
-            {labelled.has(i) && <span className="gap-dot-label">{g.name}</span>}
+            {labelled.has(i) && <span className="gap-dot-label">{g.name}{large && <small>{size} · {(g.gapS ?? 0) > 0 ? g.gap : 'front'}</small>}</span>}
           </span>
         )
       })}

@@ -300,7 +300,7 @@ function PercentileStrip({ profile, compare, unit }: { profile: main.RiderProfil
               const pt = p.curve.find((c) => c.seconds === s)
               const pct = pt ? (unit === 'wkg' ? pt.pctWkg : pt.pctW) : 0
               return (
-                <td key={s} style={{ background: `rgba(57, 135, 229, ${(0.06 + 0.6 * (pct / 100)).toFixed(2)})` }}>
+                <td key={s} style={{ background: `rgba(201, 206, 214, ${(0.04 + 0.3 * (pct / 100)).toFixed(2)})` }}>
                   {pctNum(pct)}
                 </td>
               )

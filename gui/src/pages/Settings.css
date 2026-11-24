@@ -1,104 +1,50 @@
-.settings-header {
-  margin-bottom: 2rem;
-}
-
-.setting-desc {
-  color: var(--color-text-muted);
-  margin-bottom: 1rem;
-}
-
-.setting-actions {
+.settings {
   display: flex;
-  gap: 1rem;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 860px;
+}
+
+.settings-header p {
+  margin-top: 4px;
+  color: var(--color-text-muted);
+}
+
+.settings .card { margin: 0; }
+
+.settings-row {
+  display: flex;
   flex-wrap: wrap;
-}
-
-.param-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1.5rem;
-  margin-top: 1rem;
-}
-
-@media (max-width: 900px) {
-  .param-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-.param-item label {
-  display: block;
-  margin-bottom: 0.5rem;
-  font-weight: 500;
-}
-
-.param-item input {
-  width: 100%;
-  padding: 0.75rem;
-  border: 1px solid var(--color-secondary);
-  border-radius: 4px;
-  background-color: var(--color-bg);
-  color: var(--color-text);
-  font-size: 1rem;
-}
-
-.param-help {
-  display: block;
-  font-size: 0.75rem;
-  color: var(--color-text-muted);
-  margin-top: 0.25rem;
-}
-
-.coming-soon {
-  margin-top: 0.75rem;
-  font-size: 0.85rem;
-  color: var(--color-text-muted);
-}
-
-.api-status {
-  display: flex;
   align-items: center;
-  gap: 0.75rem;
+  justify-content: space-between;
+  gap: 14px 24px;
 }
 
-.status-indicator {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
+.settings-row h2 {
+  margin: 0 0 4px;
+  font-size: 1rem;
+  color: var(--color-text);
+}
+
+.settings-row p {
+  max-width: 560px;
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+}
+
+button.secondary.danger { color: var(--color-danger); }
+
+button.secondary.danger:hover:not(:disabled) {
   background-color: var(--color-danger);
-}
-
-.status-indicator.online {
-  background-color: var(--color-success);
-  box-shadow: 0 0 8px var(--color-success);
+  border-color: var(--color-danger);
+  color: var(--color-primary-ink);
 }
 
 .db-message {
-  padding: 0.75rem 1rem;
-  border-radius: 4px;
-  margin-bottom: 1rem;
   font-size: 0.875rem;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: var(--color-surface-2);
 }
 
-.db-message.success {
-  background-color: rgba(34, 197, 94, 0.15);
-  color: var(--color-success);
-  border: 1px solid var(--color-success);
-}
-
-.db-message.error {
-  background-color: rgba(239, 68, 68, 0.15);
-  color: var(--color-danger);
-  border: 1px solid var(--color-danger);
-}
-
-button.danger {
-  background-color: transparent;
-  border-color: var(--color-danger);
-  color: var(--color-danger);
-}
-
-button.danger:hover:not(:disabled) {
-  background-color: var(--color-danger);
-  color: white;
-}
+.db-message.error { color: var(--color-danger); }

@@ -42,8 +42,6 @@ export function GetSeasonRoster(arg1:number):Promise<Array<main.SeasonRiderInfo>
 
 export function GetSeasonSquad(arg1:number,arg2:number):Promise<main.SquadInfo>;
 
-export function GetSimulationParams():Promise<main.SimParams>;
-
 export function GetStageRaceStages(arg1:number):Promise<Array<main.StageRaceStageInfo>>;
 
 export function GetStageRaces():Promise<Array<main.StageRaceInfo>>;
@@ -77,8 +75,6 @@ export function RunSimulation(arg1:number,arg2:boolean):Promise<main.RaceResults
 export function RunStageRace(arg1:number):Promise<Array<main.RaceResults>>;
 
 export function RunValidation():Promise<Array<main.ValidationResult>>;
-
-export function SaveSimulationParams(arg1:main.SimParams):Promise<void>;
 
 export function SeedDatabase():Promise<string>;
 

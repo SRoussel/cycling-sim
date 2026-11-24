@@ -2,6 +2,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import * as App from '../../wailsjs/go/main/App'
 import { main } from '../../wailsjs/go/models'
+import { RiderLink } from '../components/RiderProfile'
 import { StageStrip, useStageProfiles } from '../components/race/StageStrip'
 import './RaceSetup.css'
 
@@ -131,7 +132,7 @@ function StageRaceSetup() {
             <tbody>
               {contenders.map((r) => (
                 <tr key={r.id} className={interactiveMode && r.team === controlledTeam ? 'mine' : ''}>
-                  <td><span className="fav-who"><span>{r.name}<small>{r.team}</small></span></span></td>
+                  <td><span className="fav-who"><span><RiderLink id={r.id} name={r.name} /><small>{r.team}</small></span></span></td>
                   <td className="num">{wkg(r).toFixed(2)}</td>
                   <td className="num">{r.ftp} W</td>
                 </tr>

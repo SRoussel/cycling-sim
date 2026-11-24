@@ -29,6 +29,7 @@ export function RaceTopBar({
   onDecisionLevel,
   marks,
   groups,
+  road,
 }: {
   title: string
   subtitle?: string
@@ -51,6 +52,9 @@ export function RaceTopBar({
   marks?: GroupMark[]
   /** The groups on the road, for the gap between the first two. */
   groups?: RaceGroup[]
+  /** The road drawn large (groups by gap), shown in place of the profile
+   * when picked. */
+  road?: React.ReactNode
 }) {
   const total = profile?.totalKm || kmTotal
   const avg = elapsed > 120 ? kmCovered / (elapsed / 3600) : null
@@ -97,7 +101,7 @@ export function RaceTopBar({
         </div>
         <NextUp profile={profile} km={kmCovered} />
       </div>
-      <RouteStrip profile={profile} km={kmCovered} kmTotal={total} marks={marks} />
+      <RouteStrip profile={profile} km={kmCovered} kmTotal={total} marks={marks} road={road} />
     </header>
   )
 }
@@ -149,8 +153,9 @@ function NextUp({ profile, km }: { profile: RouteProfile | null; km: number }) {
 const ZOOM_BEHIND_KM = 3
 const ZOOM_SPAN_KM = 28
 
-function RouteStrip({ profile, km, kmTotal, marks }: { profile: RouteProfile | null; km: number; kmTotal: number; marks?: GroupMark[] }) {
+function RouteStrip({ profile, km, kmTotal, marks, road }: { profile: RouteProfile | null; km: number; kmTotal: number; marks?: GroupMark[]; road?: React.ReactNode }) {
   const [open, setOpen] = useState(false)
+  const [view, setView] = useState<'course' | 'road'>('course')
   const climbs = useMemo(() => findClimbs(profile), [profile])
   if (!profile || profile.points.length < 2) {
     const pct = kmTotal > 0 ? clamp01(km / kmTotal) * 100 : 0
@@ -168,16 +173,25 @@ function RouteStrip({ profile, km, kmTotal, marks }: { profile: RouteProfile | n
     <div className="route-strip">
       <div className="route-zoom">
         <div className="route-zoom-head">
-          <span className="route-zoom-title">Road ahead · km to go</span>
-          <span className="route-legend" aria-label="Gradient colours">
+          {road ? (
+            <span className="seg-tabs small" role="tablist" aria-label="View">
+              <button type="button" role="tab" aria-selected={view === 'course'} className={view === 'course' ? 'on' : ''} onClick={() => setView('course')}>Road ahead</button>
+              <button type="button" role="tab" aria-selected={view === 'road'} className={view === 'road' ? 'on' : ''} onClick={() => setView('road')}>On the road</button>
+            </span>
+          ) : (
+            <span className="route-zoom-title">Road ahead · km to go</span>
+          )}
+          {view === 'road' && road ? <span className="route-legend">Groups by time behind the front, sized by riders</span> : <span className="route-legend" aria-label="Gradient colours">
             <span><i className="pv-g1" />under 3%</span>
             <span><i className="pv-g2" />3–6%</span>
             <span><i className="pv-g3" />6–9%</span>
             <span><i className="pv-g4" />9% and up</span>
             {sectors.length > 0 && <span><i className="cob" />{sectors.every((x) => x.surface === 'gravel') ? 'gravel' : 'cobbles'}</span>}
-          </span>
+          </span>}
         </div>
+        {view === 'road' && road ? <div className="route-road">{road}</div> : (
         <ProfileView profile={profile} km={km} fromKm={from} toKm={from + span} tickEvery={span > 15 ? 5 : 2} className="zoom" showSectorNames detail />
+        )}
       </div>
       <button className="route-mini" onClick={() => setOpen(true)} title="Show the whole course">
         <ProfileView profile={profile} km={km} fromKm={0} toKm={total} tickEvery={total > 150 ? 50 : 25} minElevRange={600} labels="km" className="mini" marks={marks} />

@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import * as App from '../../wailsjs/go/main/App'
 import { main } from '../../wailsjs/go/models'
-import { Jersey } from '../components/race/Jersey'
 import './Season.css'
+import { teamColor } from '../sim/teamColors'
 
 /** Season mode's front door: saved seasons and a new one. */
 function Seasons() {
@@ -45,11 +45,31 @@ function Seasons() {
 
   return (
     <div className="seasons page-enter">
-      <header className="home-header">
+      <header className="seasons-header">
         <h1>Season</h1>
-        <p>Run a team through the year: pick squads, race or simulate each race, meet the board's objectives, sign riders and build for the next season.</p>
+        <p>Run a team through the year: pick squads, race or simulate each race, meet the board's objectives, sign riders and build for next season.</p>
       </header>
-      <div className="season-cols">
+      <div className="seasons-cols">
+        <section className="card seasons-saved">
+          <h2>Your seasons</h2>
+          {seasons.length === 0 ? (
+            <div className="empty-state">No seasons yet: start one.</div>
+          ) : (
+            <ul className="season-list">
+              {seasons.map((s) => (
+                <li key={s.id}>
+                  <i className="team-bar" style={{ background: teamColor(s.team) }} />
+                  <div className="sl-main">
+                    <span className="sl-name">{s.name}</span>
+                    <span className="muted">{s.team} · {s.phase === 'offseason' ? `${s.year} transfer window` : `${s.year}, ${s.date}`}</span>
+                  </div>
+                  <button className="link danger" onClick={() => remove(s)} title="Delete this season">Delete</button>
+                  <Link to={`/season/${s.id}`}><button className="primary">Continue</button></Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
         <section className="card">
           <h2>New season</h2>
           <div className="new-season">
@@ -65,30 +85,11 @@ function Seasons() {
               <span>Name (optional)</span>
               <input type="text" value={name} placeholder={`${team} 2026`} onChange={(e) => setName(e.target.value)} />
             </label>
-            <button className="primary" onClick={create} disabled={!team || busy}>
-              {busy ? 'Setting up the season…' : 'Start season'}
+            <button className="secondary" onClick={create} disabled={!team || busy}>
+              {busy ? 'Setting up the season…' : 'Start a new season'}
             </button>
           </div>
           {error && <p className="season-error">{error}</p>}
-        </section>
-        <section className="card">
-          <h2>Saved seasons</h2>
-          {seasons.length === 0 ? (
-            <div className="empty-state">No seasons yet.</div>
-          ) : (
-            <ul className="season-list">
-              {seasons.map((s) => (
-                <li key={s.id}>
-                  <Link to={`/season/${s.id}`}>
-                    <span className="race-name"><Jersey team={s.team} size={14} /> {s.name}</span>
-                    <span className="muted">{s.team}</span>
-                    <span className="race-num">{s.phase === 'offseason' ? `${s.year} transfer window` : `${s.year} · ${s.date}`}</span>
-                  </Link>
-                  <button className="link danger" onClick={() => remove(s)} title="Delete this season">Delete</button>
-                </li>
-              ))}
-            </ul>
-          )}
         </section>
       </div>
     </div>

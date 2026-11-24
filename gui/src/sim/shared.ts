@@ -11,6 +11,8 @@ export interface RiderTelemetryPoint {
   legsPct?: number
   /** Carbohydrate left, % of a full store (fuel.go). */
   fuelPct?: number
+  /** Place in the group's line (1 = in the wind). */
+  groupPos?: number
   routeKm: number
   routePct: number
 }

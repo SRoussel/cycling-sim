@@ -1248,3 +1248,23 @@
 .bar.fuel i.low { background: var(--low); }
 .bar.fuel i.empty { background: var(--empty); }
 .crew-bars { gap: 3px; }
+
+/* the road drawn large in the top bar ("On the road") */
+
+.route-road {
+  height: 200px;
+  display: flex;
+  align-items: center;
+}
+
+.route-road .gap-graphic { flex: 1; }
+
+.gap-graphic.large { height: 150px; margin: 0; }
+.gap-graphic.large .gap-axis { top: 50px; height: 4px; }
+.gap-graphic.large .gap-dot { top: 52px; font-size: 0.72rem; }
+.gap-graphic.large .gap-tick { top: 128px; font-size: 0.72rem; }
+.gap-graphic.large .gap-dot-label { top: calc(100% + 6px); font-size: 0.8rem; font-weight: 600; color: var(--color-text); text-align: center; }
+.gap-graphic.large .gap-dot-label small { display: block; font-family: var(--font-numeric); font-size: 0.68rem; font-weight: 400; color: var(--muted); }
+
+.seg-tabs.small { padding: 2px; }
+.seg-tabs.small button { min-height: 28px; padding: 0 10px; font-size: 0.78rem; }

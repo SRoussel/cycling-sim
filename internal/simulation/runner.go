@@ -28,7 +28,9 @@ type RiderTelemetryPoint struct {
 	// day's durability fade, stage-race fatigue and form included).
 	LegsPct float64 `json:"legsPct"`
 	// FuelPct: carbohydrate left as a share of a full store (fuel.go).
-	FuelPct  float64 `json:"fuelPct"`
+	FuelPct float64 `json:"fuelPct"`
+	// GroupPos: the rider's place in his group's line (1 = in the wind).
+	GroupPos int     `json:"groupPos,omitempty"`
 	RouteKm  float64 `json:"routeKm"`
 	RoutePct float64 `json:"routePct"`
 }
@@ -198,6 +200,7 @@ func buildRiderTelemetry(states []*RiderState, segment *model.Segment, segmentTi
 			WPrimePct:  wPrimePct,
 			LegsPct:    clampPercent(legsPct(rs)),
 			FuelPct:    rs.FuelShare() * 100,
+			GroupPos:   rs.GroupPosition,
 			RouteKm:    routeKm,
 			RoutePct:   routePct,
 		}

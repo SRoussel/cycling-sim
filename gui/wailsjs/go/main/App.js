@@ -78,10 +78,6 @@ export function GetSeasonSquad(arg1, arg2) {
   return window['go']['main']['App']['GetSeasonSquad'](arg1, arg2);
 }
 
-export function GetSimulationParams() {
-  return window['go']['main']['App']['GetSimulationParams']();
-}
-
 export function GetStageRaceStages(arg1) {
   return window['go']['main']['App']['GetStageRaceStages'](arg1);
 }
@@ -148,10 +144,6 @@ export function RunStageRace(arg1) {
 
 export function RunValidation() {
   return window['go']['main']['App']['RunValidation']();
-}
-
-export function SaveSimulationParams(arg1) {
-  return window['go']['main']['App']['SaveSimulationParams'](arg1);
 }
 
 export function SeedDatabase() {

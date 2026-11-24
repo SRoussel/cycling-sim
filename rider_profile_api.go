@@ -69,7 +69,7 @@ var profilePhysical = []profileMetric{
 	{"cda", "Drag area", "m²", "Air resistance (lower is faster): decides the flat and time trials.", func(r *model.Rider) float64 { return r.CdA }},
 	{"wpkm", "Watts per drag", "W/m²", "Threshold over drag area: speed on the flat, alone.", func(r *model.Rider) float64 { return float64(r.FTPWatts) / r.CdA }},
 	{"sprint", "Peak sprint", "W", "Peak power for the last 200 m (Sprint rating applied).", func(r *model.Rider) float64 { return simulation.SprintPower(r) }},
-	{"wprime", "Anaerobic reserve", "kJ", "Work above threshold before he must ease (W'): attacks, short climbs.", func(r *model.Rider) float64 {
+	{"wprime", "Anaerobic reserve", "kJ", "Work above threshold before he must ease (W'): body mass × punchiness. Pays for attacks, short climbs and surges.", func(r *model.Rider) float64 {
 		return simulation.NewWPrimeState(r).WPrimeMax / 1000
 	}},
 }
@@ -78,7 +78,7 @@ var profileRatings = []profileMetric{
 	{"climbing", "Climbing", "", "Power on climbs, ±0.2% per point around 70; none on the flat.", func(r *model.Rider) float64 { return float64(r.ClimbingAbility) }},
 	{"tt", "Time trial", "", "Power and steadier pacing in time trials, ±0.2% per point.", func(r *model.Rider) float64 { return float64(r.TTAbility) }},
 	{"sprint", "Sprint", "", "Sprint power in the finish, ±0.2% per point.", func(r *model.Rider) float64 { return float64(r.SprintAbility) }},
-	{"punch", "Punch", "", "Maximal aerobic power over threshold: the size of the anaerobic reserve.", func(r *model.Rider) float64 { return float64(r.PunchRating()) }},
+	{"punch", "Punch", "", "How punchy for his level: sets his anaerobic reserve per kilo and how far above threshold he can go (1.1-1.3×).", func(r *model.Rider) float64 { return float64(r.PunchRating()) }},
 	{"repeat", "Repeatability", "", "How fast the reserve refills between efforts within a race.", func(r *model.Rider) float64 { return float64(r.RepeatabilityRating()) }},
 	{"endurance", "Endurance", "", "How little he fades over a long, hard day (threshold and reserve).", func(r *model.Rider) float64 { return float64(r.Endurance) }},
 	{"handling", "Cobbles", "", "Power on cobbles and gravel (+0.3% per point), fewer crashes on rough roads.", func(r *model.Rider) float64 { return float64(r.Handling) }},

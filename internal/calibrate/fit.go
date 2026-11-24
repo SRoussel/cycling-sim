@@ -301,8 +301,9 @@ func Write(path string, adj []Adjustment) error {
 	defer f.Close()
 	fmt.Fprintln(f, "# Threshold corrections fitted by `cycling-sim fit-ratings` to reference results")
 	fmt.Fprintln(f, "# (see the Source column; `fit-ratings --season=2026`: every 2026 reference, ridge")
-	fmt.Fprintln(f, "# prior). Applied last at seed time, as a multiplier on the threshold from the")
-	fmt.Fprintln(f, "# earlier layers and the WorldDB rebuild. Regenerated on each fit.")
+	fmt.Fprintln(f, "# prior, bound shrinking with evidence, averaged over the last half of the passes).")
+	fmt.Fprintln(f, "# Applied last at seed time, as a multiplier on the threshold from the earlier")
+	fmt.Fprintln(f, "# layers and the WorldDB rebuild. Regenerated on each fit.")
 	w := csv.NewWriter(f)
 	if err := w.Write([]string{"Name", "FTP_scale", "Source"}); err != nil {
 		return err

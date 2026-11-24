@@ -45,7 +45,7 @@
 
 .home .card { margin: 0; }
 
-.home .race-list { padding: 0; overflow: hidden; }
+.home .card.race-list { padding: 0; overflow: hidden; }
 
 .race-list ul { list-style: none; }
 

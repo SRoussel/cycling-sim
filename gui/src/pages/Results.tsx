@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import * as App from '../../wailsjs/go/main/App'
 import { main } from '../../wailsjs/go/models'
 import { formatTime, formatGap } from '../utils/format'
+import { teamColor } from '../sim/teamColors'
 import './Results.css'
 
 function Results() {
@@ -168,15 +169,38 @@ function Results() {
     )
   }
 
-  const top3 = results.slice(0, 3)
-  const avgHandling = top3.reduce((sum, r) => sum + r.handling, 0) / 3
-  const specialistsInTop5 = results.slice(0, 5).filter(r => r.handling >= 80).length
+  // Finishing groups: riders on the same time finished together.
+  const finishers = results.filter((r) => r.position > 0)
+  const dnf = results.filter((r) => r.position === 0)
+  const groups: Array<{ gap: number; riders: main.SimulationResult[] }> = []
+  for (const r of finishers) {
+    const last = groups[groups.length - 1]
+    if (last && Math.abs(r.gap - last.gap) < 1) last.riders.push(r)
+    else groups.push({ gap: r.gap, riders: [r] })
+  }
+  const winner = finishers[0]
+  const first = groups[0]
+  const second = groups[1]
+  let headline = winner ? `${winner.riderName} wins` : raceName
+  if (winner && first) {
+    if (first.riders.length === 1 && second) headline = `${winner.riderName} wins solo by ${formatGap(second.gap).replace('+', '')}`
+    else if (first.riders.length === 2) headline = `${winner.riderName} wins a two-up sprint`
+    else if (first.riders.length > 2) headline = `${winner.riderName} wins a sprint of ${first.riders.length}`
+  }
+  const groupLabel = (g: { gap: number; riders: main.SimulationResult[] }, i: number) =>
+    i === 0 ? (g.riders.length === 1 ? 'Winner' : `Front group of ${g.riders.length}`) : g.riders.length === 1 ? 'Alone' : `Group of ${g.riders.length}`
 
   return (
     <div className="results page-enter">
       <header className="results-header">
-        <h1>{raceName}</h1>
-        <p>Simulation completed</p>
+        <span className="results-kicker">{raceName}{winner ? ` · ${formatTime(winner.time)}` : ''}</span>
+        <h1>{headline}</h1>
+        {finishers.length >= 3 && (
+          <p className="results-podium">
+            {finishers.slice(1, 3).map((r) => `${r.position === 2 ? '2nd' : '3rd'} ${r.riderName}${r.gap >= 1 ? ` (${formatGap(r.gap)})` : ''}`).join(' · ')}
+            {` · ${finishers.length} finishers`}{dnf.length > 0 ? `, ${dnf.length} did not finish` : ''}
+          </p>
+        )}
       </header>
 
       {stageNav && (
@@ -186,99 +210,61 @@ function Results() {
             onClick={() => handleStageNav(stageNav.index - 1)}
             disabled={stageNav.index <= 0}
           >
-            ← Previous Stage
+            ← Previous stage
           </button>
           <Link to={`/stage-race-stages/${stageNav.stageRaceId}`}>
-            <button className="secondary">Stage List</button>
+            <button className="secondary">Stage list</button>
           </Link>
           <button
             className="secondary"
             onClick={() => handleStageNav(stageNav.index + 1)}
             disabled={stageNav.index >= stageNav.stages.length - 1}
           >
-            Next Stage →
+            Next stage →
           </button>
         </div>
       )}
 
-      {results.length >= 3 && (
-        <section className="card podium">
-          <div className="podium-places">
-            <div className="podium-place second">
-              <span className="place-num">2</span>
-              <span className="place-name">{results[1].riderName}</span>
-              <span className="place-gap">{formatGap(results[1].gap)}</span>
+      <section className="card result-groups" aria-label="Result">
+        {groups.map((g, i) => (
+          <div key={i} className="rg">
+            <div className="rg-head">
+              <span>{groupLabel(g, i)}</span>
+              <span className="rg-gap">{i === 0 ? formatTime(g.riders[0].time) : formatGap(g.gap)}</span>
             </div>
-            <div className="podium-place first">
-              <span className="place-num">1</span>
-              <span className="place-name">{results[0].riderName}</span>
-              <span className="place-time">{formatTime(results[0].time)}</span>
-            </div>
-            <div className="podium-place third">
-              <span className="place-num">3</span>
-              <span className="place-name">{results[2].riderName}</span>
-              <span className="place-gap">{formatGap(results[2].gap)}</span>
-            </div>
+            <ol className="rg-riders">
+              {g.riders.map((r) => (
+                <li key={`${r.riderId}-${r.position}`} className={r.position <= 3 ? 'podium' : ''}>
+                  <span className="rg-pos">{r.position}</span>
+                  <span className="rg-name"><i style={{ background: teamColor(r.team) }} />{r.riderName}</span>
+                  <span className="rg-team">{r.team}</span>
+                </li>
+              ))}
+            </ol>
           </div>
-        </section>
-      )}
-
-      <section className="card full-results">
-        <h2>Full Results</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>Pos</th>
-              <th>Rider</th>
-              <th>Team</th>
-              <th>Time</th>
-              <th>Gap</th>
-              <th>Handling</th>
-            </tr>
-          </thead>
-          <tbody>
-            {results.map((r) => (
-              <tr key={`${r.riderId}-${r.position}`} className={r.position > 0 && r.position <= 3 ? 'podium-row' : ''}>
-                <td>{r.position === 0 ? 'DNF' : r.position}</td>
-                <td>{r.riderName}</td>
-                <td>{r.team}</td>
-                <td>{r.position === 0 ? '—' : formatTime(r.time)}</td>
-                <td>{r.position === 0 ? '—' : formatGap(r.gap)}</td>
-                <td>
-                  <span className={`handling-badge h-${Math.floor(r.handling / 10) * 10}`}>
-                    {r.handling}
-                  </span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
-
-      <section className="card analysis">
-        <h2>Specialist Analysis</h2>
-        <div className="analysis-grid">
-          <div className="analysis-item">
-            <span className="analysis-label">Top-3 Avg Handling</span>
-            <span className="analysis-value">{avgHandling.toFixed(1)}</span>
+        ))}
+        {dnf.length > 0 && (
+          <div className="rg">
+            <div className="rg-head"><span>Did not finish</span><span className="rg-gap">{dnf.length}</span></div>
+            <ol className="rg-riders">
+              {dnf.map((r) => (
+                <li key={`${r.riderId}-dnf`}>
+                  <span className="rg-pos">—</span>
+                  <span className="rg-name"><i style={{ background: teamColor(r.team) }} />{r.riderName}</span>
+                  <span className="rg-team">{r.team}</span>
+                </li>
+              ))}
+            </ol>
           </div>
-          <div className="analysis-item">
-            <span className="analysis-label">Winner Handling</span>
-            <span className="analysis-value">{results[0].handling}</span>
-          </div>
-          <div className="analysis-item">
-            <span className="analysis-label">Specialists in Top 5</span>
-            <span className="analysis-value">{specialistsInTop5} / 5</span>
-          </div>
-        </div>
+        )}
       </section>
 
       <div className="results-actions">
         <Link to="/">
-          <button className="secondary">← Home</button>
+          <button className="secondary">← All races</button>
         </Link>
         <Link to={`/race-setup/${raceId}`}>
-          <button className="primary">Run Again</button>
+          <button className="primary">Race it again</button>
         </Link>
       </div>
     </div>

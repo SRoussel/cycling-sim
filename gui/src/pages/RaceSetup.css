@@ -153,7 +153,7 @@ button.primary.setup-start {
 
 .setup-check input { width: 18px; height: 18px; }
 
-.race-setup .setup-favs { padding: 16px 0 10px; overflow: hidden; }
+.race-setup .card.setup-favs { padding: 16px 0 10px; overflow: hidden; }
 .setup-favs-head { padding: 0 18px; }
 
 .setup-favs table { margin-top: 4px; }

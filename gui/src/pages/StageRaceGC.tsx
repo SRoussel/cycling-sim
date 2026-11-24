@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import * as App from '../../wailsjs/go/main/App'
 import { main } from '../../wailsjs/go/models'
 import { formatTime, formatGap } from '../utils/format'
+import { teamColor } from '../sim/teamColors'
 import './Results.css'
 
 function StageRaceGC() {
@@ -12,11 +13,11 @@ function StageRaceGC() {
   const myTeam = (location.state?.team ?? '') as string
   const [standings, setStandings] = useState<main.GCStanding[]>([])
   const [stageRace, setStageRace] = useState<main.StageRaceInfo | null>(null)
-  const [riderStats, setRiderStats] = useState<Record<string, main.RiderInfo>>({})
   const [points, setPoints] = useState<main.PointsStanding[]>([])
   const [mountains, setMountains] = useState<main.MountainsStanding[]>([])
   const [youth, setYouth] = useState<main.YouthStanding[]>([])
   const [activeTab, setActiveTab] = useState<'gc' | 'points' | 'mountains' | 'youth'>('gc')
+  const [history, setHistory] = useState<main.GCStanding[][]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -24,20 +25,11 @@ function StageRaceGC() {
     async function load() {
       try {
         const raceId = parseInt(stageRaceId || '0')
-        const [stageRaces, riders] = await Promise.all([
-          App.GetStageRaces(),
-          App.GetRiders(),
-        ])
+        const stageRaces = await App.GetStageRaces()
         const race = stageRaces.find((sr: main.StageRaceInfo) => sr.id === raceId)
         if (race) {
           setStageRace(race)
         }
-
-        const riderMap: Record<string, main.RiderInfo> = {}
-        riders.forEach((r: main.RiderInfo) => {
-          riderMap[r.name] = r
-        })
-        setRiderStats(riderMap)
 
         const finalStage = race?.stageCount || 21
         const [gc, pts, kom, u25] = await Promise.all([
@@ -47,6 +39,11 @@ function StageRaceGC() {
           App.GetYouthStandings(raceId, finalStage),
         ])
         setStandings(gc)
+        // The GC after each stage, for how the final top five got there.
+        const perStage = await Promise.all(
+          Array.from({ length: finalStage }, (_, i) => App.GetGCStandings(raceId, i + 1).catch(() => [] as main.GCStanding[])),
+        )
+        setHistory(perStage.map((st) => st || []))
         setPoints(pts || [])
         setMountains(kom || [])
         setYouth(u25 || [])
@@ -62,7 +59,7 @@ function StageRaceGC() {
   if (loading) {
     return (
       <div className="results">
-        <div className="loading">Loading GC standings...</div>
+        <div className="loading">Loading the standings…</div>
       </div>
     )
   }
@@ -71,255 +68,160 @@ function StageRaceGC() {
     return (
       <div className="results">
         <div className="error-message">
-          <h2>No Results</h2>
-          <p>{error || 'No GC standings available. Please run a stage race first.'}</p>
+          <h2>No results</h2>
+          <p>{error || 'No GC standings yet: run the stage race first.'}</p>
           <Link to="/">
-            <button className="primary">← Back to Home</button>
+            <button className="primary">← All races</button>
           </Link>
         </div>
       </div>
     )
   }
 
-  const top3 = standings.slice(0, 3)
+  const leader = standings[0]
+  const second = standings[1]
+  const tabs: Array<[typeof activeTab, string]> = [['gc', 'General'], ['points', 'Points'], ['mountains', 'Mountains'], ['youth', 'Youth']]
+  const rows: StandingRow[] =
+    activeTab === 'gc'
+      ? standings.map((s) => ({ pos: s.position, name: s.riderName, team: s.team, value: s.position === 1 ? formatTime(s.totalTime) : formatGap(s.gap), bar: s.gap }))
+      : activeTab === 'youth'
+        ? youth.slice(0, 25).map((s) => ({ pos: s.position, name: s.riderName, team: s.team, value: s.position === 1 ? formatTime(s.totalTime) : formatGap(s.gap), bar: s.gap }))
+        : (activeTab === 'points' ? points : mountains).slice(0, 25).map((s) => ({ pos: s.position, name: s.riderName, team: s.team, value: `${s.points}`, bar: s.points }))
+
+  let verdict: React.ReactNode = null
+  if (gcGoal) {
+    const ours = standings.filter((s) => s.team === myTeam)
+    const goalRider = standings.find((s) => s.riderName === gcGoal.riderName)
+    const best = ours[0]
+    const met = gcGoal.kind === 'gc' ? !!best && best.position <= gcGoal.target : false
+    verdict = gcGoal.kind === 'gc' ? (
+      <p className={`gc-goal ${met ? 'met' : 'missed'}`}>
+        <b>Goal {met ? 'met' : 'missed'}: {gcGoal.text}.</b>{' '}
+        {goalRider ? `${goalRider.riderName} finished ${goalRider.position}${goalRider.gap > 0 ? `, ${formatGap(goalRider.gap).replace('+', '')} down` : ''}.` : `${gcGoal.riderName} didn't finish.`}
+        {best && goalRider && best.riderName !== goalRider.riderName && ` Best of ours: ${best.riderName}, ${best.position}.`}
+      </p>
+    ) : (
+      <p className="gc-goal"><b>{gcGoal.text}:</b> see the stage results.</p>
+    )
+  }
 
   return (
     <div className="results page-enter">
       <header className="results-header">
-        <h1>{stageRace?.name || 'Stage Race'}</h1>
-        <p>General Classification - Final</p>
+        <span className="results-kicker">{stageRace?.name || 'Stage race'} · final classification</span>
+        <h1>{leader.riderName} wins{second ? ` by ${formatGap(second.gap).replace('+', '')}` : ''}</h1>
+        {standings.length >= 3 && (
+          <p className="results-podium">2nd {standings[1].riderName} · 3rd {standings[2].riderName}{standings[2].gap >= 1 ? ` (${formatGap(standings[2].gap)})` : ''}</p>
+        )}
+        {verdict}
       </header>
 
-      {gcGoal && (() => {
-        const ours = standings.filter((s) => s.team === myTeam)
-        const goalRider = standings.find((s) => s.riderName === gcGoal.riderName)
-        const best = ours[0]
-        const met = gcGoal.kind === 'gc' ? !!best && best.position <= gcGoal.target : false
-        return (
-          <section className={`card gc-verdict ${met ? 'met' : 'missed'}`}>
-            <h2>{gcGoal.kind === 'gc' ? `${met ? '✅ Goal met' : '❌ Goal missed'}: ${gcGoal.text}` : `🎯 ${gcGoal.text}: see the stage results`}</h2>
-            {gcGoal.kind === 'gc' && (
-              <p>
-                {goalRider ? `${goalRider.riderName} finished ${goalRider.position}${goalRider.gap > 0 ? `, ${formatGap(goalRider.gap)} down` : ''}.` : `${gcGoal.riderName} didn't finish.`}
-                {best && goalRider && best.riderName !== goalRider.riderName && ` Best of ours: ${best.riderName}, ${best.position}.`}
-              </p>
-            )}
-          </section>
-        )
-      })()}
-
       <div className="results-actions top-actions">
-        <Link to="/">
-          <button className="secondary">← Home</button>
-        </Link>
         <Link to={`/stage-race-stages/${stageRaceId}`}>
-          <button className="secondary">Stage Results</button>
+          <button className="secondary">Stage results</button>
         </Link>
         <Link to={`/stage-race/${stageRaceId}`}>
-          <button className="primary">Run Again</button>
+          <button className="primary">Race it again</button>
         </Link>
       </div>
 
-      <div className="comp-tabs" role="tablist" aria-label="Stage race competitions">
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeTab === 'gc'}
-          aria-controls="tab-gc"
-          className={activeTab === 'gc' ? 'tab active' : 'tab'}
-          onClick={() => setActiveTab('gc')}
-        >
-          GC
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeTab === 'points'}
-          aria-controls="tab-points"
-          className={activeTab === 'points' ? 'tab active' : 'tab'}
-          onClick={() => setActiveTab('points')}
-        >
-          Points
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeTab === 'mountains'}
-          aria-controls="tab-mountains"
-          className={activeTab === 'mountains' ? 'tab active' : 'tab'}
-          onClick={() => setActiveTab('mountains')}
-        >
-          Mountains
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeTab === 'youth'}
-          aria-controls="tab-youth"
-          className={activeTab === 'youth' ? 'tab active' : 'tab'}
-          onClick={() => setActiveTab('youth')}
-        >
-          Youth
-        </button>
-      </div>
-
-      {activeTab === 'gc' && standings.length >= 3 && (
-        <section className="card podium">
-          <div className="podium-places">
-            <div className="podium-place second">
-              <span className="place-num">2</span>
-              <span className="place-name">{top3[1].riderName}</span>
-              <span className="place-gap">{formatGap(top3[1].totalTime - top3[0].totalTime)}</span>
-            </div>
-            <div className="podium-place first">
-              <span className="place-num">1</span>
-              <span className="place-name">{top3[0].riderName}</span>
-              <span className="place-time">{formatTime(top3[0].totalTime)}</span>
-            </div>
-            <div className="podium-place third">
-              <span className="place-num">3</span>
-              <span className="place-name">{top3[2].riderName}</span>
-              <span className="place-gap">{formatGap(top3[2].totalTime - top3[0].totalTime)}</span>
-            </div>
+      <div className="gc-cols">
+        <section className="card standings-card">
+          <div className="seg-tabs" role="tablist" aria-label="Classification">
+            {tabs.map(([k, label]) => (
+              <button key={k} type="button" role="tab" aria-selected={activeTab === k} className={activeTab === k ? 'on' : ''} onClick={() => setActiveTab(k)}>{label}</button>
+            ))}
           </div>
-        </section>
-      )}
-
-      {activeTab === 'gc' && (
-        <section className="card full-results" id="tab-gc" role="tabpanel">
-          <h2>General Classification</h2>
-          <table>
-            <thead>
-              <tr>
-                <th>Pos</th>
-                <th>Rider</th>
-                <th>Team</th>
-                <th>Handling</th>
-                <th>Climb</th>
-                <th>TT</th>
-                <th>Endurance</th>
-                <th>Total Time</th>
-                <th>Gap</th>
-              </tr>
-            </thead>
-            <tbody>
-              {standings.map((s, idx) => {
-                const stats = riderStats[s.riderName]
-                return (
-                  <tr key={idx} className={idx < 3 ? 'podium-row' : ''}>
-                    <td>{idx + 1}</td>
-                    <td>{s.riderName}</td>
-                    <td>{s.team}</td>
-                    <td>{stats ? stats.handling : '—'}</td>
-                    <td>{stats ? stats.climbing : '—'}</td>
-                    <td>{stats ? stats.tt : '—'}</td>
-                    <td>{stats ? stats.endurance : '—'}</td>
-                    <td>{formatTime(s.totalTime)}</td>
-                    <td>{formatGap(s.totalTime - standings[0].totalTime)}</td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </section>
-      )}
-
-      {activeTab === 'points' && (
-        <section className="card full-results" id="tab-points" role="tabpanel">
-          <h2>Points Classification</h2>
-          {points.length === 0 ? (
-            <div className="empty-state">No points standings available yet.</div>
+          {rows.length === 0 ? (
+            <div className="empty-state">No standings yet.</div>
           ) : (
-            <table>
-              <thead>
-                <tr>
-                  <th>Pos</th>
-                  <th>Rider</th>
-                  <th>Team</th>
-                  <th>Points</th>
-                  <th>Gap</th>
-                </tr>
-              </thead>
-              <tbody>
-                {points.slice(0, 25).map((s, idx) => (
-                  <tr key={idx} className={idx === 0 ? 'podium-row' : ''}>
-                    <td>{s.position}</td>
-                    <td>{s.riderName}</td>
-                    <td>{s.team}</td>
-                    <td>{s.points}</td>
-                    <td>{s.gap === 0 ? '—' : `-${s.gap}`}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <StandingsTable rows={rows} myTeam={myTeam} points={activeTab === 'points' || activeTab === 'mountains'} />
           )}
         </section>
-      )}
 
-      {activeTab === 'mountains' && (
-        <section className="card full-results" id="tab-mountains" role="tabpanel">
-          <h2>Mountains Classification</h2>
-          {mountains.length === 0 ? (
-            <div className="empty-state">No mountains standings available yet.</div>
-          ) : (
-            <table>
-              <thead>
-                <tr>
-                  <th>Pos</th>
-                  <th>Rider</th>
-                  <th>Team</th>
-                  <th>Points</th>
-                  <th>Gap</th>
-                </tr>
-              </thead>
-              <tbody>
-                {mountains.slice(0, 25).map((s, idx) => (
-                  <tr key={idx} className={idx === 0 ? 'podium-row' : ''}>
-                    <td>{s.position}</td>
-                    <td>{s.riderName}</td>
-                    <td>{s.team}</td>
-                    <td>{s.points}</td>
-                    <td>{s.gap === 0 ? '—' : `-${s.gap}`}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </section>
-      )}
-
-      {activeTab === 'youth' && (
-        <section className="card full-results" id="tab-youth" role="tabpanel">
-          <h2>Youth Classification (U25)</h2>
-          {youth.length === 0 ? (
-            <div className="empty-state">No youth standings available yet.</div>
-          ) : (
-            <table>
-              <thead>
-                <tr>
-                  <th>Pos</th>
-                  <th>Rider</th>
-                  <th>Team</th>
-                  <th>Total Time</th>
-                  <th>Gap</th>
-                </tr>
-              </thead>
-              <tbody>
-                {youth.slice(0, 25).map((s, idx) => (
-                  <tr key={idx} className={idx === 0 ? 'podium-row' : ''}>
-                    <td>{s.position}</td>
-                    <td>{s.riderName}</td>
-                    <td>{s.team}</td>
-                    <td>{formatTime(s.totalTime)}</td>
-                    <td>{formatGap(s.gap)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </section>
-      )}
+        {history.length > 1 && <GCStory history={history} final={standings} />}
+      </div>
     </div>
+  )
+}
+
+interface StandingRow {
+  pos: number
+  name: string
+  team: string
+  value: string
+  /** Gap in seconds (times) or points: drawn as a bar against the longest. */
+  bar: number
+}
+
+function StandingsTable({ rows, myTeam, points }: { rows: StandingRow[]; myTeam: string; points: boolean }) {
+  const max = Math.max(1, ...rows.map((r) => r.bar))
+  return (
+    <ol className="standings-list">
+      {rows.map((r) => (
+        <li key={`${r.pos}-${r.name}`} className={`${r.pos === 1 ? 'lead' : ''}${myTeam && r.team === myTeam ? ' mine' : ''}`}>
+          <span className="sl-pos">{r.pos}</span>
+          <span className="sl-who"><i style={{ background: teamColor(r.team) }} /><span>{r.name}<small>{r.team}</small></span></span>
+          <span className="sl-bar"><i style={{ width: `${Math.max(points ? 2 : 0, (r.bar / max) * 100)}%` }} /></span>
+          <span className="sl-val">{r.value}</span>
+        </li>
+      ))}
+    </ol>
+  )
+}
+
+/** The time behind the leader after each stage for the final top five. */
+function GCStory({ history, final }: { history: main.GCStanding[][]; final: main.GCStanding[] }) {
+  const top = final.slice(0, 5)
+  const W = 520
+  const H = 260
+  const padL = 46
+  const padR = 150
+  const padT = 16
+  const padB = 34
+  const n = history.length
+  const series = top.map((t) => history.map((st) => {
+    const row = st.find((r) => r.riderName === t.riderName)
+    return row ? row.gap : null
+  }))
+  const maxGap = Math.max(30, ...series.flat().filter((g): g is number => g !== null))
+  const x = (i: number) => padL + (n === 1 ? 0 : (i / (n - 1)) * (W - padL - padR))
+  const y = (g: number) => padT + (Math.min(g, maxGap) / maxGap) * (H - padT - padB)
+  const step = maxGap > 600 ? 300 : maxGap > 180 ? 60 : 30
+  const ticks = Array.from({ length: Math.floor(maxGap / step) + 1 }, (_, i) => i * step)
+  const fmt = (g: number) => `${Math.floor(g / 60)}:${String(Math.round(g % 60)).padStart(2, '0')}`
+  // End labels, pushed apart so they don't overlap.
+  const ends = top.map((t, k) => ({ t, k, y: y(series[k][n - 1] ?? 0) })).sort((a, b) => a.y - b.y)
+  for (let i = 1; i < ends.length; i++) ends[i].y = Math.max(ends[i].y, ends[i - 1].y + 15)
+  const every = n > 12 ? 3 : 1
+  return (
+    <section className="card gc-story" aria-label="How the GC moved">
+      <div className="gc-story-head">
+        <h2>How the GC moved</h2>
+        <span>Time behind the leader after each stage</span>
+      </div>
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label="Time behind the leader after each stage for the final top five">
+        {ticks.map((g) => (
+          <g key={g}>
+            <line x1={padL} x2={W - padR} y1={y(g)} y2={y(g)} className="gs-grid" />
+            <text x={padL - 6} y={y(g) + 3.5} textAnchor="end" className="gs-axis">{fmt(g)}</text>
+          </g>
+        ))}
+        {history.map((_, i) => (i % every === 0 || i === n - 1) && (
+          <text key={i} x={x(i)} y={H - padB + 16} textAnchor="middle" className="gs-axis">{i + 1}</text>
+        ))}
+        <text x={(padL + W - padR) / 2} y={H - 4} textAnchor="middle" className="gs-caption">Stage</text>
+        {series.map((pts, k) => {
+          const d = pts.map((g, i) => (g === null ? '' : `${i === 0 || pts[i - 1] === null ? 'M' : 'L'}${x(i).toFixed(1)},${y(g).toFixed(1)}`)).join(' ')
+          return <path key={k} d={d} className={`gs-line${k === 0 ? ' lead' : ''}`} style={{ stroke: teamColor(top[k].team) }} />
+        })}
+        {ends.map(({ t, k, y: ly }) => (
+          <text key={k} x={W - padR + 8} y={ly + 4} className={`gs-label${k === 0 ? ' lead' : ''}`}>
+            {t.riderName.split(' ').slice(-1)[0]} {k > 0 ? formatGap(t.gap) : ''}
+          </text>
+        ))}
+      </svg>
+    </section>
   )
 }
 

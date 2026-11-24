@@ -937,3 +937,76 @@ export namespace main {
 
 }
 
+export namespace simulation {
+	
+	export class ProfilePoint {
+	    km: number;
+	    elev: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new ProfilePoint(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.km = source["km"];
+	        this.elev = source["elev"];
+	    }
+	}
+	export class RouteSector {
+	    name: string;
+	    startKm: number;
+	    lengthKm: number;
+	    stars: number;
+	    surface: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new RouteSector(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.startKm = source["startKm"];
+	        this.lengthKm = source["lengthKm"];
+	        this.stars = source["stars"];
+	        this.surface = source["surface"];
+	    }
+	}
+	export class RouteProfile {
+	    totalKm: number;
+	    points: ProfilePoint[];
+	    sectors?: RouteSector[];
+	
+	    static createFrom(source: any = {}) {
+	        return new RouteProfile(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.totalKm = source["totalKm"];
+	        this.points = this.convertValues(source["points"], ProfilePoint);
+	        this.sectors = this.convertValues(source["sectors"], RouteSector);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+
+}
+

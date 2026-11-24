@@ -1,3 +1,4 @@
+import './ProfileView.css'
 import { useLayoutEffect, useRef, useState } from 'react'
 import { RouteProfile } from '../../sim/shared'
 
@@ -134,6 +135,7 @@ export function ProfileView({
   className,
   showSectorNames = false,
   detail = false,
+  showPosition = true,
   marks = [],
 }: {
   profile: RouteProfile
@@ -147,6 +149,8 @@ export function ProfileView({
   showSectorNames?: boolean
   /** Elevation scale and climb labels (the road-ahead and whole-course views). */
   detail?: boolean
+  /** Draw the riders' position (off before the start). */
+  showPosition?: boolean
   marks?: GroupMark[]
 }) {
   const [ref, { w: W, h: H }] = useSize<HTMLDivElement>()
@@ -172,7 +176,7 @@ export function ProfileView({
   const rawHi = Math.max(...pts.map((p) => p.elev))
   const range = Math.max(minElevRange, rawHi - rawLo)
   const step = elevStep(range)
-  const lo = detail ? Math.floor(rawLo / step) * step : rawLo
+  const lo = detail ? Math.floor((rawLo > -15 ? Math.max(0, rawLo) : rawLo) / step) * step : rawLo
   const hi = detail ? Math.max(lo + range, Math.ceil(rawHi / step) * step) : lo + range
   const x = (k: number) => padL + ((k - fromKm) / span) * pw
   const y = (e: number) => base - ((e - lo) / Math.max(1, hi - lo)) * ph * (detail ? 1 : 0.9)
@@ -223,7 +227,7 @@ export function ProfileView({
     const row = rowFree[0] <= left ? 0 : rowFree[1] <= left ? 1 : -1
     if (row < 0) return []
     rowFree[row] = left + width + 10
-    const state = top < km ? 'done' : climbs.find((d) => d.startKm + d.lengthKm >= km) === c ? 'next' : ''
+    const state = !showPosition ? '' : top < km ? 'done' : climbs.find((d) => d.startKm + d.lengthKm >= km) === c ? 'next' : ''
     return [{ c, name, spec, cx, tx: left + width / 2, ty: row === 0 ? 14 : 30, py: y(elevAt(profile.points, top)), state }]
   })
 
@@ -238,7 +242,7 @@ export function ProfileView({
   }
 
   const nowX = x(Math.max(fromKm, Math.min(km, toKm)))
-  const showNow = km >= fromKm && km <= toKm
+  const showNow = showPosition && km >= fromKm && km <= toKm
 
   return (
     <div ref={ref} className={`pv ${className || ''}`}>

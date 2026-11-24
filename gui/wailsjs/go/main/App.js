@@ -122,6 +122,10 @@ export function PreviewRacePlan(arg1) {
   return window['go']['main']['App']['PreviewRacePlan'](arg1);
 }
 
+export function PreviewRaceProfile(arg1) {
+  return window['go']['main']['App']['PreviewRaceProfile'](arg1);
+}
+
 export function PreviewRaceStartList(arg1) {
   return window['go']['main']['App']['PreviewRaceStartList'](arg1);
 }

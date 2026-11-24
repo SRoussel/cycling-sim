@@ -1,37 +1,138 @@
-.plan-form .plan-grid {
+.plan-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.plan-row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 0.75rem 1rem;
-  margin: 0.75rem 0;
+  grid-template-columns: 130px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
 }
 
-.plan-form .plan-grid label {
+.plan-label {
+  color: var(--color-text-soft);
+  font-size: 0.875rem;
+  padding-top: 9px;
+}
+
+.plan-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.plan-chips button {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
-  font-size: 0.85rem;
-  color: var(--color-text-muted);
-}
-
-.plan-form select {
-  background: var(--color-secondary);
+  align-items: flex-start;
+  text-align: left;
+  min-height: 48px;
+  padding: 6px 12px;
+  border-radius: 9px;
+  background: var(--color-surface-2);
+  border: 1px solid #2b3038;
   color: var(--color-text);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 4px;
-  padding: 0.35rem 0.5rem;
-}
-
-.plan-form .plan-hard {
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 6px;
-  padding: 0.5rem 0.75rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-}
-
-.plan-form .plan-hard legend {
+  font-weight: 600;
   font-size: 0.85rem;
+}
+
+.plan-chips button small {
+  font-weight: 400;
+  font-size: 0.72rem;
   color: var(--color-text-muted);
-  padding: 0 0.3rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.plan-chips button.on {
+  background: var(--color-primary-tint);
+  border-color: var(--color-primary);
+}
+
+.plan-seg {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-self: start;
+  background: var(--color-surface-sunk);
+  border: 1px solid #22272e;
+  border-radius: 9px;
+  padding: 3px;
+  gap: 2px;
+}
+
+.plan-seg button {
+  min-height: 36px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--color-text-muted);
+}
+
+.plan-seg button.on {
+  background: #2a2f37;
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.plan-points-head,
+.plan-point {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 92px 92px;
+  gap: 8px;
+  align-items: center;
+}
+
+.plan-points-head {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+  padding-bottom: 6px;
+}
+
+.plan-points-head span { text-align: center; }
+
+.plan-point {
+  padding: 6px 0;
+  border-top: 1px solid var(--color-line);
+  font-size: 0.875rem;
+}
+
+.plan-point b { font-weight: 600; }
+
+.plan-point small {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.plan-point button {
+  min-height: 34px;
+  padding: 0;
+  border-radius: 8px;
+  background: transparent;
+  border: 1px solid #2b3038;
+  color: var(--color-text-faint);
+  font-size: 0.8rem;
+}
+
+.plan-point button.on {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-primary-ink);
+  font-weight: 650;
+}
+
+.plan-note,
+.plan-none {
+  margin: 8px 0 0;
+  font-size: 0.75rem;
+  color: var(--color-text-faint);
+}
+
+.plan-none { margin-top: 9px; color: var(--color-text-muted); }
+
+@media (max-width: 700px) {
+  .plan-row { grid-template-columns: minmax(0, 1fr); }
+  .plan-label { padding-top: 0; }
 }

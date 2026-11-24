@@ -11,12 +11,24 @@ export interface PlanValue {
 export const EMPTY_PLAN: PlanValue = { leaderId: 0, break: 'auto', hardOn: [], attackOn: '' }
 
 const wkg = (r: main.RiderInfo) => (r.weight > 0 ? r.ftp / r.weight : 0)
-const icon = (kind: string) => (kind === 'climb' ? '⛰' : kind === 'gravel' ? '💨' : '🪨')
+
+const BREAK_OPTIONS: Array<[string, string, string]> = [
+  ['auto', 'Team decides', 'Riders the team can spare may go with moves.'],
+  ['yes', 'Get a rider in', 'Your strongest domestiques attack until one is up the road.'],
+  ['no', 'Stay out', "Your domestiques don't go in breaks."],
+]
+
+/** "Paterberg (0.5 km at 10.1%, 56 km to go)" → name and details. */
+function splitLabel(label: string): { name: string; spec: string } {
+  const m = label.match(/^(.*?)\s*\((.*)\)\s*$/)
+  return m ? { name: m[1], spec: m[2] } : { name: label, spec: '' }
+}
 
 /**
- * The race plan's choices: who the team rides for, the break, where the
- * leader attacks and where the team makes it hard. Used before a one-day
- * race and before each stage of a stage race.
+ * The race plan's choices: who the team rides for, the break, and for each
+ * decisive climb or sector whether the team drives it hard and whether the
+ * leader attacks there. Used before a one-day race, before each stage of a
+ * stage race and in the season hub.
  */
 export function PlanForm({
   riders,
@@ -30,53 +42,61 @@ export function PlanForm({
   onChange: (v: PlanValue) => void
 }) {
   const set = (patch: Partial<PlanValue>) => onChange({ ...value, ...patch })
+  const byPower = [...riders].sort((a, b) => wkg(b) - wkg(a))
   return (
     <div className="plan-form">
-      <div className="plan-grid">
-        <label>
-          <span>Ride for</span>
-          <select value={value.leaderId} onChange={(e) => set({ leaderId: Number(e.target.value) })}>
-            <option value={0}>Team decides</option>
-            {riders.map((r) => (
-              <option key={r.id} value={r.id}>{r.name} ({wkg(r).toFixed(1)} W/kg, {r.ftp} W)</option>
-            ))}
-          </select>
-        </label>
-        <label>
-          <span>The break</span>
-          <select value={value.break} onChange={(e) => set({ break: e.target.value })}>
-            <option value="auto">Team decides</option>
-            <option value="yes">Put a rider in the break</option>
-            <option value="no">Nobody in the break</option>
-          </select>
-        </label>
-        <label>
-          <span>Leader attacks on</span>
-          <select value={value.attackOn} onChange={(e) => set({ attackOn: e.target.value })} disabled={points.length === 0}>
-            <option value="">Wherever he sees fit</option>
-            {points.map((p) => (
-              <option key={p.key} value={p.key}>{p.label}</option>
-            ))}
-          </select>
-        </label>
-      </div>
-      {points.length > 0 ? (
-        <fieldset className="plan-hard">
-          <legend>Make it hard on (the team drives into and over it)</legend>
-          {points.map((p) => (
-            <label key={p.key} className="checkbox-label">
-              <input
-                type="checkbox"
-                checked={value.hardOn.includes(p.key)}
-                onChange={(e) => set({ hardOn: e.target.checked ? [...value.hardOn, p.key] : value.hardOn.filter((k) => k !== p.key) })}
-              />
-              {icon(p.kind)} {p.label}
-            </label>
+      <div className="plan-row">
+        <span className="plan-label">Ride for</span>
+        <div className="plan-chips" role="radiogroup" aria-label="Ride for">
+          <button type="button" role="radio" aria-checked={value.leaderId === 0} className={value.leaderId === 0 ? 'on' : ''} onClick={() => set({ leaderId: 0 })}>
+            Team decides<small>on the day</small>
+          </button>
+          {byPower.map((r) => (
+            <button key={r.id} type="button" role="radio" aria-checked={value.leaderId === r.id} className={value.leaderId === r.id ? 'on' : ''} onClick={() => set({ leaderId: r.id })}>
+              {r.name}<small>{wkg(r).toFixed(1)} W/kg · {r.ftp} W</small>
+            </button>
           ))}
-        </fieldset>
-      ) : (
-        <p className="option-help">No decisive climbs or sectors: it's one for the sprinters.</p>
-      )}
+        </div>
+      </div>
+
+      <div className="plan-row">
+        <span className="plan-label">The break</span>
+        <div className="plan-seg" role="radiogroup" aria-label="The break">
+          {BREAK_OPTIONS.map(([v, label, help]) => (
+            <button key={v} type="button" role="radio" aria-checked={value.break === v} className={value.break === v ? 'on' : ''} title={help} onClick={() => set({ break: v })}>{label}</button>
+          ))}
+        </div>
+      </div>
+
+      <div className="plan-row">
+        <span className="plan-label">Climbs and sectors</span>
+        {points.length === 0 ? (
+          <p className="plan-none">No decisive climbs or sectors: it's one for the sprinters.</p>
+        ) : (
+          <div className="plan-points">
+            <div className="plan-points-head" aria-hidden="true"><span /><span>Drive it hard</span><span>Leader attacks</span></div>
+            {points.map((p) => {
+              const { name, spec } = splitLabel(p.label)
+              const hard = value.hardOn.includes(p.key)
+              const attack = value.attackOn === p.key
+              return (
+                <div key={p.key} className="plan-point">
+                  <span><b>{name}</b> <small>{spec}</small></span>
+                  <button type="button" aria-pressed={hard} aria-label={`Drive hard on ${name}`} className={hard ? 'on' : ''}
+                    onClick={() => set({ hardOn: hard ? value.hardOn.filter((k) => k !== p.key) : [...value.hardOn, p.key] })}>
+                    {hard ? 'Hard' : '—'}
+                  </button>
+                  <button type="button" aria-pressed={attack} aria-label={`Leader attacks on ${name}`} className={attack ? 'on' : ''}
+                    onClick={() => set({ attackOn: attack ? '' : p.key })}>
+                    {attack ? 'Attack' : '—'}
+                  </button>
+                </div>
+              )
+            })}
+            <p className="plan-note">The leader attacks at one place at most; with none picked he goes where he sees fit.</p>
+          </div>
+        )}
+      </div>
     </div>
   )
 }

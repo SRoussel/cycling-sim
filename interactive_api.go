@@ -318,6 +318,23 @@ func (a *App) PreviewRacePlan(raceID int64) []director.PlanPoint {
 	return director.PlanPoints(simulation.BuildRouteProfile(course))
 }
 
+// PreviewRaceProfile returns a race's course profile (elevation, sectors)
+// for the setup page, before any session exists.
+func (a *App) PreviewRaceProfile(raceID int64) *simulation.RouteProfile {
+	if a.db == nil {
+		return nil
+	}
+	race, err := a.db.GetRace(raceID)
+	if err != nil || race == nil {
+		return nil
+	}
+	course, err := a.db.GetCourse(race.CourseID)
+	if err != nil || course == nil {
+		return nil
+	}
+	return simulation.BuildRouteProfile(course)
+}
+
 // ResolveMoment applies the player's choice for a decision moment and resumes
 // the race. It returns the chosen option's label ("" if the moment is gone).
 func (a *App) ResolveMoment(sessionID string, momentID string, optionID string) string {

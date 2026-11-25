@@ -273,7 +273,7 @@ func EffectivePower(rider *model.Rider, basePower float64, segment *model.Segmen
 	if isTT {
 		factor = ModifierFactor(rider.TTAbility)
 	} else {
-		w := math.Max(0, math.Min(1, climbOf(segment)/terrainClimb))
+		w := clamp01(climbOf(segment) / terrainClimb)
 		factor = 1 + (ModifierFactor(rider.ClimbingAbility)-1)*w
 	}
 	return basePower * factor * AltitudePowerFactor(segment.ElevationM)
@@ -336,4 +336,16 @@ func SegmentTime(speed float64, distanceKm float64) float64 {
 		return math.Inf(1)
 	}
 	return (distanceKm * 1000.0) / speed
+}
+
+// clamp01 limits x to [0, 1] (plain comparisons: math.Min/Max's NaN and
+// signed-zero handling cost time in hot paths, and x is never NaN here).
+func clamp01(x float64) float64 {
+	if x < 0 {
+		return 0
+	}
+	if x > 1 {
+		return 1
+	}
+	return x
 }

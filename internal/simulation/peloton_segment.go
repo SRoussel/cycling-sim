@@ -240,10 +240,12 @@ func simulateStep(riders []*RiderState, segment *model.Segment, isTT bool, dista
 		state.survivesFinale = nil
 		state.finishTimes = nil
 		state.fastLines = nil
+		state.lineSpeeds = nil
 	}
 	for ci, cluster := range clusters {
 		if state != nil {
 			state.Road, state.Chasers, state.ChaseGap = cluster, nil, 0
+			state.lineSpeeds = nil // riders ahead have moved on this step
 			if ci+1 < len(clusters) && len(cluster) > 0 && len(clusters[ci+1]) > 0 {
 				state.Chasers = clusters[ci+1]
 				state.ChaseGap = clusters[ci+1][0].TotalTime - cluster[0].TotalTime

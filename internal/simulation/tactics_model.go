@@ -160,8 +160,11 @@ type RaceState struct {
 	// OpenKm: one-day races: km to go at which the race opens (openingKm).
 	OpenKm                float64
 	SegIndex              int
-	lineTime              map[lineKey]float64     // per-step cache of timeToLine
-	reach                 float64                 // per-step cache of breakReach
+	lineTime              map[lineKey]float64      // per-step cache of timeToLine
+	reach                 float64                  // per-step cache of breakReach
+	lineSpeeds            map[lineSpeedKey]float64 // per-step cache of fast-line paces
+	gcLead                float64                  // smallest GCGaps value (set once per stage)
+	gcLeadSet             bool
 	canFollow             map[*RiderState]bool    // per-step cache of sprinterCanFollow
 	survivesFinale        map[*RiderState]bool    // per-step cache of sprinterSurvivesFinale
 	finishTimes           map[*RiderState]float64 // per-step cache of finishTime

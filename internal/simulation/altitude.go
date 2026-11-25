@@ -30,7 +30,13 @@ func AltitudePowerFactor(elevationM float64) float64 {
 	}
 	h := elevationM / 1000
 	f := (99.921 - 1.8991*h - 1.122*h*h) / 99.921
-	return math.Max(0.5, math.Min(1, f))
+	if f > 1 {
+		return 1
+	}
+	if f < 0.5 {
+		return 0.5
+	}
+	return f
 }
 
 // PrepareSegments returns a race-ready copy of a course's segments: wind

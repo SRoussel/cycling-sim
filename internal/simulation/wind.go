@@ -76,6 +76,13 @@ func segmentPower(speed, massKg, cda float64, seg *model.Segment, handling int) 
 	return speed * (ForceGravity(massKg, seg.GradientPct) + forceRolling(massKg, seg.GradientPct, seg.SurfaceType, handling, sectorRoughness(seg)) + fAero)
 }
 
+// segmentPowerSlope is d(segmentPower)/d(speed).
+func segmentPowerSlope(speed, massKg, cda float64, seg *model.Segment, handling int) float64 {
+	air := speed + seg.HeadwindMPS
+	k := 0.5 * cda * densityRatio(seg) * airDensity
+	return k*(air*math.Abs(air)+2*math.Abs(air)*speed) + ForceGravity(massKg, seg.GradientPct) + forceRolling(massKg, seg.GradientPct, seg.SurfaceType, handling, sectorRoughness(seg))
+}
+
 // gutterExposure is the fraction of shelter lost by riders beyond the
 // echelon at this speed: 0 in calm or pure head/tailwind, 1 at high yaw.
 func gutterExposure(seg *model.Segment, speed float64) float64 {

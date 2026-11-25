@@ -243,7 +243,8 @@ func (s *RaceState) planChase(group []*RiderState) chasePlan {
 // and an all-out effort.
 func (s *RaceState) requiredIntensity(chasers, brk []*RiderState, lead, allowed float64) float64 {
 	tBreak := s.timeToLine(brk)
-	adv := func(f float64) float64 { return lead + s.timeToLineAt(chasers, f) - tBreak }
+	lp := s.lineProfile(chasers) // the chase's powers don't depend on f
+	adv := func(f float64) float64 { return lead + lp.timeAt(f) - tBreak }
 	lo, hi := easyIntensity, chaseAllIn
 	if lo > hi {
 		lo = hi
@@ -364,21 +365,35 @@ func (s *RaceState) sprinterFollowsAt(sp *RiderState, group []*RiderState, raced
 		if len(line) == 0 {
 			return true
 		}
-		n := float64(len(line))
-		var p, m, cda, handling float64
 		finale := raced && left[i] <= finalKm+seg.DistanceKm
-		for _, rs := range line {
-			thr := EffectivePower(rs.Rider, rs.CurrentFTP(), seg, false)
-			if finale {
-				v0 := segmentSpeed(thr, rs.Rider.TotalMassKg(), rs.Rider.CdA, seg, rs.Rider.Handling)
-				thr = rs.maxPowerFor(thr, thr, SegmentTime(v0, km))
+		// The line's pace is the same for every sprinter not in it: shared
+		// within the step (exact; the riders' state doesn't change in it).
+		pk := lineSpeedKey{fastKey{group[0], len(group), i}, raced, km}
+		top := s.fastLines[pk.fast]
+		shared := !containsRider(top[:min(len(top), maxRotation)], sp)
+		v, ok := s.lineSpeeds[pk]
+		if !shared || !ok {
+			n := float64(len(line))
+			var p, m, cda, handling float64
+			for _, rs := range line {
+				thr := EffectivePower(rs.Rider, rs.CurrentFTP(), seg, false)
+				if finale {
+					v0 := segmentSpeed(thr, rs.Rider.TotalMassKg(), rs.Rider.CdA, seg, rs.Rider.Handling)
+					thr = rs.maxPowerFor(thr, thr, SegmentTime(v0, km))
+				}
+				p += thr
+				m += rs.Rider.TotalMassKg()
+				cda += rs.Rider.CdA
+				handling += float64(rs.Rider.Handling)
 			}
-			p += thr
-			m += rs.Rider.TotalMassKg()
-			cda += rs.Rider.CdA
-			handling += float64(rs.Rider.Handling)
+			v = segmentSpeed(p/n, m/n, cda/n*rotationFactor(len(line), seg.SurfaceType), seg, int(handling/n))
+			if shared {
+				if s.lineSpeeds == nil {
+					s.lineSpeeds = map[lineSpeedKey]float64{}
+				}
+				s.lineSpeeds[pk] = v
+			}
 		}
-		v := segmentSpeed(p/n, m/n, cda/n*rotationFactor(len(line), seg.SurfaceType), seg, int(handling/n))
 		need := segmentPower(v, r.TotalMassKg(), r.CdA*groupDraft(maxRotation+1, false, seg, v), seg, r.Handling)
 		thr := EffectivePower(r, sp.CurrentFTP(), seg, false)
 		t := SegmentTime(v, km)
@@ -389,6 +404,23 @@ func (s *RaceState) sprinterFollowsAt(sp *RiderState, group []*RiderState, raced
 
 	}
 	return true
+}
+
+// lineSpeedKey identifies a group's fastest-line pace on one segment
+// (raced: the finale at full effort; km: the part of the segment left).
+type lineSpeedKey struct {
+	fast  fastKey
+	raced bool
+	km    float64
+}
+
+func containsRider(line []*RiderState, rs *RiderState) bool {
+	for _, x := range line {
+		if x == rs {
+			return true
+		}
+	}
+	return false
 }
 
 // fastKey identifies a group's fastest line on one course segment.
@@ -434,7 +466,20 @@ func fastestRiders(group []*RiderState, seg *model.Segment, k int) []*RiderState
 			continue
 		}
 		r := rs.Rider
-		v := segmentSpeed(EffectivePower(r, rs.CurrentFTP(), seg, false), r.TotalMassKg(), r.CdA, seg, r.Handling)
+		p := EffectivePower(r, rs.CurrentFTP(), seg, false)
+		// Exact shortcut: where the air speed is >= 0 the power needed to
+		// hold a speed is convex in it, so if it is rising at the k-th
+		// speed it keeps rising beyond: a rider short of the power for
+		// that speed (by a margin far above solver tolerance) is slower.
+		// Skip his speed solve.
+		if len(best) == k {
+			vk := best[k-1].v
+			if vk+seg.HeadwindMPS >= 0 && segmentPowerSlope(vk, r.TotalMassKg(), r.CdA, seg, r.Handling) > 0 &&
+				p < segmentPower(vk, r.TotalMassKg(), r.CdA, seg, r.Handling)*(1-1e-6) {
+				continue
+			}
+		}
+		v := segmentSpeed(p, r.TotalMassKg(), r.CdA, seg, r.Handling)
 		if len(best) == k && v <= best[k-1].v {
 			continue
 		}
@@ -458,27 +503,66 @@ func fastestRiders(group []*RiderState, seg *model.Segment, k int) []*RiderState
 
 // timeToLineAt is timeToLine at a fraction of threshold (not cached).
 func (s *RaceState) timeToLineAt(line []*RiderState, f float64) float64 {
-	n := float64(len(line))
-	t := 0.0
+	return s.lineProfile(line).timeAt(f)
+}
+
+// lineSegment is what a pace line brings to one remaining segment, apart
+// from the intensity: each rider's power at threshold (kept per rider so
+// timeAt sums power×f in the same order as before: same results).
+type lineSegment struct {
+	seg              *model.Segment
+	km               float64
+	eps              []float64
+	m, cda, handling float64
+	capV             float64
+	rot              float64
+}
+
+type lineProfile struct {
+	n    float64
+	segs []lineSegment
+}
+
+func (s *RaceState) lineProfile(line []*RiderState) lineProfile {
+	lp := lineProfile{n: float64(len(line))}
+	if len(s.Course) > s.SegIndex {
+		lp.segs = make([]lineSegment, 0, len(s.Course)-s.SegIndex)
+	}
+	eps := make([]float64, len(line)*max(0, len(s.Course)-s.SegIndex))
 	for i := s.SegIndex; i < len(s.Course); i++ {
 		seg := &s.Course[i]
 		km := seg.DistanceKm
 		if i == s.SegIndex && s.SegmentKmLeft > 0 && s.SegmentKmLeft < km {
 			km = s.SegmentKmLeft
 		}
-		var p, m, cda, handling float64
-		capV := math.Inf(1)
-		for _, rs := range line {
-			p += EffectivePower(rs.Rider, rs.CurrentFTP(), seg, false) * f
-			m += rs.Rider.TotalMassKg()
-			cda += rs.Rider.CdA
-			handling += float64(rs.Rider.Handling)
-			capV = math.Min(capV, SpeedCap(rs.Rider, seg))
+		ls := lineSegment{seg: seg, km: km, capV: math.Inf(1), rot: rotationFactor(len(line), seg.SurfaceType)}
+		ls.eps, eps = eps[:len(line):len(line)], eps[len(line):]
+		for j, rs := range line {
+			ls.eps[j] = EffectivePower(rs.Rider, rs.CurrentFTP(), seg, false)
+			ls.m += rs.Rider.TotalMassKg()
+			ls.cda += rs.Rider.CdA
+			ls.handling += float64(rs.Rider.Handling)
+			ls.capV = math.Min(ls.capV, SpeedCap(rs.Rider, seg))
+		}
+		lp.segs = append(lp.segs, ls)
+	}
+	return lp
+}
+
+// timeAt is the line's time to the finish at a fraction f of threshold.
+func (lp lineProfile) timeAt(f float64) float64 {
+	n := lp.n
+	t := 0.0
+	for i := range lp.segs {
+		ls := &lp.segs[i]
+		var p float64
+		for _, ep := range ls.eps {
+			p += ep * f
 		}
 		// A group descends as fast as its most cautious rider dares (the
 		// race's SpeedCap): projections without it had descents too fast.
-		v := math.Min(capV, segmentSpeed(p/n, m/n, cda/n*rotationFactor(len(line), seg.SurfaceType), seg, int(handling/n)))
-		t += SegmentTime(v, km)
+		v := math.Min(ls.capV, segmentSpeed(p/n, ls.m/n, ls.cda/n*ls.rot, ls.seg, int(ls.handling/n)))
+		t += SegmentTime(v, ls.km)
 	}
 	return t
 }
@@ -512,14 +596,17 @@ func (s *RaceState) gcContender(rs *RiderState) bool {
 	if s == nil || !s.IsStageRace || (rs.TeamRole != RoleLeader && !s.highOnGC(rs)) {
 		return false
 	}
-	lead := math.Inf(1)
-	for _, g := range s.GCGaps {
-		lead = math.Min(lead, g)
+	if !s.gcLeadSet {
+		lead := math.Inf(1)
+		for _, g := range s.GCGaps {
+			lead = math.Min(lead, g)
+		}
+		if lead == math.Inf(1) {
+			lead = 0
+		}
+		s.gcLead, s.gcLeadSet = lead, true
 	}
-	if lead == math.Inf(1) {
-		lead = 0
-	}
-	return s.GCGaps[rs.Rider.ID]-lead < s.breakReach()
+	return s.GCGaps[rs.Rider.ID]-s.gcLead < s.breakReach()
 }
 
 // breakReach is the time a break could gain over the rest of the stage if
@@ -569,7 +656,7 @@ func (s *RaceState) setBreakIntent(states []*RiderState, segments []model.Segmen
 			s.WantsBreak[rs.Rider.ID] = true
 		}
 	}
-	s.canFollow, s.fastLines, s.reach, s.Road = nil, nil, 0, nil
+	s.canFollow, s.fastLines, s.lineSpeeds, s.reach, s.Road = nil, nil, nil, 0, nil
 }
 
 // gcWatched: teams watch the riders this high on GC (twice the protected

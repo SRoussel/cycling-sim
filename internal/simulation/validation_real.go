@@ -445,9 +445,21 @@ func RunRealRaceValidationFor(db *database.DB, allRiders []model.Rider, entries 
 
 		var checks []RiderCheck
 		for _, m := range matched {
+			realGap, simGap, margin := entry.Top10GapSecs[m.refPos-1], avgGap(m.riderID), false
+			// The winner's gap is always 0, which hides by how much he won:
+			// judge him on his margin over the next rider instead (minus the
+			// real margin; in the simulation his time against the best of
+			// the others, negative when he wins). Nov 2026: Pogačar won
+			// Strade by 1:00 and the sim by seconds, and the fit saw
+			// nothing.
+			if m.refPos == 1 && len(entry.Top10GapSecs) > 1 && entry.Top10GapSecs[1] != gapUnknown {
+				if v, ok := winnerMargin(allRuns, m.riderID); ok {
+					realGap, simGap, margin = -entry.Top10GapSecs[1], v, true
+				}
+			}
 			checks = append(checks, RiderCheck{
-				RiderID: m.riderID, RealPos: m.refPos, RealGap: entry.Top10GapSecs[m.refPos-1],
-				SimPos: avgPos(m.riderID), SimGap: avgGap(m.riderID),
+				RiderID: m.riderID, RealPos: m.refPos, RealGap: realGap,
+				SimPos: avgPos(m.riderID), SimGap: simGap, Margin: margin,
 				Top10Pct: float64(top10Hits[m.riderID]) / float64(runs) * 100,
 				WinPct:   float64(wins[m.riderID]) / float64(runs) * 100,
 			})
@@ -929,4 +941,33 @@ func (e RealRaceEntry) pool(riders []model.Rider) []model.Rider {
 		}
 	}
 	return out
+}
+
+// winnerMargin is a rider's mean time against the best of the other
+// finishers over the runs he finished: minus his winning margin when he
+// wins, his gap to the winner otherwise.
+func winnerMargin(runs [][]model.RaceResult, id int64) (float64, bool) {
+	sum, n := 0.0, 0
+	for _, rr := range runs {
+		mine, best := math.Inf(1), math.Inf(1)
+		for _, r := range rr {
+			if r.Position == 0 {
+				continue
+			}
+			if r.RiderID == id {
+				mine = r.FinishTimeSeconds
+			} else if r.FinishTimeSeconds < best {
+				best = r.FinishTimeSeconds
+			}
+		}
+		if math.IsInf(mine, 1) || math.IsInf(best, 1) {
+			continue
+		}
+		sum += mine - best
+		n++
+	}
+	if n == 0 {
+		return 0, false
+	}
+	return sum / float64(n), true
 }

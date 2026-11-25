@@ -30,14 +30,16 @@ func TestRiderStep(t *testing.T) {
 			t.Errorf("%s: step %.2f (%v), want %.2f (%v)", c.name, got, ok, c.want, c.ok)
 		}
 	}
-	// With the wide bound (a prior), a one-day winner's bigger margin still
-	// lowers him by at most the per-race step; a loser's error is not capped.
+	// With the wide bound (a prior), a one-day winner's margin moves him by
+	// at most the per-race step either way; a loser's error is not capped.
 	wide := []struct {
 		name string
 		c    simulation.RiderCheck
 		want float64
 	}{
 		{"winner by far more", simulation.RiderCheck{RealPos: 1, RealGap: 0, SimGap: -600, SimPos: 1}, -maxStepPct},
+		{"winner by far less", simulation.RiderCheck{RealPos: 1, RealGap: -60, SimGap: -6, SimPos: 1, Margin: true}, 0.45},
+		{"winner who rarely wins in the sim", simulation.RiderCheck{RealPos: 1, RealGap: -600, SimGap: 30, SimPos: 3, Margin: true}, maxStepPct},
 		{"loser too fast", simulation.RiderCheck{RealPos: 2, RealGap: 600, SimGap: 0, SimPos: 1}, -5},
 	}
 	for _, c := range wide {

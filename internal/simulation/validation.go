@@ -88,6 +88,10 @@ type RiderCheck struct {
 	SimGap   float64 // average simulated gap (s)
 	Top10Pct float64 // share of runs finishing top 10
 	WinPct   float64
+	// Margin: a one-day winner judged on his winning margin: RealGap is
+	// minus his real margin over 2nd and SimGap his mean time against the
+	// best of the others (negative when he wins).
+	Margin bool `json:",omitempty"`
 }
 
 // ValidationSeedBase offsets every validation seed (run i uses base+i+1).

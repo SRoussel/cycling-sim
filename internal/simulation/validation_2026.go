@@ -165,7 +165,96 @@ func Load2026References(referencePath, startListPath string, riders []model.Ride
 			}
 		}
 	}
+	loadSavedResults(filepath.Join(filepath.Dir(startListPath), "local", "results_2026.csv"), resolve, oneDay, stage)
 	return oneDay, stage, nil
+}
+
+// savedRaceNames maps ProCyclingStats race titles (pages the user saved) to
+// the reference names, by a distinctive part of the title.
+var savedRaceNames = []struct{ part, race string }{
+	{"Strade Bianche", "Strade Bianche"}, {"Milano", "Milan-San Remo"}, {"E3 Saxo", "E3 Saxo Classic"},
+	{"Wevelgem", "Gent-Wevelgem"}, {"Vlaanderen", "Tour of Flanders"}, {"Roubaix", "Paris-Roubaix"},
+	{"Amstel", "Amstel Gold Race"}, {"Wallon", "La Fleche Wallonne"}, {"Bastogne", "Liege-Bastogne-Liege"},
+	{"San Sebastian", "Clasica San Sebastian"}, {"Lombardia", "Il Lombardia"}, {"Paris-Nice", "Paris-Nice"},
+	{"Tirreno", "Tirreno-Adriatico"}, {"Catalunya", "Volta a Catalunya"}, {"Itzulia", "Tour of the Basque Country"},
+	{"Basque", "Tour of the Basque Country"}, {"Romandie", "Tour de Romandie"}, {"Giro", "Giro d'Italia"},
+	{"Dauphin", "Tour Auvergne-Rhone-Alpes"}, {"Auvergne", "Tour Auvergne-Rhone-Alpes"}, {"Suisse", "Tour de Suisse"},
+	{"Tour de France", "Tour de France"}, {"Vuelta", "Vuelta a Espana"},
+}
+
+// loadSavedResults reads the full results and start lists the user saved
+// from ProCyclingStats (tools/pcs_saved_pages.py; optional): every rider's
+// real place and gap, who didn't finish, and the field where the references
+// have no start list (the start list page, else everyone in the result).
+func loadSavedResults(path string, resolve func(string) (model.Rider, bool), oneDay, stage []RealRaceEntry) {
+	rows, err := readCSV(path)
+	if err != nil || len(rows) < 2 {
+		return
+	}
+	entryFor := func(title string) *RealRaceEntry {
+		for _, n := range savedRaceNames {
+			if !strings.Contains(title, n.part) {
+				continue
+			}
+			for i := range oneDay {
+				if oneDay[i].DisplayName == n.race+" 2026" {
+					return &oneDay[i]
+				}
+			}
+			for i := range stage {
+				if stage[i].DisplayName == n.race+" 2026 (GC)" {
+					return &stage[i]
+				}
+			}
+		}
+		return nil
+	}
+	starts := map[*RealRaceEntry][]Starter{}
+	finishers := map[*RealRaceEntry][]Starter{}
+	for _, row := range rows[1:] { // Race,Kind,Pos,Rider,Team,GapS,Status
+		if len(row) < 7 {
+			continue
+		}
+		e := entryFor(row[0])
+		if e == nil {
+			continue
+		}
+		r, ok := resolve(row[3])
+		if !ok {
+			continue
+		}
+		switch row[1] {
+		case "start":
+			starts[e] = append(starts[e], Starter{Name: r.Name, Team: row[4]})
+		case "result", "gc":
+			finishers[e] = append(finishers[e], Starter{Name: r.Name, Team: row[4]})
+			if row[6] != "" {
+				e.Abandoned = append(e.Abandoned, r.ID)
+				continue
+			}
+			pos, _ := strconv.Atoi(row[2])
+			gap, err := strconv.ParseFloat(row[5], 64)
+			if pos <= 0 || err != nil {
+				continue
+			}
+			if e.Full == nil {
+				e.Full = map[int64]FullPlace{}
+			}
+			e.Full[r.ID] = FullPlace{Pos: pos, Gap: gap}
+		}
+	}
+	for e, list := range starts {
+		if len(e.StartList) == 0 {
+			e.StartList = list
+		}
+	}
+	for e, list := range finishers {
+		// A one-day result lists every starter; a final GC only finishers
+		// plus those it marks as out, so it's no start list.
+		if len(e.StartList) == 0 && !strings.HasSuffix(e.DisplayName, "(GC)") {
+			e.StartList = list
+		}
+	}
 }
 
 // RunSeedSetsFor scores given references over several seed sets (as

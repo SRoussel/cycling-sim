@@ -62,10 +62,20 @@ type RealRaceEntry struct {
 	// Abandoned lists riders who started the real race but didn't finish it
 	// (data/abandons_2026.csv): they aren't judged as top-10 intruders.
 	Abandoned []int64
+	// Full holds real places beyond the top 10 when known (pages the user
+	// saved from ProCyclingStats, data/local/results_2026.csv): an intruder
+	// whose real place is known is judged on it like any other rider.
+	Full map[int64]FullPlace
 	// StartList, when set, is the real field: only DB riders on it start
 	// (names matched case- and space-insensitively), each for the team they
 	// rode for then (today's rosters differ).
 	StartList []Starter
+}
+
+// FullPlace is a rider's real place and gap behind the winner.
+type FullPlace struct {
+	Pos int
+	Gap float64
 }
 
 // Starter is a rider on a reference race's real start list.
@@ -769,6 +779,14 @@ func findIntruders(entry RealRaceEntry, top10 map[int64]int, wins map[int64]int,
 	}
 	var out []RiderCheck
 	for id, n := range top10 {
+		if f, ok := entry.Full[id]; ok && !known[id] && float64(n) >= intruderTop10Share*float64(runs) {
+			// Real place known (beyond the top 10): an ordinary position error.
+			out = append(out, RiderCheck{
+				RiderID: id, RealPos: f.Pos, RealGap: f.Gap, SimPos: pos(id), SimGap: gap(id),
+				Top10Pct: float64(n) / float64(runs) * 100, WinPct: float64(wins[id]) / float64(runs) * 100,
+			})
+			continue
+		}
 		if known[id] || float64(n) < intruderTop10Share*float64(runs) {
 			continue
 		}

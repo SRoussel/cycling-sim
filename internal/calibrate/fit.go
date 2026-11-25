@@ -140,6 +140,15 @@ func Fit(db *database.DB, base []model.Rider, opt Options) ([]Adjustment, error)
 				}
 			}
 			for _, c := range res.Intruders {
+				// Real place known (saved full results): judged like anyone.
+				if c.RealPos > 0 && c.RealGap >= 0 {
+					if s, ok := riderStep(c, stage, opt.Prior > 0); ok {
+						steps[c.RiderID] = append(steps[c.RiderID], s)
+						weights[c.RiderID] = append(weights[c.RiderID], w)
+						ev[c.RiderID] = append(ev[c.RiderID], fmt.Sprintf("%s %dth %+.1f%%", res.Name, c.RealPos, s))
+					}
+					continue
+				}
 				s := -intruderPenaltyPct * c.Top10Pct / 100
 				steps[c.RiderID] = append(steps[c.RiderID], s)
 				weights[c.RiderID] = append(weights[c.RiderID], w)

@@ -214,3 +214,8 @@ Refit on it (fitted26l), applied (backup data/local/backups/before-fitted26l.db)
 - Calibration: one-day top-10 50-75% band happens 31 -> 41% (claimed 62%), GC top-10 75-100% 66 -> 71% (81%); Brier .0482/.0425 -> .0472/.0417; winners 32.5 -> 31.3%.
 - GC spread: Giro 10th 27'41" -> 26'43" (history 9-21'), Vuelta 2nd 11'41" -> 11'05" (generic course), Dauphiné 10th 12'47" (4-10'); week-long 2nd places still too big at Paris-Nice (2'12"), Romandie (2'30"), Suisse (2'29"), too small at the Basque Country (12 s) and Tirreno (25 s).
 - Race shape: Grand Tours sprints 7.0-7.1 (6.5), breakaways 7.0-7.1 (8.5), selections 5.8-5.9 (5.0); week-long sprints 2.3-2.6 (1.5), selections 2.2-2.6 (3.5).
+
+## 2026-11-25: what's clearly off once noise is counted; first held-out reading
+Same build as the baseline above, `validate --sets 2 --season 2026 --holdout`, now with 95% ranges.
+- Solo shares: only Paris-Roubaix is clearly off (10%, 6-17%, vs history 4 of 10: 17-69%). Strade (44% vs 52-95%), Lombardia, E3, Liège (85% vs 35-85%), Amstel are within noise of ~10 editions. The total is clearly low: 31% (29-34%) vs history 48 of 117 editions (33-50%).
+- Held out (2024 and 2023 references, never fitted, with 2026 ratings, so a season off): real winners 36.6% (2026: 31.3%); calibration much worse than in-sample: one-day top 10 given 50-75% made it 26% (2026: 41%), GC top 10 given 50-75% made it 19% (2026: 48%); Brier .0498/.0482 (2026: .0472/.0417). Part is the season mismatch (riders' level changes year to year), part may be the fit's per-rider corrections not generalising; watch how it moves with future changes rather than its level.

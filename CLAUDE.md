@@ -103,10 +103,10 @@ Go 1.24+, `modernc.org/sqlite` (pure Go). DB path: `CYCLING_SIM_DB` (default `cy
 - WorldDB riders: `import-riders` reads the mod database (`internal/pcmdb`); riders the base files lack get ratings from ridge fits of PCM attributes. Names match ignoring accents, middle names, double surnames and one-letter variants.
 - `data/rider_llm.csv` (offline LLM-drafted profiles for templated riders, `data/llm/`); `data/stage_prestige.csv` (stage prestige); `data/results/` (saved pages for `import-results`).
 
-## Open problems (Nov 2026, in priority order; baseline in docs/model-history.md, 2026-11-25)
-1. **One-day solo shares:** 31% of races (history 41%). Too rarely solo: Strade 44% (82%), Roubaix 10% (40%), E3 17% (40%), Lombardia 44% (73%; with Pogačar on the start line he wins ~1 in 3, history: five straight); too often: Liège 85% (64%), Amstel 29% (10%). Pogačar's edge in the model is 2-4% on long climbs, 6-7% on short paved ones.
-2. **Calibration:** one-day top 10 overconfident (riders given 50-75% make it 41%); GC top 10 given 75-100% make it 71%.
-3. **Stage-race GC spread:** Giro 10th ~27' (history 9-21'), Dauphiné 10th 12'47" (4-10'); week-long 2nd places too big at Paris-Nice/Romandie/Suisse, too small at the Basque Country/Tirreno.
+## Open problems (Nov 2026, in priority order; only what's clearly outside the noise; baseline in docs/model-history.md, 2026-11-25)
+1. **Too few solo wins overall:** 31% of one-day races (95% range 29-34%) vs history 41% (33-50%); per race only Roubaix is clearly off (10% vs 17-69%). With Pogačar added, Lombardia goes to him ~1 in 3 (history: five straight).
+2. **Calibration:** one-day top 10 overconfident (riders given 50-75% make it 41%); GC top 10 given 75-100% make it 71%. Held out (2024/2023, a season off) it's worse: 26% and 53%.
+3. **Stage-race GC spread:** outside history's range at Paris-Nice, Romandie, Suisse (2nd too far back), the Giro, Dauphiné and Vuelta (10th too far back); the Basque Country's 10th too close.
 4. **Week-long races:** too many sprints (2.3-2.6 vs 1.5 per race), too few selections (2.2-2.6 vs 3.5).
-5. **Grand Tour breakaway wins** 7.0-7.1 per race (real 8.5); selections 5.8-5.9 (5.0).
-6. **Flèche** still splits ~60-75 km out in some runs (finish correct: favourites together on the Mur).
+5. **Grand Tour breakaway wins** 7.0-7.1 per race (real 8.5; two or three real races, so weak evidence).
+6. **Flèche** still splits ~60-75 km out in some runs (finish correct).

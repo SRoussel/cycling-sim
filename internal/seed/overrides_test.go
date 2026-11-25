@@ -79,13 +79,17 @@ func TestShippedRatingLayers(t *testing.T) {
 			t.Errorf("%s invalid after rating layers: %v", r.Name, err)
 		}
 	}
+	// The fit also corrects riders only the local WorldDB import adds
+	// (data/local, not in the repo): without it those names can't match.
+	_, statErr := os.Stat(DataPath(WorldDBFile))
+	haveWorldDB := statErr == nil
 	for _, layer := range RatingLayers {
 		m, err := LoadOverrides(findDataFile(layer))
 		if err != nil {
 			t.Fatalf("%s: %v", layer, err)
 		}
 		for key, o := range m {
-			if !names[key] {
+			if !names[key] && (haveWorldDB || layer != FittedFile) {
 				t.Errorf("%s: %q matches no rider", layer, o.Name)
 			}
 			if layer == "rider_llm.csv" && o.Confidence != "high" && o.Confidence != "medium" && o.Confidence != "low" {

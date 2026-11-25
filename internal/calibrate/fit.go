@@ -273,7 +273,16 @@ func riderStep(c simulation.RiderCheck, stage, wide bool) (float64, bool) {
 		if wide {
 			lim = maxCorrectionPct
 		}
-		return clamp((c.SimGap-c.RealGap)/per, -lim, lim), true
+		step := clamp((c.SimGap-c.RealGap)/per, -lim, lim)
+		// A one-day winner's real margin is one draw (Flanders 2026: 34 s,
+		// history 0-62 s): winning by more in the simulation lowers him by
+		// at most the per-race step, not the wide bound. Nov 2026: one
+		// margin cut Pogačar's threshold 5.2%, which also weakened him on
+		// the long climbs the single scale can't tell apart.
+		if !stage && c.RealPos == 1 && step < -maxStepPct {
+			step = -maxStepPct
+		}
+		return step, true
 	}
 	if c.RealPos > 0 {
 		return clamp((c.SimPos-float64(c.RealPos))/placesPerPct, -1, 1), true

@@ -110,3 +110,8 @@ Go 1.24+, `modernc.org/sqlite` (pure Go). DB path: `CYCLING_SIM_DB` (default `cy
 4. **Week-long races:** too many sprints (2.3-2.6 vs 1.5 per race), too few selections (2.2-2.6 vs 3.5).
 5. **Grand Tour breakaway wins** 7.0-7.1 per race (real 8.5; two or three real races, so weak evidence).
 6. **Flèche** still splits ~60-75 km out in some runs (finish correct).
+
+## Future tasks (game speed; the endgame is a Steam desktop game that feels fast, the user, Nov 2026)
+Wails stays the shell: on Windows it is WebView2 calling Go in-process; the time goes to the engine. Exact speed-ups only (same results).
+1. **Simulate a season's background races in parallel.** Races on the same day don't depend on each other: run them on all cores, each with its own seed, so results stay identical to the serial run (check that). Expected ~8-15x on a season advance.
+2. **Profile a full season advance** (CPU profile, as for the earlier race speed-up in docs/model-history.md) and take the exact wins it shows. Do it while nothing else is using the cores (a running fit skews timings).

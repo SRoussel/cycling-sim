@@ -456,7 +456,7 @@ func RunRealRaceValidationFor(db *database.DB, allRiders []model.Rider, entries 
 			Riders:               checks,
 			Intruders:            intruders,
 			Finish:               &finish,
-			Calib:                calibPoints(posCnt, top10Hits, wins, runs, entry.Top10RiderIDs),
+			Calib:                entry.calibIfKnown(calibPoints(posCnt, top10Hits, wins, runs, entry.Top10RiderIDs)),
 		})
 	}
 	return results
@@ -704,7 +704,7 @@ func RunRealStageRaceValidationFor(db *database.DB, allRiders []model.Rider, ent
 			Details: fmt.Sprintf("Matched %d | Corr %.2f | GC top-10 overlap %.0f%% (≥%.0f%%) | GC gap MAE %.0fs over %d (≤%.0fs), median-gap MAE %.0fs | Real winner wins %.0f%%",
 				len(matched), corr, overlap, realPassTop10Target, mae, n, realStageRaceGapMAE, medMAE, winPct),
 			Riders: checks, Intruders: intruders, Spread: spread,
-			Calib:     calibPoints(gapN, top10, wins, runs, entry.Top10RiderIDs),
+			Calib:     entry.calibIfKnown(calibPoints(gapN, top10, wins, runs, entry.Top10RiderIDs)),
 			StageRace: entry.InternalName, Outcomes: outcomes,
 		})
 	}
@@ -827,6 +827,18 @@ func (e RealRaceEntry) field() map[string]string {
 		out[fieldName(s.Name)] = s.Team
 	}
 	return out
+}
+
+// calibIfKnown drops a race's calibration points when its real field is
+// unknown (no start list and no list of non-starters): the simulated field
+// is everyone the selection picks, and a favourite "missing" the top 10 may
+// not have started (Nov 2026: E3 and Gent-Wevelgem 2026 put Pogačar, Van der
+// Poel, Van Aert and Evenepoel at 60-95% for top 10s they likely never rode).
+func (e RealRaceEntry) calibIfKnown(points []CalibPoint) []CalibPoint {
+	if len(e.StartList) == 0 && len(e.DidNotStart) == 0 {
+		return nil
+	}
+	return points
 }
 
 // fieldName matches rider names case- and space-insensitively.

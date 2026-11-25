@@ -20,6 +20,7 @@ type CalibPoint struct {
 	P10, PWin float64 // simulated chance of a top 10 / of winning
 	In10, Won bool    // what he did
 	Runs      int     // simulations behind the chances
+	RiderID   int64
 }
 
 // calibPoints builds the field's points: every rider who started in the
@@ -49,7 +50,7 @@ func calibPoints(seen map[int64]int, top10, wins map[int64]int, runs int, real [
 		out = append(out, CalibPoint{
 			P10:  float64(top10[id]) / float64(runs),
 			PWin: float64(wins[id]) / float64(runs),
-			In10: inReal[id], Won: id == winner && winner > 0, Runs: runs,
+			In10: inReal[id], Won: id == winner && winner > 0, Runs: runs, RiderID: id,
 		})
 	}
 	return out

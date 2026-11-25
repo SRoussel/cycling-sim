@@ -44,7 +44,22 @@ type Options struct {
 	// rider seen once moves less than one seen in five races. 0 = off (the
 	// plain mean of the old fit).
 	Prior float64
+	// Start: corrections to begin from (the installed fit), by rider ID. The
+	// prior still pulls towards the base, so the target is unchanged; a fit
+	// that starts near its answer just needs fewer passes.
+	Start map[int64]float64
+	// MinPasses before the fit may stop on a settled average (with a prior).
+	MinPasses int
 }
+
+// settledAvgPct: with a prior the fit stops once the running average of the
+// last half of the passes moves less than this per pass for the mean rider
+// (and settledAvgMaxPct for any rider): noise keeps single passes swinging
+// (some rider at the step limit every pass), the average settles.
+const (
+	settledAvgPct    = 0.05
+	settledAvgMaxPct = 0.3
+)
 
 // DefaultOptions are a reasonable trade-off between noise and run time (runs
 // within a pass use all CPUs). With 4 stage-race runs a pass, the Tour gap
@@ -102,6 +117,9 @@ func Fit(db *database.DB, base []model.Rider, opt Options) ([]Adjustment, error)
 		logf = func(string, ...any) {}
 	}
 	scale := map[int64]float64{}
+	for id, v := range opt.Start {
+		scale[id] = v
+	}
 	evidence := map[int64][]string{}
 	// history holds each pass's scales: with a prior the result is the
 	// average of the last half of the passes (Polyak averaging), since each
@@ -209,6 +227,21 @@ func Fit(db *database.DB, base []model.Rider, opt Options) ([]Adjustment, error)
 		if meanStep < settledPct && largest < settledMaxPct {
 			break
 		}
+		if opt.Prior > 0 && opt.MinPasses > 0 && len(history) >= opt.MinPasses {
+			now, before := tailMean(history), tailMean(history[:len(history)-1])
+			var sum, most float64
+			for id, v := range now {
+				d := math.Abs(v-before[id]) * 100
+				sum += d
+				most = math.Max(most, d)
+			}
+			mean := sum / float64(max(1, len(now)))
+			logf("  average moved %.3f%% (largest %.2f%%)\n", mean, most)
+			if mean < settledAvgPct && most < settledAvgMaxPct {
+				logf("average settled after %d passes\n", len(history))
+				break
+			}
+		}
 	}
 	spread := map[int64]float64{}
 	if opt.Prior > 0 && len(history) >= 4 {
@@ -297,6 +330,31 @@ func riderStep(c simulation.RiderCheck, stage, wide bool) (float64, bool) {
 		return clamp((c.SimPos-float64(c.RealPos))/placesPerPct, -1, 1), true
 	}
 	return 0, false
+}
+
+// tailMean is each rider's mean scale over the last half of the passes (1
+// for a rider never adjusted).
+func tailMean(history []map[int64]float64) map[int64]float64 {
+	tail := history[len(history)/2:]
+	ids := map[int64]bool{}
+	for _, h := range tail {
+		for id := range h {
+			ids[id] = true
+		}
+	}
+	out := make(map[int64]float64, len(ids))
+	for id := range ids {
+		sum := 0.0
+		for _, h := range tail {
+			v := h[id]
+			if v == 0 {
+				v = 1
+			}
+			sum += v
+		}
+		out[id] = sum / float64(len(tail))
+	}
+	return out
 }
 
 func applyScales(base []model.Rider, scale map[int64]float64) []model.Rider {

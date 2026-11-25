@@ -739,6 +739,21 @@ func cmdFitRatings(db *database.DB, path string, classics, season2026 bool) {
 		}
 		opt.Prior, opt.MaxChange = 1, 0.10
 		opt.Iterations, opt.Runs, opt.StageRuns = 20, 30, 16
+		// Start from the installed fit (the prior still pulls towards the
+		// unfitted base) and stop when the average settles: a routine refit
+		// starts near its answer (Nov 2026: ~10-15 min instead of 30-40).
+		if fitted, err := seed.LoadOverrides(seed.DataPath(seed.FittedFile)); err == nil && len(fitted) > 0 {
+			opt.Start = map[int64]float64{}
+			for _, r := range base {
+				if o, ok := fitted[seed.NormalizeName(r.Name)]; ok {
+					if v, err := strconv.ParseFloat(o.Fields["FTP_scale"], 64); err == nil && v > 0 {
+						opt.Start[r.ID] = v
+					}
+				}
+			}
+			opt.MinPasses = 6
+			fmt.Printf("Starting from the installed fit (%d riders).\n", len(opt.Start))
+		}
 		what = "every 2026 reference (one-day and GC)"
 	}
 	fmt.Printf("Fitting thresholds to %s (this takes a minute or two)...\n", what)

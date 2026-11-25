@@ -69,3 +69,18 @@ func TestUnfitAndWriteRoundTrip(t *testing.T) {
 		t.Fatalf("fitted FTP %d, want 420", r.FTPWatts)
 	}
 }
+
+// A known place far behind the sim counts no more than an intruder; one
+// ahead of it counts fully.
+func TestKnownPlaceStep(t *testing.T) {
+	behind := simulation.RiderCheck{RealPos: 91, RealGap: 3600, SimPos: 8, SimGap: 30, Top10Pct: 60}
+	s, ok := knownPlaceStep(behind, true, true)
+	if !ok || s != -intruderPenaltyPct*0.6 {
+		t.Errorf("far behind: got %.2f, want %.2f", s, -intruderPenaltyPct*0.6)
+	}
+	ahead := simulation.RiderCheck{RealPos: 12, RealGap: 20, SimPos: 30, SimGap: 200, Top10Pct: 5}
+	want, _ := riderStep(ahead, false, true)
+	if s, _ := knownPlaceStep(ahead, false, true); want <= 0 || s != want {
+		t.Errorf("ahead: got %.2f, want riderStep %.2f > 0", s, want)
+	}
+}

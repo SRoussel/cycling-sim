@@ -158,16 +158,19 @@ func Fit(db *database.DB, base []model.Rider, opt Options) ([]Adjustment, error)
 				}
 			}
 			for _, c := range res.Intruders {
-				// Real place known (saved full results): judged like anyone.
+				s := -intruderPenaltyPct * c.Top10Pct / 100
+				// Real place known (saved full results): one better than the
+				// sim expected counts fully; a worse one only as much as an
+				// intruder, since riders who crash, work or sit up lose
+				// minutes that say nothing about their power.
 				if c.RealPos > 0 && c.RealGap >= 0 {
-					if s, ok := riderStep(c, stage, opt.Prior > 0); ok {
-						steps[c.RiderID] = append(steps[c.RiderID], s)
+					if k, ok := knownPlaceStep(c, stage, opt.Prior > 0); ok {
+						steps[c.RiderID] = append(steps[c.RiderID], k)
 						weights[c.RiderID] = append(weights[c.RiderID], w)
-						ev[c.RiderID] = append(ev[c.RiderID], fmt.Sprintf("%s %dth %+.1f%%", res.Name, c.RealPos, s))
+						ev[c.RiderID] = append(ev[c.RiderID], fmt.Sprintf("%s %dth %+.1f%%", res.Name, c.RealPos, k))
 					}
 					continue
 				}
-				s := -intruderPenaltyPct * c.Top10Pct / 100
 				steps[c.RiderID] = append(steps[c.RiderID], s)
 				weights[c.RiderID] = append(weights[c.RiderID], w)
 				ev[c.RiderID] = append(ev[c.RiderID], fmt.Sprintf("%s intruder %+.1f%%", res.Name, s))
@@ -334,6 +337,17 @@ func riderStep(c simulation.RiderCheck, stage, wide bool) (float64, bool) {
 		return clamp((c.SimPos-float64(c.RealPos))/placesPerPct, -1, 1), true
 	}
 	return 0, false
+}
+
+// knownPlaceStep judges an intruder whose real place is known: like any
+// rider when he did better than the sim expected, never down by more than
+// the plain intruder step.
+func knownPlaceStep(c simulation.RiderCheck, stage, prior bool) (float64, bool) {
+	s, ok := riderStep(c, stage, prior)
+	if !ok {
+		return 0, false
+	}
+	return math.Max(s, -intruderPenaltyPct*c.Top10Pct/100), true
 }
 
 // tailMean is each rider's mean scale over the last half of the passes (1

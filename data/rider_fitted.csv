@@ -4,111 +4,112 @@
 # Applied last at seed time, as a multiplier on the threshold from the earlier
 # layers and the WorldDB rebuild. Regenerated on each fit.
 Name,FTP_scale,Source
-Afonso Eulálio,1.0524,fitted: Giro d'Italia 2026 (GC) +6.1%
-Aimé De Gendt,1.0199,fitted: Gent-Wevelgem 2026 +2.2%
-Albert Withen Philipsen,1.0205,fitted: Tour de Romandie 2026 (GC) +2.9%; Amstel Gold Race 2026 +0.7%
-Alessandro Pinarello,1.0219,fitted: Tirreno-Adriatico 2026 (GC) +2.0%
-Alex Baudin,1.0162,fitted: Paris-Nice 2026 (GC) -0.5%; Tour of the Basque Country 2026 (GC) -0.3%; La Fleche Wallonne 2026 +1.2%
-Andrea Vendrame,1.0086,fitted: Milan-San Remo 2026 +1.8%
-Andreas Kron,1.0271,fitted: Strade Bianche 2026 +1.3%; La Fleche Wallonne 2026 +1.4%
-Antonio Tiberi,0.9974,fitted: Tour de Romandie 2026 (GC) intruder -0.2%
-Arnaud De Lie,1.0159,fitted: Gent-Wevelgem 2026 -0.3%
-Bart Lemmen,1.0042,fitted: Tour de Suisse 2026 (GC) +0.8%
-Ben Healy,1.0102,fitted: Tirreno-Adriatico 2026 (GC) +1.7%; Tour of the Basque Country 2026 (GC) intruder -0.3%
-Ben Tulett,1.0125,fitted: La Fleche Wallonne 2026 -2.6%; Clasica San Sebastian 2026 +2.0%
-Benoît Cosnefroy,1.0248,fitted: Amstel Gold Race 2026 +0.4%; La Fleche Wallonne 2026 +2.4%
-Brandon McNulty,1.0150,fitted: Paris-Nice 2026 (GC) intruder -0.3%; Tour de Suisse 2026 (GC) +0.3%; Il Lombardia 2026 +4.5%
-Christian Scaroni,1.0243,fitted: Liege-Bastogne-Liege 2026 +1.7%; Clasica San Sebastian 2026 +2.3%; Il Lombardia 2026 -2.0%
-Christophe Laporte,1.0169,fitted: E3 Saxo Classic 2026 +1.2%; Gent-Wevelgem 2026 +2.1%; Tour of Flanders 2026 -0.7%; Paris-Roubaix 2026 -1.7%
-Cian Uijtdebroeks,1.0292,fitted: Volta a Catalunya 2026 (GC) +1.7%; Tour Auvergne-Rhone-Alpes 2026 (GC) +4.6%
-Clément Berthet,1.0345,fitted: Vuelta a Espana 2026 (GC) +10.0%
-Clément Champoussin,1.0058,fitted: Tour of the Basque Country 2026 (GC) +1.0%
-Corbin Strong,1.0073,fitted: Milan-San Remo 2026 +1.6%
-Cristián Rodríguez,1.0513,fitted: Tour Auvergne-Rhone-Alpes 2026 (GC) +5.6%; Vuelta a Espana 2026 (GC) +10.0%
-Damiano Caruso,1.0505,fitted: Tour de Romandie 2026 (GC) intruder -0.4%; Giro d'Italia 2026 (GC) +6.1%
-Daniel Martínez,1.0092,fitted: Paris-Nice 2026 (GC) +1.4%
-Davide Piganzoli,1.0340,fitted: Paris-Nice 2026 (GC) intruder -0.3%; Giro d'Italia 2026 (GC) +2.2%
-Derek Gee-West,1.0376,fitted: Giro d'Italia 2026 (GC) +3.1%
-Edoardo Zambanini,1.0112,fitted: Milan-San Remo 2026 +1.5%
-Egan Bernal,1.0278,fitted: Giro d'Italia 2026 (GC) +2.1%; Tour de France 2026 (GC) intruder -0.3%; Liege-Bastogne-Liege 2026 +1.7%
-Emiel Verstrynge,1.0162,fitted: Amstel Gold Race 2026 +1.5%; Liege-Bastogne-Liege 2026 +4.0%
-Enric Mas,1.0308,fitted: Giro d'Italia 2026 (GC) intruder -0.3%; Tour de Suisse 2026 (GC) intruder -0.3%; Vuelta a Espana 2026 (GC) +9.0%; Il Lombardia 2026 +1.8%
-Ewen Costiou,1.0045,fitted: Amstel Gold Race 2026 +1.8%
-Felix Gall,1.0578,fitted: Volta a Catalunya 2026 (GC) +1.0%; Giro d'Italia 2026 (GC) +2.4%; Vuelta a Espana 2026 (GC) +5.1%
-Filippo Ganna,0.9965,fitted: Paris-Roubaix 2026 intruder -0.4%
-Filippo Zana,1.0284,fitted: Liege-Bastogne-Liege 2026 -2.9%; Il Lombardia 2026 +4.7%
-Florian Lipowitz,1.0159,fitted: Volta a Catalunya 2026 (GC) +1.4%; Tour of the Basque Country 2026 (GC) +0.2%; Tour de Romandie 2026 (GC) +0.9%
-Florian Vermeersch,1.0335,fitted: E3 Saxo Classic 2026 +3.5%; Tour of Flanders 2026 +0.3%
-Georg Steinhauser,1.0132,fitted: Paris-Nice 2026 (GC) +2.6%
-Gianni Vermeersch,1.0117,fitted: Strade Bianche 2026 -1.7%; E3 Saxo Classic 2026 +1.0%; Tour of Flanders 2026 +0.3%
-Giulio Ciccone,1.0132,fitted: Tirreno-Adriatico 2026 (GC) +1.7%; Giro d'Italia 2026 (GC) intruder -0.3%; Clasica San Sebastian 2026 +1.6%; Il Lombardia 2026 +1.7%
-Giulio Pellizzari,1.0127,fitted: Tirreno-Adriatico 2026 (GC) +1.2%
+Afonso Eulálio,1.0500,fitted: Giro d'Italia 2026 (GC) +6.1%
+Aimé De Gendt,1.0066,fitted: Gent-Wevelgem 2026 +0.4%
+Albert Withen Philipsen,1.0230,fitted: Tour de Romandie 2026 (GC) +1.6%; Amstel Gold Race 2026 +2.1%
+Alessandro Pinarello,1.0224,fitted: Tirreno-Adriatico 2026 (GC) +2.3%
+Alex Baudin,1.0153,fitted: Paris-Nice 2026 (GC) +0.8%; Tour of the Basque Country 2026 (GC) -0.1%; La Fleche Wallonne 2026 -2.0%
+Andrea Vendrame,1.0034,fitted: Milan-San Remo 2026 -3.2%
+Andreas Kron,1.0318,fitted: Strade Bianche 2026 -1.1%; La Fleche Wallonne 2026 +1.4%
+Antonio Tiberi,0.9974,fitted: Tour de Romandie 2026 (GC) 27th -0.3%
+António Morgado,1.0034,fitted: E3 Saxo Classic 2026 14th +0.9%
+Arnaud De Lie,1.0246,fitted: Gent-Wevelgem 2026 +1.4%
+Bart Lemmen,1.0047,fitted: Tour de Suisse 2026 (GC) +1.5%
+Ben Healy,1.0107,fitted: Tirreno-Adriatico 2026 (GC) +0.6%; Tour Auvergne-Rhone-Alpes 2026 (GC) intruder -0.3%
+Ben Tulett,1.0138,fitted: La Fleche Wallonne 2026 +0.9%; Clasica San Sebastian 2026 +0.7%
+Benoît Cosnefroy,1.0269,fitted: Amstel Gold Race 2026 +2.5%; La Fleche Wallonne 2026 +1.3%
+Brandon McNulty,1.0149,fitted: Paris-Nice 2026 (GC) intruder -0.4%; Tour de Suisse 2026 (GC) +0.1%; Il Lombardia 2026 +2.5%
+Christian Scaroni,1.0270,fitted: La Fleche Wallonne 2026 11th +1.6%; Liege-Bastogne-Liege 2026 +1.7%; Clasica San Sebastian 2026 -0.5%; Il Lombardia 2026 +2.5%
+Christophe Laporte,1.0139,fitted: E3 Saxo Classic 2026 +0.7%; Gent-Wevelgem 2026 +1.1%; Tour of Flanders 2026 +1.2%; Paris-Roubaix 2026 +1.4%
+Cian Uijtdebroeks,1.0292,fitted: Volta a Catalunya 2026 (GC) +1.1%; Tour Auvergne-Rhone-Alpes 2026 (GC) +3.8%
+Clément Berthet,1.0379,fitted: Tour de Romandie 2026 (GC) 25th -0.2%; Vuelta a Espana 2026 (GC) +10.0%
+Clément Champoussin,1.0072,fitted: Tour of the Basque Country 2026 (GC) +2.1%
+Corbin Strong,1.0083,fitted: Milan-San Remo 2026 +2.6%
+Cristián Rodríguez,1.0550,fitted: Tour de Romandie 2026 (GC) 19th -0.0%; Tour Auvergne-Rhone-Alpes 2026 (GC) +3.7%; Vuelta a Espana 2026 (GC) +8.8%
+Damiano Caruso,1.0526,fitted: Tour de Romandie 2026 (GC) 30th -0.3%; Giro d'Italia 2026 (GC) +6.1%
+Daniel Martínez,1.0079,fitted: Paris-Nice 2026 (GC) +2.6%
+Davide Piganzoli,1.0338,fitted: Paris-Nice 2026 (GC) intruder -0.3%; Giro d'Italia 2026 (GC) +2.6%
+Derek Gee-West,1.0394,fitted: Volta a Catalunya 2026 (GC) intruder -0.2%; Giro d'Italia 2026 (GC) +4.0%
+Edoardo Zambanini,1.0030,fitted: Milan-San Remo 2026 -3.0%
+Egan Bernal,1.0232,fitted: Giro d'Italia 2026 (GC) +2.6%; Tour de France 2026 (GC) 20th -0.3%; Liege-Bastogne-Liege 2026 +0.0%
+Emiel Verstrynge,1.0255,fitted: Amstel Gold Race 2026 +4.4%; Liege-Bastogne-Liege 2026 +5.9%
+Enric Mas,1.0363,fitted: Volta a Catalunya 2026 (GC) 24th -0.3%; Giro d'Italia 2026 (GC) 32th -0.4%; Vuelta a Espana 2026 (GC) +7.3%; Clasica San Sebastian 2026 17th +2.0%; Il Lombardia 2026 +0.8%
+Felix Gall,1.0574,fitted: Volta a Catalunya 2026 (GC) +1.3%; Giro d'Italia 2026 (GC) +1.7%; Vuelta a Espana 2026 (GC) +4.7%
+Filippo Zana,1.0325,fitted: Liege-Bastogne-Liege 2026 -2.1%; Il Lombardia 2026 +2.6%
+Florian Lipowitz,1.0158,fitted: Volta a Catalunya 2026 (GC) +1.4%; Tour of the Basque Country 2026 (GC) +0.1%; Tour de Romandie 2026 (GC) +0.8%
+Florian Vermeersch,1.0157,fitted: E3 Saxo Classic 2026 +1.0%; Tour of Flanders 2026 +0.4%
+Georg Steinhauser,1.0132,fitted: Paris-Nice 2026 (GC) +2.1%
+Gianni Vermeersch,0.9938,fitted: Strade Bianche 2026 +2.2%; E3 Saxo Classic 2026 -0.7%; Tour of Flanders 2026 -0.2%
+Giulio Ciccone,1.0198,fitted: Tirreno-Adriatico 2026 (GC) +0.5%; Giro d'Italia 2026 (GC) 20th -0.3%; Milan-San Remo 2026 38th +0.8%; Liege-Bastogne-Liege 2026 20th +1.0%; Clasica San Sebastian 2026 +1.8%; Il Lombardia 2026 +1.3%
+Giulio Pellizzari,1.0119,fitted: Tirreno-Adriatico 2026 (GC) +0.7%
 Guillaume Martin,1.0333,fitted: Tour Auvergne-Rhone-Alpes 2026 (GC) +10.0%
-Harold Tejada,1.0273,fitted: Paris-Nice 2026 (GC) -0.2%; Vuelta a Espana 2026 (GC) +6.0%
-Igor Arrieta,1.0060,fitted: Tour of the Basque Country 2026 (GC) +1.2%
-Ion Izagirre,1.0071,fitted: Paris-Nice 2026 (GC) +0.2%; Tour of the Basque Country 2026 (GC) +0.7%; La Fleche Wallonne 2026 -1.4%
-Isaac del Toro,1.0227,fitted: Tirreno-Adriatico 2026 (GC) +0.2%; Tour of the Basque Country 2026 (GC) intruder -0.4%; Tour Auvergne-Rhone-Alpes 2026 (GC) +0.9%; Tour de France 2026 (GC) +3.0%; Strade Bianche 2026 +0.0%; Milan-San Remo 2026 intruder -0.3%; Il Lombardia 2026 intruder -0.5%
-Jai Hindley,1.0188,fitted: Tirreno-Adriatico 2026 (GC) intruder -0.3%; Volta a Catalunya 2026 (GC) intruder -0.2%; Giro d'Italia 2026 (GC) +2.8%; La Fleche Wallonne 2026 intruder -0.3%; Liege-Bastogne-Liege 2026 intruder -0.3%
+Harold Tejada,1.0288,fitted: Paris-Nice 2026 (GC) -0.9%; Tour of the Basque Country 2026 (GC) 15th -0.3%; Vuelta a Espana 2026 (GC) +7.1%
+Igor Arrieta,1.0047,fitted: Tour of the Basque Country 2026 (GC) +0.6%
+Ion Izagirre,1.0064,fitted: Paris-Nice 2026 (GC) +1.0%; Tour of the Basque Country 2026 (GC) +0.7%; La Fleche Wallonne 2026 +1.0%
+Isaac del Toro,1.0196,fitted: Tirreno-Adriatico 2026 (GC) +0.6%; Tour of the Basque Country 2026 (GC) intruder -0.4%; Tour Auvergne-Rhone-Alpes 2026 (GC) +1.2%; Tour de France 2026 (GC) +2.1%; Strade Bianche 2026 +0.8%; Milan-San Remo 2026 110th -0.3%; Il Lombardia 2026 28th -0.5%
+Jai Hindley,1.0278,fitted: Tirreno-Adriatico 2026 (GC) 22th -0.2%; Volta a Catalunya 2026 (GC) 17th +0.4%; Giro d'Italia 2026 (GC) +2.5%; La Fleche Wallonne 2026 33th +1.3%
 Jakob Omrzel,1.0333,fitted: Vuelta a Espana 2026 (GC) +10.0%
-Jan Christen,1.0176,fitted: Strade Bianche 2026 -3.2%; Clasica San Sebastian 2026 +1.0%
-Jasper Philipsen,1.0142,fitted: Gent-Wevelgem 2026 +1.4%; Paris-Roubaix 2026 intruder -0.2%
-Jasper Stuyven,1.0024,fitted: Milan-San Remo 2026 +1.0%; Gent-Wevelgem 2026 -0.7%; Tour of Flanders 2026 +2.0%; Paris-Roubaix 2026 -10.0%
-Javier Romo,1.0042,fitted: Tour of the Basque Country 2026 (GC) +1.0%
-Jefferson Alveiro Cepeda,1.0530,fitted: Tour de Romandie 2026 (GC) +10.0%
-Jonas Abrahamsen,1.0377,fitted: E3 Saxo Classic 2026 +2.6%; Gent-Wevelgem 2026 +2.1%
-Jonas Vingegaard,1.0070,fitted: Paris-Nice 2026 (GC) +0.4%; Volta a Catalunya 2026 (GC) +0.5%; Giro d'Italia 2026 (GC) +0.6%
-Jordan Jegat,1.0270,fitted: Tour de France 2026 (GC) +5.6%
-José Félix Parra,1.0333,fitted: Tour Auvergne-Rhone-Alpes 2026 (GC) +8.9%
-João Almeida,0.9948,fitted: Volta a Catalunya 2026 (GC) intruder -0.3%; Tour Auvergne-Rhone-Alpes 2026 (GC) intruder -0.5%; Vuelta a Espana 2026 (GC) intruder -0.3%
-Juan Ayuso,1.0124,fitted: Paris-Nice 2026 (GC) intruder -0.4%; Tour of the Basque Country 2026 (GC) intruder -0.2%; Tour Auvergne-Rhone-Alpes 2026 (GC) +1.3%; Tour de France 2026 (GC) +2.8%; Il Lombardia 2026 intruder -0.3%
-Junior Lecerf,1.0176,fitted: Tour de Romandie 2026 (GC) +2.0%
-Jørgen Nordhagen,1.0186,fitted: Tour de Romandie 2026 (GC) +2.3%
-Kévin Vauquelin,0.9885,fitted: Paris-Nice 2026 (GC) -0.4%; Tour of the Basque Country 2026 (GC) -1.1%; Tour Auvergne-Rhone-Alpes 2026 (GC) intruder -0.2%; Amstel Gold Race 2026 intruder -0.3%; La Fleche Wallonne 2026 intruder -0.3%; Liege-Bastogne-Liege 2026 intruder -0.3%
-Lennert Van Eetvelt,0.9973,fitted: La Fleche Wallonne 2026 intruder -0.3%
-Lenny Martinez,1.0330,fitted: Paris-Nice 2026 (GC) +0.6%; Volta a Catalunya 2026 (GC) +1.0%; Tour de Romandie 2026 (GC) +0.8%; Tour de France 2026 (GC) +3.0%; La Fleche Wallonne 2026 -3.7%; Il Lombardia 2026 intruder -0.4%
-Lorenzo Fortunato,1.0169,fitted: Tour de Romandie 2026 (GC) +1.2%
-Luca Mozzato,1.0424,fitted: Gent-Wevelgem 2026 +2.7%
-Luke Plapp,1.0126,fitted: Tour de Romandie 2026 (GC) +1.5%
-Luke Tuckwell,1.0600,fitted: Tour de Romandie 2026 (GC) +3.5%; Tour Auvergne-Rhone-Alpes 2026 (GC) +8.0%
-Léo Bisiaux,1.0132,fitted: Clasica San Sebastian 2026 +2.0%
-Mads Pedersen,0.9712,fitted: Milan-San Remo 2026 -9.2%; E3 Saxo Classic 2026 +1.1%; Tour of Flanders 2026 +0.0%; Paris-Roubaix 2026 +1.1%
-Magnus Sheffield,1.0180,fitted: Tirreno-Adriatico 2026 (GC) +1.8%
-Marc Hirschi,1.0085,fitted: Clasica San Sebastian 2026 -1.1%
-Marc Soler,1.0054,fitted: Paris-Nice 2026 (GC) +1.5%
-Marcel Camprubí,1.0115,fitted: Clasica San Sebastian 2026 +2.9%
-Marco Frigo,1.0128,fitted: Amstel Gold Race 2026 +1.9%
-Matej Mohorič,1.0060,fitted: Tour of Flanders 2026 +0.7%
-Mathias Vacek,1.0073,fitted: Tour de Suisse 2026 (GC) +1.8%
-Mathieu van der Poel,1.0168,fitted: Tirreno-Adriatico 2026 (GC) intruder -0.3%; Tour de Suisse 2026 (GC) intruder -0.2%; Milan-San Remo 2026 +1.5%; E3 Saxo Classic 2026 +0.6%; Tour of Flanders 2026 +0.5%; Paris-Roubaix 2026 +0.7%
-Mathys Rondel,1.0206,fitted: Paris-Nice 2026 (GC) -0.0%; Il Lombardia 2026 +3.9%
-Matteo Jorgenson,1.0117,fitted: Tirreno-Adriatico 2026 (GC) +0.5%; Tour Auvergne-Rhone-Alpes 2026 (GC) +1.4%; Strade Bianche 2026 -3.0%; Amstel Gold Race 2026 intruder -0.3%; Clasica San Sebastian 2026 intruder -0.3%; Il Lombardia 2026 intruder -0.3%
-Matteo Trentin,1.0246,fitted: Milan-San Remo 2026 +2.0%; E3 Saxo Classic 2026 +0.9%; Gent-Wevelgem 2026 +2.0%
-Matthew Brennan,0.9963,fitted: Tour of Flanders 2026 intruder -0.2%; Paris-Roubaix 2026 intruder -0.3%
-Matthew Riccitello,1.0138,fitted: Volta a Catalunya 2026 (GC) +2.1%; Tour of the Basque Country 2026 (GC) intruder -0.2%; Tour de Suisse 2026 (GC) +0.2%
-Mattias Skjelmose,1.0197,fitted: Volta a Catalunya 2026 (GC) -0.1%; Tour of the Basque Country 2026 (GC) intruder -0.3%; Tour Auvergne-Rhone-Alpes 2026 (GC) +0.4%; Tour de France 2026 (GC) +1.0%; Vuelta a Espana 2026 (GC) intruder -0.3%; Amstel Gold Race 2026 +0.6%; La Fleche Wallonne 2026 +1.0%; Liege-Bastogne-Liege 2026 intruder -0.3%
-Mauri Vansevenant,1.0060,fitted: Amstel Gold Race 2026 +3.0%
-Mauro Schmid,1.0141,fitted: Amstel Gold Race 2026 +0.4%; La Fleche Wallonne 2026 +1.5%
-Michael Storer,1.0289,fitted: Tirreno-Adriatico 2026 (GC) intruder -0.3%; Giro d'Italia 2026 (GC) +2.4%
-Mick van Dijke,1.0184,fitted: Paris-Roubaix 2026 +1.7%
-Nils Politt,1.0107,fitted: Paris-Roubaix 2026 +1.6%
-Oscar Onley,1.0079,fitted: Paris-Nice 2026 (GC) intruder -0.3%; Volta a Catalunya 2026 (GC) intruder -0.3%; Tour de Romandie 2026 (GC) intruder -0.4%; Tour Auvergne-Rhone-Alpes 2026 (GC) intruder -0.3%; Vuelta a Espana 2026 (GC) +3.2%; Il Lombardia 2026 intruder -0.3%
-Paul Seixas,1.0198,fitted: Tour of the Basque Country 2026 (GC) +0.6%; Tour Auvergne-Rhone-Alpes 2026 (GC) intruder -0.4%; Tour de France 2026 (GC) +2.4%; Strade Bianche 2026 +1.5%; La Fleche Wallonne 2026 +0.2%; Liege-Bastogne-Liege 2026 +0.7%; Il Lombardia 2026 +1.4%
-Pello Bilbao,1.0173,fitted: Tirreno-Adriatico 2026 (GC) intruder -0.2%; Tour of the Basque Country 2026 (GC) -0.5%; Liege-Bastogne-Liege 2026 +1.7%; Clasica San Sebastian 2026 +2.8%; Il Lombardia 2026 +2.0%
-Per Strand Hagenes,1.0215,fitted: E3 Saxo Classic 2026 +1.7%
-Primož Roglič,1.0101,fitted: Tirreno-Adriatico 2026 (GC) +1.0%; Tour of the Basque Country 2026 (GC) intruder -0.4%; Tour de Romandie 2026 (GC) intruder -0.4%; Tour de Suisse 2026 (GC) -1.1%; Vuelta a Espana 2026 (GC) +2.7%
-Remco Evenepoel,1.0047,fitted: Volta a Catalunya 2026 (GC) +0.4%; Tour de France 2026 (GC) +1.8%; Tour of Flanders 2026 +0.7%; Amstel Gold Race 2026 -1.5%; Liege-Bastogne-Liege 2026 +0.6%; Clasica San Sebastian 2026 +0.5%; Il Lombardia 2026 +1.2%
-Richard Carapaz,1.0045,fitted: Tirreno-Adriatico 2026 (GC) intruder -0.3%; Volta a Catalunya 2026 (GC) +0.6%; Tour de Suisse 2026 (GC) -0.1%; Tour de France 2026 (GC) +0.9%; Vuelta a Espana 2026 (GC) +2.6%; Strade Bianche 2026 intruder -0.3%; Clasica San Sebastian 2026 +0.4%
-Robert Donaldson,1.0337,fitted: Gent-Wevelgem 2026 +3.9%
-Romain Grégoire,1.0115,fitted: Strade Bianche 2026 +1.8%; Milan-San Remo 2026 intruder -0.4%; Amstel Gold Race 2026 +0.9%; La Fleche Wallonne 2026 +2.2%; Liege-Bastogne-Liege 2026 +2.0%
-Santiago Buitrago,1.0026,fitted: Tirreno-Adriatico 2026 (GC) +1.2%; Volta a Catalunya 2026 (GC) intruder -0.2%; Tour Auvergne-Rhone-Alpes 2026 (GC) intruder -0.3%; Liege-Bastogne-Liege 2026 intruder -0.3%
-Sepp Kuss,1.0318,fitted: Vuelta a Espana 2026 (GC) +7.1%
-Sergio Higuita,1.0033,fitted: Tour de Suisse 2026 (GC) +0.4%
-Stan Dewulf,1.0216,fitted: E3 Saxo Classic 2026 +2.4%
-Stefan Bissegger,1.0230,fitted: Paris-Roubaix 2026 +1.9%
-Tadej Pogačar,0.9918,fitted: Tour de Romandie 2026 (GC) +0.1%; Tour de Suisse 2026 (GC) +0.4%; Tour de France 2026 (GC) +0.3%; Strade Bianche 2026 -0.4%; Milan-San Remo 2026 +0.4%; Tour of Flanders 2026 +0.1%; Paris-Roubaix 2026 +0.3%; Liege-Bastogne-Liege 2026 +1.0%
-Thymen Arensman,1.0493,fitted: Giro d'Italia 2026 (GC) +6.6%
-Tobias Foss,1.0072,fitted: Tour de Suisse 2026 (GC) +1.4%
-Tobias Halland Johannessen,1.0159,fitted: Tirreno-Adriatico 2026 (GC) +1.1%; Tour of the Basque Country 2026 (GC) -0.1%; Tour Auvergne-Rhone-Alpes 2026 (GC) +1.7%; Tour de France 2026 (GC) intruder -0.3%; La Fleche Wallonne 2026 intruder -0.3%; Liege-Bastogne-Liege 2026 +1.5%; Il Lombardia 2026 intruder -0.4%
-Tobias Lund Andresen,1.0423,fitted: E3 Saxo Classic 2026 +2.1%; Gent-Wevelgem 2026 +2.0%
-Valentin Paret-Peintre,1.0152,fitted: Volta a Catalunya 2026 (GC) +2.9%
-Wout van Aert,0.9932,fitted: Tirreno-Adriatico 2026 (GC) intruder -0.3%; Strade Bianche 2026 -0.8%; Milan-San Remo 2026 +1.1%; Tour of Flanders 2026 -0.1%; Paris-Roubaix 2026 -1.5%
+Jan Christen,1.0229,fitted: Strade Bianche 2026 +2.3%; Clasica San Sebastian 2026 +1.6%
+Jasper Philipsen,1.0124,fitted: Milan-San Remo 2026 69th -0.2%; Gent-Wevelgem 2026 +1.0%
+Jasper Stuyven,0.9952,fitted: Milan-San Remo 2026 +1.9%; Gent-Wevelgem 2026 +0.8%; Tour of Flanders 2026 +0.8%; Paris-Roubaix 2026 -7.3%
+Javier Romo,1.0060,fitted: Tour of the Basque Country 2026 (GC) +1.2%
+Jefferson Alveiro Cepeda,1.0600,fitted: Tour de Romandie 2026 (GC) +10.0%; Tour de France 2026 (GC) 101th -0.2%
+Jonas Abrahamsen,1.0095,fitted: E3 Saxo Classic 2026 +1.9%; Gent-Wevelgem 2026 +0.8%
+Jonas Vingegaard,1.0093,fitted: Paris-Nice 2026 (GC) +0.5%; Volta a Catalunya 2026 (GC) +0.4%; Giro d'Italia 2026 (GC) +0.3%
+Jordan Jegat,1.0253,fitted: Tour de France 2026 (GC) +2.7%
+José Félix Parra,1.0333,fitted: Tour Auvergne-Rhone-Alpes 2026 (GC) +7.8%
+João Almeida,0.9947,fitted: Volta a Catalunya 2026 (GC) 38th -0.3%; Tour Auvergne-Rhone-Alpes 2026 (GC) intruder -0.4%; Vuelta a Espana 2026 (GC) 91th -0.4%
+Juan Ayuso,1.0130,fitted: Paris-Nice 2026 (GC) intruder -0.3%; Tour of the Basque Country 2026 (GC) intruder -0.3%; Tour Auvergne-Rhone-Alpes 2026 (GC) +1.5%; Tour de France 2026 (GC) +2.6%; Il Lombardia 2026 73th -0.2%
+Junior Lecerf,1.0162,fitted: Tour de Romandie 2026 (GC) +1.3%
+Jørgen Nordhagen,1.0170,fitted: Tour de Romandie 2026 (GC) +1.5%
+Kévin Vauquelin,0.9951,fitted: Paris-Nice 2026 (GC) -0.1%; Tour of the Basque Country 2026 (GC) -0.8%; Amstel Gold Race 2026 50th -0.4%; La Fleche Wallonne 2026 13th +0.3%; Liege-Bastogne-Liege 2026 34th -0.3%
+Lennert Van Eetvelt,1.0129,fitted: La Fleche Wallonne 2026 22th +1.3%
+Lenny Martinez,1.0388,fitted: Paris-Nice 2026 (GC) +0.7%; Volta a Catalunya 2026 (GC) +1.8%; Tour de Romandie 2026 (GC) +0.3%; Tour de France 2026 (GC) +3.1%; La Fleche Wallonne 2026 +0.3%; Il Lombardia 2026 31th -0.4%
+Lorenzo Fortunato,1.0157,fitted: Tour de Romandie 2026 (GC) +1.7%
+Luca Mozzato,1.0251,fitted: Gent-Wevelgem 2026 +2.2%
+Luke Plapp,1.0147,fitted: Tour de Romandie 2026 (GC) +1.5%
+Luke Tuckwell,1.0600,fitted: Tour de Romandie 2026 (GC) +2.5%; Tour Auvergne-Rhone-Alpes 2026 (GC) +7.6%
+Léo Bisiaux,1.0166,fitted: Clasica San Sebastian 2026 +3.1%
+Mads Pedersen,0.9826,fitted: Milan-San Remo 2026 -5.5%; E3 Saxo Classic 2026 +0.6%; Tour of Flanders 2026 -0.0%; Paris-Roubaix 2026 +2.3%
+Magnus Sheffield,1.0197,fitted: Tirreno-Adriatico 2026 (GC) +1.9%
+Marc Hirschi,1.0149,fitted: Clasica San Sebastian 2026 +3.7%
+Marc Soler,1.0051,fitted: Paris-Nice 2026 (GC) +1.4%
+Marcel Camprubí,1.0035,fitted: Clasica San Sebastian 2026 -1.4%
+Marco Frigo,1.0102,fitted: Amstel Gold Race 2026 -1.6%
+Matej Mohorič,1.0099,fitted: Tour of Flanders 2026 +1.1%
+Mathias Vacek,1.0086,fitted: Tour de Suisse 2026 (GC) +1.9%
+Mathieu van der Poel,1.0123,fitted: Tirreno-Adriatico 2026 (GC) 40th -0.3%; Tour de Suisse 2026 (GC) 64th -0.3%; Milan-San Remo 2026 +0.8%; E3 Saxo Classic 2026 +0.4%; Gent-Wevelgem 2026 35th +0.2%; Tour of Flanders 2026 -0.6%; Paris-Roubaix 2026 +0.8%
+Mathys Rondel,1.0206,fitted: Paris-Nice 2026 (GC) +0.9%; Il Lombardia 2026 +3.4%
+Matteo Jorgenson,1.0158,fitted: Tirreno-Adriatico 2026 (GC) +0.2%; Tour Auvergne-Rhone-Alpes 2026 (GC) +1.5%; Strade Bianche 2026 +0.8%; Clasica San Sebastian 2026 12th -0.4%; Il Lombardia 2026 23th -0.5%
+Matteo Trentin,1.0194,fitted: Milan-San Remo 2026 +1.4%; E3 Saxo Classic 2026 +0.6%; Gent-Wevelgem 2026 +0.9%
+Matthew Riccitello,1.0152,fitted: Volta a Catalunya 2026 (GC) +1.7%; Tour de Suisse 2026 (GC) +0.1%
+Mattias Skjelmose,1.0214,fitted: Volta a Catalunya 2026 (GC) +0.1%; Tour of the Basque Country 2026 (GC) 14th -0.4%; Tour Auvergne-Rhone-Alpes 2026 (GC) +0.3%; Tour de France 2026 (GC) +1.1%; Vuelta a Espana 2026 (GC) 13th +0.8%; Amstel Gold Race 2026 -7.1%; La Fleche Wallonne 2026 +0.7%; Liege-Bastogne-Liege 2026 17th +1.5%
+Mauri Vansevenant,1.0068,fitted: Amstel Gold Race 2026 -0.9%
+Mauro Schmid,1.0141,fitted: Amstel Gold Race 2026 -0.2%; La Fleche Wallonne 2026 +1.2%
+Maxim Van Gils,1.0023,fitted: Clasica San Sebastian 2026 21th +1.1%
+Michael Storer,1.0302,fitted: Tirreno-Adriatico 2026 (GC) 14th +0.4%; Giro d'Italia 2026 (GC) +2.7%
+Mick van Dijke,1.0213,fitted: Paris-Roubaix 2026 +1.5%
+Mike Teunissen,1.0024,fitted: Paris-Roubaix 2026 +1.4%
+Nils Politt,1.0081,fitted: Paris-Roubaix 2026 -1.5%
+Oscar Onley,1.0120,fitted: Paris-Nice 2026 (GC) intruder -0.4%; Volta a Catalunya 2026 (GC) 12th +0.8%; Tour de Romandie 2026 (GC) intruder -0.4%; Tour Auvergne-Rhone-Alpes 2026 (GC) intruder -0.4%; Vuelta a Espana 2026 (GC) +4.9%; Il Lombardia 2026 14th +1.4%
+Paul Seixas,1.0223,fitted: Tour of the Basque Country 2026 (GC) +0.3%; Tour Auvergne-Rhone-Alpes 2026 (GC) intruder -0.5%; Tour de France 2026 (GC) +0.4%; Strade Bianche 2026 +0.6%; La Fleche Wallonne 2026 +0.0%; Liege-Bastogne-Liege 2026 +0.2%; Il Lombardia 2026 +1.7%
+Pello Bilbao,1.0052,fitted: Tour of the Basque Country 2026 (GC) +0.0%; Amstel Gold Race 2026 15th -0.3%; Liege-Bastogne-Liege 2026 -2.0%; Clasica San Sebastian 2026 +0.3%; Il Lombardia 2026 +1.6%
+Per Strand Hagenes,1.0188,fitted: E3 Saxo Classic 2026 +2.3%
+Primož Roglič,1.0109,fitted: Tirreno-Adriatico 2026 (GC) -0.1%; Tour of the Basque Country 2026 (GC) 16th -0.3%; Tour de Romandie 2026 (GC) 18th -0.3%; Tour de Suisse 2026 (GC) -0.9%; Vuelta a Espana 2026 (GC) +5.4%
+Remco Evenepoel,1.0072,fitted: Volta a Catalunya 2026 (GC) +0.3%; Tour de France 2026 (GC) +1.4%; Tour of Flanders 2026 +1.3%; Amstel Gold Race 2026 +0.6%; Liege-Bastogne-Liege 2026 -0.2%; Clasica San Sebastian 2026 +0.0%; Il Lombardia 2026 +0.6%
+Richard Carapaz,1.0090,fitted: Tirreno-Adriatico 2026 (GC) 18th -0.4%; Volta a Catalunya 2026 (GC) +0.2%; Tour de Suisse 2026 (GC) -0.2%; Tour de France 2026 (GC) -0.7%; Vuelta a Espana 2026 (GC) +3.5%; Strade Bianche 2026 39th -0.3%; Clasica San Sebastian 2026 -1.5%
+Robert Donaldson,1.0174,fitted: Gent-Wevelgem 2026 +2.4%
+Romain Grégoire,1.0028,fitted: Tour de Suisse 2026 (GC) 26th -0.3%; Strade Bianche 2026 +1.8%; Milan-San Remo 2026 18th +0.6%; Amstel Gold Race 2026 -0.4%; La Fleche Wallonne 2026 +1.4%; Liege-Bastogne-Liege 2026 +1.8%
+Santiago Buitrago,1.0027,fitted: Tirreno-Adriatico 2026 (GC) +0.1%; Tour Auvergne-Rhone-Alpes 2026 (GC) intruder -0.4%; Liege-Bastogne-Liege 2026 22th -0.4%
+Sepp Kuss,1.0323,fitted: Vuelta a Espana 2026 (GC) +7.1%
+Sergio Higuita,1.0040,fitted: Tour de Suisse 2026 (GC) +1.5%
+Stan Dewulf,1.0128,fitted: E3 Saxo Classic 2026 +2.3%
+Stefan Bissegger,1.0169,fitted: Paris-Roubaix 2026 +2.1%
+Tadej Pogačar,0.9946,fitted: Tour de Romandie 2026 (GC) +0.0%; Tour de Suisse 2026 (GC) +0.0%; Tour de France 2026 (GC) +0.3%; Strade Bianche 2026 +0.6%; Milan-San Remo 2026 +0.0%; Tour of Flanders 2026 -1.5%; Paris-Roubaix 2026 +0.9%; Liege-Bastogne-Liege 2026 +0.8%
+Thymen Arensman,1.0497,fitted: Giro d'Italia 2026 (GC) +4.9%
+Tobias Foss,1.0082,fitted: Tour de Suisse 2026 (GC) +1.4%
+Tobias Halland Johannessen,1.0197,fitted: Tirreno-Adriatico 2026 (GC) +0.6%; Tour of the Basque Country 2026 (GC) +1.5%; Tour Auvergne-Rhone-Alpes 2026 (GC) +3.3%; Tour de France 2026 (GC) 12th -0.2%; La Fleche Wallonne 2026 44th +0.9%; Liege-Bastogne-Liege 2026 +2.6%; Il Lombardia 2026 84th -0.3%
+Tobias Lund Andresen,1.0292,fitted: E3 Saxo Classic 2026 +2.0%; Gent-Wevelgem 2026 +1.3%
+Tom Pidcock,1.0030,fitted: Volta a Catalunya 2026 (GC) intruder -0.3%; Tour de France 2026 (GC) -1.9%; Strade Bianche 2026 +0.6%; Milan-San Remo 2026 +2.8%; Liege-Bastogne-Liege 2026 101th -0.4%; Il Lombardia 2026 -0.1%
+Valentin Paret-Peintre,1.0157,fitted: Volta a Catalunya 2026 (GC) +2.9%
+Wout van Aert,0.9951,fitted: Strade Bianche 2026 -0.0%; Milan-San Remo 2026 +1.7%; Gent-Wevelgem 2026 30th +0.6%; Tour of Flanders 2026 -5.2%; Paris-Roubaix 2026 -0.5%

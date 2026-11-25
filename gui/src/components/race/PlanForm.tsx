@@ -1,5 +1,5 @@
 import './PlanForm.css'
-import { director, main } from '../../../wailsjs/go/models'
+import { director, app } from '../../api'
 
 export interface PlanValue {
   leaderId: number
@@ -10,7 +10,7 @@ export interface PlanValue {
 
 export const EMPTY_PLAN: PlanValue = { leaderId: 0, break: 'auto', hardOn: [], attackOn: '' }
 
-const wkg = (r: main.RiderInfo) => (r.weight > 0 ? r.ftp / r.weight : 0)
+const wkg = (r: app.RiderInfo) => (r.weight > 0 ? r.ftp / r.weight : 0)
 
 const BREAK_OPTIONS: Array<[string, string, string]> = [
   ['auto', 'Team decides', 'Riders the team can spare may go with moves.'],
@@ -36,7 +36,7 @@ export function PlanForm({
   value,
   onChange,
 }: {
-  riders: main.RiderInfo[]
+  riders: app.RiderInfo[]
   points: director.PlanPoint[]
   value: PlanValue
   onChange: (v: PlanValue) => void

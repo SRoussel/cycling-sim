@@ -1,7 +1,7 @@
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useState, useEffect } from 'react'
-import * as App from '../../wailsjs/go/main/App'
-import { main } from '../../wailsjs/go/models'
+import * as App from '../api'
+import { app } from '../api'
 import { RiderLink } from '../components/RiderProfile'
 import { StageStrip, useStageProfiles } from '../components/race/StageStrip'
 import './RaceSetup.css'
@@ -9,12 +9,12 @@ import './RaceSetup.css'
 function StageRaceSetup() {
   const { stageRaceId } = useParams()
   const navigate = useNavigate()
-  const [stageRace, setStageRace] = useState<main.StageRaceInfo | null>(null)
+  const [stageRace, setStageRace] = useState<app.StageRaceInfo | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const [startList, setStartList] = useState<main.RiderInfo[]>([])
-  const [stages, setStages] = useState<main.StageRaceStageInfo[]>([])
+  const [startList, setStartList] = useState<app.RiderInfo[]>([])
+  const [stages, setStages] = useState<app.StageRaceStageInfo[]>([])
   const profiles = useStageProfiles(stages)
   const [interactiveMode, setInteractiveMode] = useState(false)
   const [controlledTeam, setControlledTeam] = useState('')
@@ -23,7 +23,7 @@ function StageRaceSetup() {
     async function loadStageRace() {
       try {
         const stageRaces = await App.GetStageRaces()
-        const race = stageRaces.find((sr: main.StageRaceInfo) => sr.id === parseInt(stageRaceId || '0'))
+        const race = stageRaces.find((sr: app.StageRaceInfo) => sr.id === parseInt(stageRaceId || '0'))
         if (race) {
           setStageRace(race)
 
@@ -74,7 +74,7 @@ function StageRaceSetup() {
     )
   }
 
-  const wkg = (r: main.RiderInfo) => (r.weight > 0 ? r.ftp / r.weight : 0)
+  const wkg = (r: app.RiderInfo) => (r.weight > 0 ? r.ftp / r.weight : 0)
   const contenders = [...startList].sort((a, b) => wkg(b) * (1 + b.climbing / 400) - wkg(a) * (1 + a.climbing / 400)).slice(0, 8)
 
   return (

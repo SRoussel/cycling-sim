@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import * as App from '../../wailsjs/go/main/App'
-import { main } from '../../wailsjs/go/models'
+import * as App from '../api'
+import { app } from '../api'
 import './RiderProfile.css'
 
 /**
@@ -80,9 +80,9 @@ function ordinal(n: number): string {
 type Unit = 'wkg' | 'w'
 
 function RiderProfilePanel({ riderId, seasonId, onClose }: { riderId: number; seasonId: number; onClose: () => void }) {
-  const [profile, setProfile] = useState<main.RiderProfile | null>(null)
-  const [compare, setCompare] = useState<main.RiderProfile | null>(null)
-  const [names, setNames] = useState<main.ProfileRiderRef[]>([])
+  const [profile, setProfile] = useState<app.RiderProfile | null>(null)
+  const [compare, setCompare] = useState<app.RiderProfile | null>(null)
+  const [names, setNames] = useState<app.ProfileRiderRef[]>([])
   const [query, setQuery] = useState('')
   const [unit, setUnit] = useState<Unit>('wkg')
   const [error, setError] = useState('')
@@ -184,12 +184,12 @@ const H = 300
 const M = { top: 26, right: 16, bottom: 30, left: 48 }
 const X_TICKS = [5, 15, 60, 300, 1200, 3600, 4 * 3600]
 
-function PowerCurveChart({ profile, compare, unit }: { profile: main.RiderProfile; compare: main.RiderProfile | null; unit: Unit }) {
+function PowerCurveChart({ profile, compare, unit }: { profile: app.RiderProfile; compare: app.RiderProfile | null; unit: Unit }) {
   const [hover, setHover] = useState<number | null>(null)
   const svgRef = useRef<SVGSVGElement>(null)
   const pts = profile.curve
-  const get = (p: main.CurvePoint) => (unit === 'wkg' ? p.wkg : p.watts)
-  const band = (p: main.CurvePoint) => (unit === 'wkg' ? [p.wkgP10, p.wkgP50, p.wkgP90] : [p.wP10, p.wP50, p.wP90])
+  const get = (p: app.CurvePoint) => (unit === 'wkg' ? p.wkg : p.watts)
+  const band = (p: app.CurvePoint) => (unit === 'wkg' ? [p.wkgP10, p.wkgP50, p.wkgP90] : [p.wP10, p.wP50, p.wP90])
 
   const { x, y, yTicks } = useMemo(() => {
     const lo = Math.log(pts[0].seconds)
@@ -209,7 +209,7 @@ function PowerCurveChart({ profile, compare, unit }: { profile: main.RiderProfil
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pts, compare, unit])
 
-  const line = (curve: main.CurvePoint[]) => curve.map((p, i) => `${i ? 'L' : 'M'}${x(p.seconds).toFixed(1)},${y(get(p)).toFixed(1)}`).join('')
+  const line = (curve: app.CurvePoint[]) => curve.map((p, i) => `${i ? 'L' : 'M'}${x(p.seconds).toFixed(1)},${y(get(p)).toFixed(1)}`).join('')
   const area =
     pts.map((p, i) => `${i ? 'L' : 'M'}${x(p.seconds).toFixed(1)},${y(band(p)[2]).toFixed(1)}`).join('') +
     [...pts].reverse().map((p) => `L${x(p.seconds).toFixed(1)},${y(band(p)[0]).toFixed(1)}`).join('') +
@@ -281,7 +281,7 @@ function PowerCurveChart({ profile, compare, unit }: { profile: main.RiderProfil
 const STRIP = [5, 30, 60, 120, 300, 600, 1200, 3600, 7200, 4 * 3600]
 
 /** The rider's percentile in the field at each duration (numbers, shaded). */
-function PercentileStrip({ profile, compare, unit }: { profile: main.RiderProfile; compare: main.RiderProfile | null; unit: Unit }) {
+function PercentileStrip({ profile, compare, unit }: { profile: app.RiderProfile; compare: app.RiderProfile | null; unit: Unit }) {
   const rows = [profile, ...(compare ? [compare] : [])]
   return (
     <table className="rp-strip">
@@ -314,7 +314,7 @@ function PercentileStrip({ profile, compare, unit }: { profile: main.RiderProfil
 
 // ---- Ratings -----------------------------------------------------------
 
-function StatBars({ stats, compare, showUnits }: { stats: main.ProfileStat[]; compare?: main.ProfileStat[]; showUnits?: boolean }) {
+function StatBars({ stats, compare, showUnits }: { stats: app.ProfileStat[]; compare?: app.ProfileStat[]; showUnits?: boolean }) {
   return (
     <ul className="rp-bars">
       {stats.map((s) => {

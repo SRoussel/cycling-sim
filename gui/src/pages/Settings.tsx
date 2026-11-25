@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import * as App from '../../wailsjs/go/main/App'
+import * as App from '../api'
 import './Settings.css'
 
 /**

@@ -1,4 +1,4 @@
-import { main } from '../../../wailsjs/go/models'
+import { app } from '../../api'
 import { formatGap } from '../../sim/shared'
 import { RaceGoal } from '../../sim/useTeamControl'
 import { teamColor } from '../../sim/teamColors'
@@ -24,7 +24,7 @@ export function Debrief({
 }: {
   goal: RaceGoal | null
   breakMade: boolean
-  results: main.RaceResults
+  results: app.RaceResults
   team: string
   decisions: string[]
   onResults: () => void

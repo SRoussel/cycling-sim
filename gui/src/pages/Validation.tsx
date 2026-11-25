@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import * as App from '../../wailsjs/go/main/App'
-import { main } from '../../wailsjs/go/models'
+import * as App from '../api'
+import { app } from '../api'
 import './Validation.css'
 
 type Status = 'passed' | 'failed' | 'skipped'
@@ -115,7 +115,7 @@ function Validation() {
   )
 }
 
-function toCheck(r: main.ValidationResult): Check {
+function toCheck(r: app.ValidationResult): Check {
   return {
     name: r.testName,
     status: r.isRealRace && r.matchedRiders < 3 && !r.passed ? 'skipped' : r.passed ? 'passed' : 'failed',

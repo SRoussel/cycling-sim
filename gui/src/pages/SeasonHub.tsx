@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
-import * as App from '../../wailsjs/go/main/App'
-import { director, main } from '../../wailsjs/go/models'
+import * as App from '../api'
+import { director, app } from '../api'
 import { Jersey } from '../components/race/Jersey'
 import { RiderLink } from '../components/RiderProfile'
 import { PlanForm, PlanValue } from '../components/race/PlanForm'
@@ -34,11 +34,11 @@ function CategoryBadge({ category }: { category: string }) {
 }
 
 /** The 1-100 ratings that shape a rider's racing, for a tooltip. */
-function ratingsTitle(r: main.RiderInfo): string {
+function ratingsTitle(r: app.RiderInfo): string {
   return `Climbing ${r.climbing} · Punch ${r.punch} · Repeated efforts ${r.repeatability} · Cobbles ${r.handling} · Endurance ${r.endurance} · Sprint ${r.sprint} · TT ${r.tt}`
 }
 
-function eventDates(e: main.SeasonEventInfo): string {
+function eventDates(e: app.SeasonEventInfo): string {
   return e.days > 1 ? `${e.start} – ${e.end}` : e.start
 }
 
@@ -50,7 +50,7 @@ function SeasonHub() {
   // The race just raced (back from the race screen, or just simulated): its
   // result opens the overview.
   const [justRaced, setJustRaced] = useState<number>((location.state as { justRaced?: number } | null)?.justRaced ?? 0)
-  const [hub, setHub] = useState<main.SeasonHub | null>(null)
+  const [hub, setHub] = useState<app.SeasonHub | null>(null)
   const [tab, setTab] = useState<Tab>('overview')
   const [error, setError] = useState('')
 
@@ -125,7 +125,7 @@ function SeasonHub() {
 }
 
 function Overview({ hub, reload, openTab, justRaced, onRaced }: {
-  hub: main.SeasonHub
+  hub: app.SeasonHub
   reload: () => Promise<void>
   openTab: (t: Tab) => void
   justRaced: number
@@ -134,7 +134,7 @@ function Overview({ hub, reload, openTab, justRaced, onRaced }: {
   const s = hub.season
   const offseason = s.phase === 'offseason'
   const [busy, setBusy] = useState(false)
-  const [yearNews, setYearNews] = useState<main.NewsInfo[] | null>(null)
+  const [yearNews, setYearNews] = useState<app.NewsInfo[] | null>(null)
 
   const endYear = async () => {
     setBusy(true)
@@ -227,7 +227,7 @@ function Overview({ hub, reload, openTab, justRaced, onRaced }: {
 
 /** The year at a glance: every event on a January–October line, Grand Tours
  * as bars, our wins in yellow, today marked. */
-function SeasonStrip({ hub }: { hub: main.SeasonHub }) {
+function SeasonStrip({ hub }: { hub: app.SeasonHub }) {
   const year = hub.season.year
   const t0 = Date.UTC(year, 0, 1)
   const t1 = Date.UTC(year, 9, 31)
@@ -238,7 +238,7 @@ function SeasonStrip({ hub }: { hub: main.SeasonHub }) {
     return isNaN(t) ? -1 : Math.max(0, Math.min(W, ((t - t0) / (t1 - t0)) * W))
   }
   const today = x(hub.season.date)
-  const won = (e: main.SeasonEventInfo) => e.mine.startsWith('1st')
+  const won = (e: app.SeasonEventInfo) => e.mine.startsWith('1st')
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct']
   const big = hub.events.filter((e) => e.days >= 21)
   return (
@@ -271,7 +271,7 @@ function SeasonStrip({ hub }: { hub: main.SeasonHub }) {
   )
 }
 
-function Objectives({ hub }: { hub: main.SeasonHub }) {
+function Objectives({ hub }: { hub: app.SeasonHub }) {
   return (
     <section className="card">
       <h2>The board's objectives</h2>
@@ -305,12 +305,12 @@ function ordinal(n: number): string {
 }
 
 /** The next race: pick the squad, then race it live or simulate it. */
-function NextRace({ hub, reload, onRaced }: { hub: main.SeasonHub; reload: () => Promise<void>; onRaced: (eventId: number) => void }) {
+function NextRace({ hub, reload, onRaced }: { hub: app.SeasonHub; reload: () => Promise<void>; onRaced: (eventId: number) => void }) {
   const sid = useSeasonId()
   const navigate = useNavigate()
   const s = hub.season
   const next = hub.next!
-  const [squad, setSquad] = useState<main.SquadInfo | null>(null)
+  const [squad, setSquad] = useState<app.SquadInfo | null>(null)
   const [picked, setPicked] = useState<number[]>([])
   const [busy, setBusy] = useState(false)
   const [planning, setPlanning] = useState(false)
@@ -385,7 +385,7 @@ function NextRace({ hub, reload, onRaced }: { hub: main.SeasonHub; reload: () =>
       {planning && squad && (
         <div className="race-plan inline">
           <h3>Race plan</h3>
-          <PlanForm riders={pickedRiders as unknown as main.RiderInfo[]} points={squad.points as director.PlanPoint[]} value={plan} onChange={setPlan} />
+          <PlanForm riders={pickedRiders as unknown as app.RiderInfo[]} points={squad.points as director.PlanPoint[]} value={plan} onChange={setPlan} />
         </div>
       )}
 
@@ -446,8 +446,8 @@ function NextRace({ hub, reload, onRaced }: { hub: main.SeasonHub; reload: () =>
 }
 
 /** A raced event's result: the top ten (or final GC), our riders, stage winners. */
-function RaceSummary({ hub, eventId, onClose }: { hub: main.SeasonHub; eventId: number; onClose: () => void }) {
-  const [rows, setRows] = useState<main.SeasonResultRow[] | null>(null)
+function RaceSummary({ hub, eventId, onClose }: { hub: app.SeasonHub; eventId: number; onClose: () => void }) {
+  const [rows, setRows] = useState<app.SeasonResultRow[] | null>(null)
   useEffect(() => {
     App.GetSeasonEventResults(hub.season.id, eventId).then(setRows)
   }, [hub.season.id, eventId])
@@ -482,7 +482,7 @@ function FitBar({ fit }: { fit: number }) {
   )
 }
 
-function TeamTable({ rows, mineRow }: { rows: main.StandingRow[]; mineRow?: main.StandingRow }) {
+function TeamTable({ rows, mineRow }: { rows: app.StandingRow[]; mineRow?: app.StandingRow }) {
   const shown = mineRow && !rows.some((r) => r.mine) ? [...rows, mineRow] : rows
   return (
     <table className="standings">
@@ -501,10 +501,10 @@ function TeamTable({ rows, mineRow }: { rows: main.StandingRow[]; mineRow?: main
   )
 }
 
-function Calendar({ hub }: { hub: main.SeasonHub }) {
+function Calendar({ hub }: { hub: app.SeasonHub }) {
   const [open, setOpen] = useState<number | null>(null)
-  const [rows, setRows] = useState<main.SeasonResultRow[]>([])
-  const show = async (e: main.SeasonEventInfo) => {
+  const [rows, setRows] = useState<app.SeasonResultRow[]>([])
+  const show = async (e: app.SeasonEventInfo) => {
     if (!e.done) return
     if (open === e.id) {
       setOpen(null)
@@ -534,7 +534,7 @@ function Calendar({ hub }: { hub: main.SeasonHub }) {
   )
 }
 
-function EventResults({ rows }: { rows: main.SeasonResultRow[] }) {
+function EventResults({ rows }: { rows: app.SeasonResultRow[] }) {
   const finals = rows.filter((r) => r.kind !== 'stage')
   const stages = Array.from(new Set(rows.filter((r) => r.kind === 'stage').map((r) => r.stage)))
   return (
@@ -570,9 +570,9 @@ function EventResults({ rows }: { rows: main.SeasonResultRow[] }) {
   )
 }
 
-function Team({ hub, reload }: { hub: main.SeasonHub; reload: () => Promise<void> }) {
+function Team({ hub, reload }: { hub: app.SeasonHub; reload: () => Promise<void> }) {
   const sid = useSeasonId()
-  const [roster, setRoster] = useState<main.SeasonRiderInfo[]>([])
+  const [roster, setRoster] = useState<app.SeasonRiderInfo[]>([])
   const load = useCallback(async () => setRoster(await App.GetSeasonRoster(hub.season.id)), [hub.season.id])
   useEffect(() => {
     load()
@@ -639,7 +639,7 @@ function Strength({ label, value, title }: { label: string; value: number; title
   )
 }
 
-function Standings({ hub }: { hub: main.SeasonHub }) {
+function Standings({ hub }: { hub: app.SeasonHub }) {
   const sid = useSeasonId()
   return (
     <div className="season-cols">
@@ -670,11 +670,11 @@ function Standings({ hub }: { hub: main.SeasonHub }) {
 
 /** Renewals and signings (in the season: riders whose contracts end, for
  * next year; in the off-season: free agents, joining now). */
-function Contracts({ hub, reload }: { hub: main.SeasonHub; reload: () => Promise<void> }) {
+function Contracts({ hub, reload }: { hub: app.SeasonHub; reload: () => Promise<void> }) {
   const s = hub.season
   const offseason = s.phase === 'offseason'
-  const [roster, setRoster] = useState<main.SeasonRiderInfo[]>([])
-  const [market, setMarket] = useState<main.SeasonRiderInfo[]>([])
+  const [roster, setRoster] = useState<app.SeasonRiderInfo[]>([])
+  const [market, setMarket] = useState<app.SeasonRiderInfo[]>([])
   const [reply, setReply] = useState<{ ok: boolean; message: string } | null>(null)
   const [filter, setFilter] = useState('')
   const load = useCallback(async () => {
@@ -686,7 +686,7 @@ function Contracts({ hub, reload }: { hub: main.SeasonHub; reload: () => Promise
     load()
   }, [load])
 
-  const offer = async (r: main.SeasonRiderInfo, salary: number, years: number) => {
+  const offer = async (r: app.SeasonRiderInfo, salary: number, years: number) => {
     const res = await App.OfferContract(s.id, r.id, salary, years)
     setReply(res)
     if (res.ok) {
@@ -733,8 +733,8 @@ function Contracts({ hub, reload }: { hub: main.SeasonHub; reload: () => Promise
 }
 
 function OfferTable({ riders, onOffer, action, showTeam }: {
-  riders: main.SeasonRiderInfo[]
-  onOffer: (r: main.SeasonRiderInfo, salary: number, years: number) => void
+  riders: app.SeasonRiderInfo[]
+  onOffer: (r: app.SeasonRiderInfo, salary: number, years: number) => void
   action: string
   showTeam?: boolean
 }) {
@@ -765,8 +765,8 @@ function OfferTable({ riders, onOffer, action, showTeam }: {
 }
 
 function OfferRow({ r, onOffer, action, showTeam }: {
-  r: main.SeasonRiderInfo
-  onOffer: (r: main.SeasonRiderInfo, salary: number, years: number) => void
+  r: app.SeasonRiderInfo
+  onOffer: (r: app.SeasonRiderInfo, salary: number, years: number) => void
   action: string
   showTeam?: boolean
 }) {

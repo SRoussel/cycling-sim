@@ -1,31 +1,4 @@
-export namespace director {
-	
-	export class PlanPoint {
-	    key: string;
-	    label: string;
-	    kind: string;
-	    startKm: number;
-	    lengthKm: number;
-	    toGoKm: number;
-	
-	    static createFrom(source: any = {}) {
-	        return new PlanPoint(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.key = source["key"];
-	        this.label = source["label"];
-	        this.kind = source["kind"];
-	        this.startKm = source["startKm"];
-	        this.lengthKm = source["lengthKm"];
-	        this.toGoKm = source["toGoKm"];
-	    }
-	}
-
-}
-
-export namespace main {
+export namespace app {
 	
 	export class CourseInfo {
 	    id: number;
@@ -914,6 +887,33 @@ export namespace main {
 	        this.team = source["team"];
 	        this.totalTime = source["totalTime"];
 	        this.gap = source["gap"];
+	    }
+	}
+
+}
+
+export namespace director {
+	
+	export class PlanPoint {
+	    key: string;
+	    label: string;
+	    kind: string;
+	    startKm: number;
+	    lengthKm: number;
+	    toGoKm: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new PlanPoint(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.key = source["key"];
+	        this.label = source["label"];
+	        this.kind = source["kind"];
+	        this.startKm = source["startKm"];
+	        this.lengthKm = source["lengthKm"];
+	        this.toGoKm = source["toGoKm"];
 	    }
 	}
 

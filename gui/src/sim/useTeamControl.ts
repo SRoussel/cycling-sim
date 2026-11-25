@@ -3,8 +3,8 @@
 // interpolation), route profile, and all team-control commands.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { RadioState, newRadioState, radioMessages } from './radio'
-import * as App from '../../wailsjs/go/main/App'
-import { director, main } from '../../wailsjs/go/models'
+import * as App from '../api'
+import { director, app } from '../api'
 import {
   ACCEPT_PULSE_MS,
   COMMAND_COOLDOWN_MS,
@@ -163,7 +163,7 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
   // Every starter's team by name (road groups list names), for team colours.
   const [teamByName, setTeamByName] = useState<Record<string, string>>({})
   // Every starter by id (team, watts, weight): for the group sheet.
-  const [riderById, setRiderById] = useState<Record<number, main.RiderInfo>>({})
+  const [riderById, setRiderById] = useState<Record<number, app.RiderInfo>>({})
   // togglePause is defined before the stage plan's submit: read both by ref.
   const stagePlanRef = useRef<StagePlanRequest | null>(null)
   stagePlanRef.current = stagePlan
@@ -219,7 +219,7 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
     if (!active || !stagePlan) return
     const req = stagePlan
     setStagePlan(null)
-    await App.SetStagePlan(sessionId!, main.RacePlan.createFrom(plan))
+    await App.SetStagePlan(sessionId!, app.RacePlan.createFrom(plan))
     setPaused(false)
     setTeamOrders((prev) => ({ ...prev, break: plan.break as TeamOrderValue }))
     const bits = [
@@ -250,7 +250,7 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
 
   // ── Team & rider state ────────────────────────────────────
   const [controlledTeam, setControlledTeam] = useState(opts.initialTeam)
-  const [teamRiders, setTeamRiders] = useState<main.RiderInfo[]>([])
+  const [teamRiders, setTeamRiders] = useState<app.RiderInfo[]>([])
   const [riderGroups, setRiderGroups] = useState<Record<number, string>>({})
   const [riderPersistentActions, setRiderPersistentActions] = useState<Record<number, string>>({})
   const [riderOneShotQueued, setRiderOneShotQueued] = useState<Record<number, boolean>>({})
@@ -321,7 +321,7 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
   }, [teamRiders, riderGroups])
 
   const groupedTeamRiders = useMemo(() => {
-    const sections: Array<{ key: string; label: string; riders: main.RiderInfo[] }> = []
+    const sections: Array<{ key: string; label: string; riders: app.RiderInfo[] }> = []
     const indexByKey: Record<string, number> = {}
     for (const rider of sortedTeamRiders) {
       const label = groupBucket(riderGroups[rider.id])
@@ -335,7 +335,7 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
   }, [sortedTeamRiders, riderGroups])
 
   const teamRiderByID = useMemo(() => {
-    const out: Record<number, main.RiderInfo> = {}
+    const out: Record<number, app.RiderInfo> = {}
     for (const rider of teamRiders) out[rider.id] = rider
     return out
   }, [teamRiders])
@@ -371,7 +371,7 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
     isAccepted(id, action, mode) ? 'secondary accepted' : 'secondary'
 
   // ── Session start ─────────────────────────────────────────
-  const beginSession = async (sess: main.InteractiveSessionInfo) => {
+  const beginSession = async (sess: app.InteractiveSessionInfo) => {
     const riders = sess.teamRiders || []
     setSessionId(sess.sessionId)
     setControlledTeam(sess.controlledTeam)

@@ -1,4 +1,4 @@
-package main
+package app
 
 import (
 	"cycling_sim/internal/simulation"

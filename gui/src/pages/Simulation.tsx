@@ -1,8 +1,8 @@
 import { useParams, useLocation, useNavigate } from 'react-router-dom'
 import { useState, useEffect, useRef } from 'react'
-import * as App from '../../wailsjs/go/main/App'
-import { main } from '../../wailsjs/go/models'
-import { EventsOn } from '../../wailsjs/runtime/runtime'
+import * as App from '../api'
+import { app } from '../api'
+import { EventsOn } from '../api'
 import { RaceGroup, formatGap, toDisplayGroups } from '../sim/shared'
 import { LiveProgressPayload, RaceGoal, useTeamControl } from '../sim/useTeamControl'
 import { Debrief } from '../components/race/Debrief'
@@ -34,7 +34,7 @@ function Simulation() {
   const location = useLocation()
   const navigate = useNavigate()
 
-  const race = location.state?.race as main.RaceInfo | undefined
+  const race = location.state?.race as app.RaceInfo | undefined
   const enableIncidents = location.state?.enableIncidents as boolean ?? false
   const interactiveMode = location.state?.interactiveMode as boolean ?? false
   const initialTeam = location.state?.controlledTeam as string ?? ''
@@ -50,7 +50,7 @@ function Simulation() {
   const [progress, setProgress] = useState(0)
   const [elapsedTime, setElapsedTime] = useState(0)
   const [simulationComplete, setSimulationComplete] = useState(false)
-  const [results, setResults] = useState<main.RaceResults | null>(null)
+  const [results, setResults] = useState<app.RaceResults | null>(null)
   const [breakMade, setBreakMade] = useState(false)
   const [liveProgress, setLiveProgress] = useState(false)
   const [groups, setGroups] = useState<RaceGroup[]>([])
@@ -117,8 +117,8 @@ function Simulation() {
         if (interactiveMode) {
           const plan = location.state?.plan ?? { leaderId: 0, break: 'auto', hardOn: [], attackOn: '' }
           const sess = season
-            ? await App.StartSeasonRace(season.seasonId, season.eventId, main.RacePlan.createFrom(plan))
-            : await App.StartInteractiveSimulation(race.id, enableIncidents, initialTeam, main.RacePlan.createFrom(plan))
+            ? await App.StartSeasonRace(season.seasonId, season.eventId, app.RacePlan.createFrom(plan))
+            : await App.StartInteractiveSimulation(race.id, enableIncidents, initialTeam, app.RacePlan.createFrom(plan))
           await tc.beginSession(sess)
           return
         }

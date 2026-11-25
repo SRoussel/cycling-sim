@@ -1,8 +1,8 @@
 import { useParams, useNavigate, Link, useLocation } from 'react-router-dom'
 import { useEffect, useRef, useState } from 'react'
-import * as App from '../../wailsjs/go/main/App'
-import { main } from '../../wailsjs/go/models'
-import { EventsOn } from '../../wailsjs/runtime/runtime'
+import * as App from '../api'
+import { app } from '../api'
+import { EventsOn } from '../api'
 import { RaceGroup, formatRaceClock, toDisplayGroups } from '../sim/shared'
 import { LiveProgressPayload, RaceGoal, useTeamControl } from '../sim/useTeamControl'
 import { RaceDashboard } from '../components/race/RaceDashboard'
@@ -47,7 +47,7 @@ function StageRaceSimulation() {
   const tc = useTeamControl({ interactiveMode, initialTeam, stageRace: true })
   const { appendEvents, sessionId } = tc
 
-  const [stageRace, setStageRace] = useState<main.StageRaceInfo | null>(null)
+  const [stageRace, setStageRace] = useState<app.StageRaceInfo | null>(null)
   const [loading, setLoading] = useState(true)
   const [failed, setFailed] = useState(false)
   const [progress, setProgress] = useState(0)
@@ -63,7 +63,7 @@ function StageRaceSimulation() {
   useEffect(() => {
     App.GetStageRaces()
       .then((all) => {
-        const sr = all.find((s: main.StageRaceInfo) => s.id === parseInt(stageRaceId || '0'))
+        const sr = all.find((s: app.StageRaceInfo) => s.id === parseInt(stageRaceId || '0'))
         if (sr) setStageRace(sr)
       })
       .finally(() => setLoading(false))

@@ -1,7 +1,7 @@
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
-import * as App from '../../wailsjs/go/main/App'
-import { director, main } from '../../wailsjs/go/models'
+import * as App from '../api'
+import { director, app } from '../api'
 import { PlanForm } from '../components/race/PlanForm'
 import { ProfileView } from '../components/race/ProfileView'
 import { RouteProfile } from '../sim/shared'
@@ -9,10 +9,10 @@ import { teamColor } from '../sim/teamColors'
 import { RiderLink } from '../components/RiderProfile'
 import './RaceSetup.css'
 
-const wkg = (r: main.RiderInfo) => (r.weight > 0 ? r.ftp / r.weight : 0)
+const wkg = (r: app.RiderInfo) => (r.weight > 0 ? r.ftp / r.weight : 0)
 
 /** Each rider's place in this field on a rating, 0 (weakest) to 100. */
-function fieldRanks(riders: main.RiderInfo[], key: (r: main.RiderInfo) => number): Map<number, number> {
+function fieldRanks(riders: app.RiderInfo[], key: (r: app.RiderInfo) => number): Map<number, number> {
   const sorted = [...riders].sort((a, b) => key(a) - key(b))
   const n = Math.max(1, sorted.length - 1)
   return new Map(sorted.map((r, i) => [r.id, (i / n) * 100]))
@@ -21,8 +21,8 @@ function fieldRanks(riders: main.RiderInfo[], key: (r: main.RiderInfo) => number
 function RaceSetup() {
   const { raceId } = useParams()
   const navigate = useNavigate()
-  const [race, setRace] = useState<main.RaceInfo | null>(null)
-  const [startList, setStartList] = useState<main.RiderInfo[]>([])
+  const [race, setRace] = useState<app.RaceInfo | null>(null)
+  const [startList, setStartList] = useState<app.RiderInfo[]>([])
   const [profile, setProfile] = useState<RouteProfile | null>(null)
   const [enableIncidents, setEnableIncidents] = useState(false)
 

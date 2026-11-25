@@ -1,7 +1,7 @@
 import { useParams, Link, useLocation } from 'react-router-dom'
 import { useState, useEffect } from 'react'
-import * as App from '../../wailsjs/go/main/App'
-import { main } from '../../wailsjs/go/models'
+import * as App from '../api'
+import { app } from '../api'
 import { formatTime, formatGap } from '../utils/format'
 import { teamColor } from '../sim/teamColors'
 import './Results.css'
@@ -11,13 +11,13 @@ function StageRaceGC() {
   const location = useLocation()
   const gcGoal = (location.state?.gcGoal ?? null) as { kind: string; riderName: string; target: number; text: string } | null
   const myTeam = (location.state?.team ?? '') as string
-  const [standings, setStandings] = useState<main.GCStanding[]>([])
-  const [stageRace, setStageRace] = useState<main.StageRaceInfo | null>(null)
-  const [points, setPoints] = useState<main.PointsStanding[]>([])
-  const [mountains, setMountains] = useState<main.MountainsStanding[]>([])
-  const [youth, setYouth] = useState<main.YouthStanding[]>([])
+  const [standings, setStandings] = useState<app.GCStanding[]>([])
+  const [stageRace, setStageRace] = useState<app.StageRaceInfo | null>(null)
+  const [points, setPoints] = useState<app.PointsStanding[]>([])
+  const [mountains, setMountains] = useState<app.MountainsStanding[]>([])
+  const [youth, setYouth] = useState<app.YouthStanding[]>([])
   const [activeTab, setActiveTab] = useState<'gc' | 'points' | 'mountains' | 'youth'>('gc')
-  const [history, setHistory] = useState<main.GCStanding[][]>([])
+  const [history, setHistory] = useState<app.GCStanding[][]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -26,7 +26,7 @@ function StageRaceGC() {
       try {
         const raceId = parseInt(stageRaceId || '0')
         const stageRaces = await App.GetStageRaces()
-        const race = stageRaces.find((sr: main.StageRaceInfo) => sr.id === raceId)
+        const race = stageRaces.find((sr: app.StageRaceInfo) => sr.id === raceId)
         if (race) {
           setStageRace(race)
         }
@@ -41,7 +41,7 @@ function StageRaceGC() {
         setStandings(gc)
         // The GC after each stage, for how the final top five got there.
         const perStage = await Promise.all(
-          Array.from({ length: finalStage }, (_, i) => App.GetGCStandings(raceId, i + 1).catch(() => [] as main.GCStanding[])),
+          Array.from({ length: finalStage }, (_, i) => App.GetGCStandings(raceId, i + 1).catch(() => [] as app.GCStanding[])),
         )
         setHistory(perStage.map((st) => st || []))
         setPoints(pts || [])
@@ -171,7 +171,7 @@ function StandingsTable({ rows, myTeam, points }: { rows: StandingRow[]; myTeam:
 }
 
 /** The time behind the leader after each stage for the final top five. */
-function GCStory({ history, final }: { history: main.GCStanding[][]; final: main.GCStanding[] }) {
+function GCStory({ history, final }: { history: app.GCStanding[][]; final: app.GCStanding[] }) {
   const top = final.slice(0, 5)
   const W = 520
   const H = 260

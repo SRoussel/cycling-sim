@@ -12,7 +12,8 @@ case "${1:-}" in
 start)
   if ! curl -sf http://localhost:34115 >/dev/null; then
     tmux kill-session -t cs-wails 2>/dev/null
-    tmux new-session -d -s cs-wails "cd '$ROOT' && wails dev -tags webkit2_41 2>&1 | tee '$RUN/wails.log'"
+    # tmux doesn't inherit the caller's environment: pass the DB through.
+    tmux new-session -d -s cs-wails "cd '$ROOT' && CYCLING_SIM_DB='${CYCLING_SIM_DB:-}' wails dev -tags webkit2_41 2>&1 | tee '$RUN/wails.log'"
     timeout 300 bash -c 'until curl -sf http://localhost:34115 >/dev/null; do sleep 2; done' \
       || { echo "wails dev did not come up; see $RUN/wails.log"; exit 1; }
   fi

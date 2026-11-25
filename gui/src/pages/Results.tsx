@@ -1,7 +1,7 @@
 import { useParams, Link, useLocation, useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
-import * as App from '../../wailsjs/go/main/App'
-import { main } from '../../wailsjs/go/models'
+import * as App from '../api'
+import { app } from '../api'
 import { formatTime, formatGap } from '../utils/format'
 import { teamColor } from '../sim/teamColors'
 import './Results.css'
@@ -10,19 +10,19 @@ function Results() {
   const { raceId } = useParams()
   const location = useLocation()
   const navigate = useNavigate()
-  const [results, setResults] = useState<main.SimulationResult[]>([])
+  const [results, setResults] = useState<app.SimulationResult[]>([])
   const [raceName, setRaceName] = useState<string>('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [stageNav, setStageNav] = useState<{
     stageRaceId: number
     stageRaceName: string
-    stages: main.StageRaceStageInfo[]
+    stages: app.StageRaceStageInfo[]
     index: number
   } | null>(null)
   
   // Get results passed from simulation
-  const passedResults = location.state?.results as main.RaceResults | undefined
+  const passedResults = location.state?.results as app.RaceResults | undefined
 
   useEffect(() => {
     async function loadResults() {
@@ -72,7 +72,7 @@ function Results() {
         if (!stageRaces || stageRaces.length === 0) return
 
         const stageLists = await Promise.all(
-          stageRaces.map(async (race: main.StageRaceInfo) => ({
+          stageRaces.map(async (race: app.StageRaceInfo) => ({
             race,
             stages: await App.GetStageRaceStages(race.id),
           }))
@@ -80,7 +80,7 @@ function Results() {
 
         for (const entry of stageLists) {
           const index = entry.stages.findIndex(
-            (stage: main.StageRaceStageInfo) => stage.raceId === Number(raceId)
+            (stage: app.StageRaceStageInfo) => stage.raceId === Number(raceId)
           )
           if (index >= 0 && !cancelled) {
             setStageNav({
@@ -172,7 +172,7 @@ function Results() {
   // Finishing groups: riders on the same time finished together.
   const finishers = results.filter((r) => r.position > 0)
   const dnf = results.filter((r) => r.position === 0)
-  const groups: Array<{ gap: number; riders: main.SimulationResult[] }> = []
+  const groups: Array<{ gap: number; riders: app.SimulationResult[] }> = []
   for (const r of finishers) {
     const last = groups[groups.length - 1]
     if (last && Math.abs(r.gap - last.gap) < 1) last.riders.push(r)
@@ -187,7 +187,7 @@ function Results() {
     else if (first.riders.length === 2) headline = `${winner.riderName} wins a two-up sprint`
     else if (first.riders.length > 2) headline = `${winner.riderName} wins a sprint of ${first.riders.length}`
   }
-  const groupLabel = (g: { gap: number; riders: main.SimulationResult[] }, i: number) =>
+  const groupLabel = (g: { gap: number; riders: app.SimulationResult[] }, i: number) =>
     i === 0 ? (g.riders.length === 1 ? 'Winner' : `Front group of ${g.riders.length}`) : g.riders.length === 1 ? 'Alone' : `Group of ${g.riders.length}`
 
   return (

@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react'
-import * as App from '../../../wailsjs/go/main/App'
-import { main } from '../../../wailsjs/go/models'
+import * as App from '../../api'
+import { app } from '../../api'
 import { RouteProfile } from '../../sim/shared'
 import { findClimbs } from './ProfileView'
 import './StageStrip.css'
 
 /** What kind of stage it is, from its own profile. */
-function stageKind(stage: main.StageRaceStageInfo, p: RouteProfile | undefined): string {
+function stageKind(stage: app.StageRaceStageInfo, p: RouteProfile | undefined): string {
   if (stage.raceType === 'tt' || /\bITT\b|time trial/i.test(stage.raceName)) return 'Time trial'
   if (!p || p.points.length < 2) return ''
   let gain = 0
@@ -19,7 +19,7 @@ function stageKind(stage: main.StageRaceStageInfo, p: RouteProfile | undefined):
 }
 
 /** Each stage's profile, loaded once per list of stages. */
-export function useStageProfiles(stages: main.StageRaceStageInfo[]): Record<number, RouteProfile> {
+export function useStageProfiles(stages: app.StageRaceStageInfo[]): Record<number, RouteProfile> {
   const [profiles, setProfiles] = useState<Record<number, RouteProfile>>({})
   useEffect(() => {
     let live = true
@@ -58,10 +58,10 @@ export function StageStrip({
   link,
   note,
 }: {
-  stages: main.StageRaceStageInfo[]
+  stages: app.StageRaceStageInfo[]
   profiles: Record<number, RouteProfile>
-  link?: (stage: main.StageRaceStageInfo, index: number) => React.ReactNode
-  note?: (stage: main.StageRaceStageInfo) => string
+  link?: (stage: app.StageRaceStageInfo, index: number) => React.ReactNode
+  note?: (stage: app.StageRaceStageInfo) => string
 }) {
   return (
     <ol className="stage-strip">

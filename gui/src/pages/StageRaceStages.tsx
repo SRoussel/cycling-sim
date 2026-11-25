@@ -1,15 +1,15 @@
 import { useParams, Link } from 'react-router-dom'
 import { useEffect, useState } from 'react'
-import * as App from '../../wailsjs/go/main/App'
-import { main } from '../../wailsjs/go/models'
+import * as App from '../api'
+import { app } from '../api'
 import { StageStrip, useStageProfiles } from '../components/race/StageStrip'
 import './Results.css'
 
 function StageRaceStages() {
   const { stageRaceId } = useParams()
   const stageRaceIdNumber = parseInt(stageRaceId || '0')
-  const [stageRace, setStageRace] = useState<main.StageRaceInfo | null>(null)
-  const [stages, setStages] = useState<main.StageRaceStageInfo[]>([])
+  const [stageRace, setStageRace] = useState<app.StageRaceInfo | null>(null)
+  const [stages, setStages] = useState<app.StageRaceStageInfo[]>([])
   const profiles = useStageProfiles(stages)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -22,7 +22,7 @@ function StageRaceStages() {
           App.GetStageRaces(),
           App.GetStageRaceStages(id),
         ])
-        const race = stageRaces.find((sr: main.StageRaceInfo) => sr.id === id) || null
+        const race = stageRaces.find((sr: app.StageRaceInfo) => sr.id === id) || null
         setStageRace(race)
         setStages(stageList || [])
       } catch (err) {

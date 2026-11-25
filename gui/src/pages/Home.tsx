@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useState, useEffect } from 'react'
-import * as App from '../../wailsjs/go/main/App'
-import { main } from '../../wailsjs/go/models'
+import * as App from '../api'
+import { app } from '../api'
 import { RouteProfile } from '../sim/shared'
 import { findClimbs } from '../components/race/ProfileView'
 import './Home.css'
@@ -49,8 +49,8 @@ function MiniProfile({ p }: { p: RouteProfile | undefined }) {
 }
 
 function Home() {
-  const [races, setRaces] = useState<main.RaceInfo[]>([])
-  const [stageRaces, setStageRaces] = useState<main.StageRaceInfo[]>([])
+  const [races, setRaces] = useState<app.RaceInfo[]>([])
+  const [stageRaces, setStageRaces] = useState<app.StageRaceInfo[]>([])
   const [profiles, setProfiles] = useState<Record<number, RouteProfile>>({})
   const [isSeeded, setIsSeeded] = useState(true)
   const [loading, setLoading] = useState(true)
@@ -99,7 +99,7 @@ function Home() {
     )
   }
 
-  const byDate = (a: main.RaceInfo, b: main.RaceInfo) => a.date.slice(5).localeCompare(b.date.slice(5))
+  const byDate = (a: app.RaceInfo, b: app.RaceInfo) => a.date.slice(5).localeCompare(b.date.slice(5))
   const oneDay = races.filter((r) => !isEdition(r.name)).sort(byDate)
   const oneDayEditions = races.filter((r) => isEdition(r.name)).sort((a, b) => a.date.localeCompare(b.date))
   const stages = stageRaces.filter((s) => !isEdition(s.name))
@@ -109,7 +109,7 @@ function Home() {
     return isNaN(d.getTime()) ? iso : d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
   }
 
-  const raceRow = (race: main.RaceInfo, withYear = false) => (
+  const raceRow = (race: app.RaceInfo, withYear = false) => (
     <li key={race.id}>
       <Link to={`/race-setup/${race.id}`}>
         <span className="race-date">{withYear ? race.date.slice(0, 4) : day(race.date)}</span>
@@ -120,7 +120,7 @@ function Home() {
       </Link>
     </li>
   )
-  const stageRow = (sr: main.StageRaceInfo) => (
+  const stageRow = (sr: app.StageRaceInfo) => (
     <li key={sr.id}>
       <Link to={`/stage-race/${sr.id}`}>
         <span className="race-date">{sr.stageCount >= 21 ? 'Grand Tour' : 'Week'}</span>

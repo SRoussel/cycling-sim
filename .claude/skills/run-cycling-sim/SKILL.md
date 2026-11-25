@@ -20,27 +20,28 @@ These were already installed on this machine (WSL2 Ubuntu). Nothing extra was ne
 
 ```bash
 S=.claude/skills/run-cycling-sim
+# The GUI opens the real DB (~/.config/CyclingSim) unless told otherwise:
+export CYCLING_SIM_DB=$HOME/.cache/cycling-sim-run/gui-check.db
+sqlite3 ~/.config/CyclingSim/cycling_sim.db ".backup '$CYCLING_SIM_DB'"
 $S/app.sh start      # first start builds Go + Vite: ~1-2 min; prints "app: http://localhost:34115 ..."
 mkdir -p /tmp/cs-shots
 node $S/driver.mjs <<'EOF'
 nav http://localhost:34115/
 waitfor Milan-San Remo
 click Milan-San Remo
-waitfor Start Simulation
-click Interactive mode
+waitfor Watch the race
+click Direct a team
 wait 1500
-click Start Simulation
-waitfor Team orders
+click Start the race
+waitfor Chase breaks
 click Don't chase
-waitfor Team order: Chasing: Don't chase
-scrollto .team-orders-panel
-shot /tmp/cs-shots/team-orders.png
-text .team-orders-panel
+wait 3000
+shot /tmp/cs-shots/live.png
 EOF
 $S/app.sh stop
 ```
 
-What it does: it opens the home page, picks a race, enables interactive mode (team control, defaulting to the first team), starts the live race, sets a team order, then screenshots and reads the panel. The driver exits 1 if any `click` or `waitfor` fails. **Look at the screenshot.**
+What it does: on a scratch copy of the DB, it opens the home page, picks a race, takes charge of a team ("Direct a team"), starts the live race, sets a team order and screenshots it. The driver exits 1 if any `click` or `waitfor` fails. **Look at the screenshot.**
 
 Driver commands, one per line, read from stdin or a file argument:
 
@@ -89,7 +90,7 @@ cd gui && npx tsc --noEmit
 - **Use :34115, not :3000.** :3000 is bare Vite, where `window.go` is missing, so every backend call fails. :34115 is Wails' dev server and injects the bindings, so the app is fully functional in plain Chromium.
 - **Don't deep-link to `/race-setup/:id`.** The page renders but shows no race info or start list, because the race is passed in router state from the home card. Always `nav /` and `click` the race card.
 - **The Team Control panel is below the fold** at 1000 px height. `scrollto .team-orders-panel` (or `.team-controls`) before `shot`.
-- **After adding a Go method the GUI calls,** update `gui/wailsjs/go/main/App.js` and `App.d.ts`. Wails dev regenerates them, but the typecheck runs before that. Hand-editing them in the existing format works.
+- **After adding a Go method the GUI calls,** update `gui/wailsjs/go/app/App.js` and `App.d.ts` (or run `wails generate module -tags webkit2_41`); pages import them through `gui/src/api.ts`. Wails dev regenerates them, but the typecheck runs before that. Hand-editing them in the existing format works.
 - **`wails dev` logs `ERR | Unknown message from front end: runtime:ready`** whenever the browser connects. It's harmless.
 - **Never stop processes with `pkill -f` or `pgrep -f` on a pattern** like `remote-debugging-port`: it matched the agent's own shell command and killed it (exit 144). app.sh stops by port and pid file.
 - **No `chromium-cli` here.** That's why `driver.mjs` exists: a ~70-line raw DevTools-protocol client.

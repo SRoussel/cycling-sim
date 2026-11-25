@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import * as App from '../../wailsjs/go/main/App'
-import { main } from '../../wailsjs/go/models'
+import * as App from '../api'
+import { app } from '../api'
 import './Season.css'
 import { teamColor } from '../sim/teamColors'
 
 /** Season mode's front door: saved seasons and a new one. */
 function Seasons() {
   const navigate = useNavigate()
-  const [seasons, setSeasons] = useState<main.SeasonInfo[]>([])
+  const [seasons, setSeasons] = useState<app.SeasonInfo[]>([])
   const [teams, setTeams] = useState<string[]>([])
   const [team, setTeam] = useState('')
   const [name, setName] = useState('')
@@ -37,7 +37,7 @@ function Seasons() {
     }
   }
 
-  const remove = async (s: main.SeasonInfo) => {
+  const remove = async (s: app.SeasonInfo) => {
     if (!window.confirm(`Delete "${s.name}"? This can't be undone.`)) return
     await App.DeleteSeason(s.id)
     load()

@@ -70,10 +70,13 @@ func main() {
 		if len(args) > 1 && args[0] == "--sets" {
 			n, err := strconv.Atoi(args[1])
 			if err != nil || n < 1 {
-				fatalf("Usage: cycling-sim validate --sets N [--cross-season | --season 2026]\n")
+				fatalf("Usage: cycling-sim validate --sets N [--cross-season | --season 2026 [--holdout]]\n")
 			}
 			season2026 := len(args) > 3 && args[2] == "--season" && args[3] == "2026"
 			cmdValidateSets(db, n, len(args) > 2 && args[2] == "--cross-season", season2026)
+			if season2026 && len(args) > 4 && args[4] == "--holdout" {
+				printHoldout(db, n)
+			}
 			break
 		}
 		cmdValidate(db, len(args) > 0 && (args[0] == "-v" || args[0] == "--verbose"))
@@ -844,6 +847,16 @@ func cmdImportResults(db *database.DB, dir string) {
 // printCalibration reports whether the simulation's probabilities are
 // honest: every starter's top-10 and win chances against what he did, over
 // all reference races and seed sets (calibration.go).
+// printHoldout runs the older references the 2026 fit never sees (the 2024
+// classics and stage races, the 2023 hold-out) and prints their calibration:
+// a warning light for overfitting the 2026 references, not a target (the
+// ratings describe 2026 riders, so these fields are a season off).
+func printHoldout(db *database.DB, n int) {
+	fmt.Println()
+	fmt.Println("Held out: 2024 and 2023 references, never fitted (ratings are 2026's; a warning light, not a target)")
+	printCalibration(simulation.RunSeedSets(db, n, true))
+}
+
 func printCalibration(results []simulation.SeedSetResult) {
 	var oneDay, stage []simulation.CalibPoint
 	var races [][]simulation.CalibPoint
@@ -910,7 +923,10 @@ func printHistory(results []simulation.SeedSetResult) {
 		return ""
 	}
 	fmt.Println("Against history (each race's last ~10 editions: median, range; ← outside the range)")
+	fmt.Println("  Solo shares with 95% ranges (history over ~10 editions, the simulation over its runs);")
+	fmt.Println("  ← only when the two ranges don't overlap: a clear difference, not noise.")
 	var simSolo, realSolo, nRaces float64
+	var simK, simN, realK, realN float64
 	for _, r := range results {
 		h := hist[simulation.HistoryName(r.Name)]
 		if h == nil {
@@ -918,17 +934,29 @@ func printHistory(results []simulation.SeedSetResult) {
 		}
 		if len(r.Finish) > 0 {
 			var solo, margin float64
+			runs := 0
 			for _, f := range r.Finish {
 				solo += f.Solo / float64(len(r.Finish))
 				margin += f.Margin / float64(len(r.Finish))
+				runs += f.Runs
 			}
 			n := float64(len(h.Gap2))
 			med, lo, hi := simulation.Range(h.Gap2)
-			fmt.Printf("  %-26s solo %3.0f%% (history %3.0f%%, %d of %d)   margin %6s (history %s, %s-%s)%s\n",
-				simulation.HistoryName(r.Name), solo*100, float64(h.Solo)/n*100, h.Solo, len(h.Gap2), clk(margin), clk(med), clk(lo), clk(hi), flag(margin, lo, hi))
+			hLo, hHi := simulation.Wilson95(float64(h.Solo), n)
+			sLo, sHi := simulation.Wilson95(solo*float64(runs), float64(runs))
+			soloFlag := ""
+			if runs > 0 && (sHi < hLo || sLo > hHi) {
+				soloFlag = " ←"
+			}
+			fmt.Printf("  %-26s solo %3.0f%% (%2.0f-%3.0f%%; history %3.0f%%, %d of %d: %2.0f-%3.0f%%)%-2s  margin %6s (history %s, %s-%s)%s\n",
+				simulation.HistoryName(r.Name), solo*100, sLo*100, sHi*100, float64(h.Solo)/n*100, h.Solo, len(h.Gap2), hLo*100, hHi*100, soloFlag, clk(margin), clk(med), clk(lo), clk(hi), flag(margin, lo, hi))
 			simSolo += solo
 			realSolo += float64(h.Solo) / n
 			nRaces++
+			simK += solo * float64(runs)
+			simN += float64(runs)
+			realK += float64(h.Solo)
+			realN += n
 		}
 		if len(r.Spread) > 0 {
 			var s2, s10 float64
@@ -943,6 +971,8 @@ func printHistory(results []simulation.SeedSetResult) {
 		}
 	}
 	if nRaces > 0 {
-		fmt.Printf("  %-26s solo %3.0f%% of races (history %3.0f%%)\n", "All one-day races", simSolo/nRaces*100, realSolo/nRaces*100)
+		sLo, sHi := simulation.Wilson95(simK, simN)
+		hLo, hHi := simulation.Wilson95(realK, realN)
+		fmt.Printf("  %-26s solo %3.0f%% of races (%2.0f-%2.0f%%; history %3.0f%%, %.0f of %.0f editions: %2.0f-%2.0f%%)\n", "All one-day races", simSolo/nRaces*100, sLo*100, sHi*100, realSolo/nRaces*100, realK, realN, hLo*100, hHi*100)
 	}
 }

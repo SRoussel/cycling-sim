@@ -48,6 +48,7 @@ type ValidationSummary struct {
 // winning margin; Real* describe the real race.
 type FinishShape struct {
 	Solo, Small, Bunch float64
+	Runs               int // runs the shares are over (for their uncertainty)
 	Margin, RealMargin float64
 	RealKind           string
 }
@@ -526,4 +527,18 @@ func validationTTCourse() *model.Course {
 			{ID: 2, CourseID: 3, SegmentOrder: 2, Name: "TT Back", DistanceKm: 20, GradientPct: -0.4, SurfaceType: model.SurfaceRoad},
 		},
 	}
+}
+
+// Wilson95 is the 95% Wilson score interval of a share k/n: the plausible
+// range of the true share given n draws (n of ~10 editions leaves it wide).
+func Wilson95(k, n float64) (lo, hi float64) {
+	if n <= 0 {
+		return 0, 1
+	}
+	const z = 1.96
+	p := k / n
+	d := 1 + z*z/n
+	c := (p + z*z/(2*n)) / d
+	h := z * math.Sqrt(p*(1-p)/n+z*z/(4*n*n)) / d
+	return math.Max(0, c-h), math.Min(1, c+h)
 }

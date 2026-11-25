@@ -327,7 +327,7 @@ func RunRealRaceValidationFor(db *database.DB, allRiders []model.Rider, entries 
 			}
 			return SimulateRoadRace(cfg)
 		})
-		var finish FinishShape
+		finish := FinishShape{Runs: len(allRuns)}
 		var margins []float64
 		for _, simResults := range allRuns {
 			gaps := make([]float64, 0, 20)

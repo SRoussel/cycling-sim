@@ -84,3 +84,26 @@ func TestKnownPlaceStep(t *testing.T) {
 		t.Errorf("ahead: got %.2f, want riderStep %.2f > 0", s, want)
 	}
 }
+
+// A rider's tail starts where his correction first turns back; one still
+// travelling keeps the last half.
+func TestRiderTail(t *testing.T) {
+	seq := func(vs ...float64) []map[int64]float64 {
+		var h []map[int64]float64
+		for _, v := range vs {
+			h = append(h, map[int64]float64{1: v})
+		}
+		return h
+	}
+	got := riderTail(seq(1.00, 0.985, 0.975, 0.978, 0.974, 0.977, 0.975, 0.976), 1)
+	if len(got) != 6 || got[0] != 0.975 {
+		t.Errorf("turning back at pass 3: tail %v, want from 0.975 (6 passes)", got)
+	}
+	got = riderTail(seq(1.00, 0.99, 0.98, 0.97, 0.96, 0.95), 1)
+	if len(got) != 3 {
+		t.Errorf("still travelling: tail %v, want the last half", got)
+	}
+	if _, _, se := tailStats([]float64{1, 1, 1}); se != 0 {
+		t.Errorf("constant tail: se %v, want 0", se)
+	}
+}

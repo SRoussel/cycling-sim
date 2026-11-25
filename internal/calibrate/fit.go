@@ -50,6 +50,11 @@ type Options struct {
 	Start map[int64]float64
 	// MinPasses before the fit may stop on a settled average (with a prior).
 	MinPasses int
+	// Precision (%, with a prior): average each rider from the pass he
+	// reached his level (riderTail) and stop once every rider's average is
+	// known to this standard error. 0 = the older rule (last half of the
+	// passes, stop when that average stops moving).
+	Precision float64
 }
 
 // settledAvgPct: with a prior the fit stops once the running average of the
@@ -230,6 +235,17 @@ func Fit(db *database.DB, base []model.Rider, opt Options) ([]Adjustment, error)
 		if meanStep < settledPct && largest < settledMaxPct {
 			break
 		}
+		if opt.Prior > 0 && opt.Precision > 0 {
+			if len(history) >= max(opt.MinPasses, 4) {
+				worst, who := precisionOf(history)
+				logf("  least precise average ±%.2f%% (rider %d)\n", worst, who)
+				if worst <= opt.Precision {
+					logf("every rider's average within ±%.2f%% after %d passes\n", opt.Precision, len(history))
+					break
+				}
+			}
+			continue
+		}
 		if opt.Prior > 0 && opt.MinPasses > 0 && len(history) >= opt.MinPasses {
 			now, before := tailMean(history), tailMean(history[:len(history)-1])
 			var sum, most float64
@@ -251,7 +267,15 @@ func Fit(db *database.DB, base []model.Rider, opt Options) ([]Adjustment, error)
 		}
 	}
 	spread := map[int64]float64{}
-	if opt.Prior > 0 && len(history) >= 4 {
+	if opt.Prior > 0 && opt.Precision > 0 && len(history) >= 4 {
+		avg := map[int64]float64{}
+		for id := range scale {
+			m, sd, _ := tailStats(riderTail(history, id))
+			avg[id], spread[id] = m, sd
+		}
+		scale = avg
+		logf("averaged each rider from the pass he reached his level\n")
+	} else if opt.Prior > 0 && len(history) >= 4 {
 		tail := history[len(history)/2:]
 		avg := map[int64]float64{}
 		for id := range scale {
@@ -348,6 +372,70 @@ func knownPlaceStep(c simulation.RiderCheck, stage, prior bool) (float64, bool) 
 		return 0, false
 	}
 	return math.Max(s, -intruderPenaltyPct*c.Top10Pct/100), true
+}
+
+// riderTail is a rider's scales from the pass he reached his level: the
+// first time his correction turns back (he crossed the level his races ask
+// for and noise now moves him both ways), never later than halfway. Before
+// it he was still travelling from where the fit started.
+func riderTail(history []map[int64]float64, id int64) []float64 {
+	v := make([]float64, len(history))
+	for k, h := range history {
+		v[k] = h[id]
+		if v[k] == 0 {
+			v[k] = 1
+		}
+	}
+	start := len(v) / 2
+	for k := 2; k < start; k++ {
+		if (v[k]-v[k-1])*(v[k-1]-v[k-2]) < 0 {
+			start = k - 1
+			break
+		}
+	}
+	return v[start:]
+}
+
+// tailStats: mean, standard deviation and the mean's standard error.
+func tailStats(t []float64) (mean, sd, se float64) {
+	n := float64(len(t))
+	if n == 0 {
+		return 1, 0, 0
+	}
+	var sum, sq float64
+	for _, x := range t {
+		sum += x
+		sq += x * x
+	}
+	mean = sum / n
+	sd = math.Sqrt(math.Max(0, sq/n-mean*mean))
+	if n < 2 {
+		return mean, sd, math.Inf(1)
+	}
+	return mean, sd, sd * math.Sqrt(n/(n-1)) / math.Sqrt(n)
+}
+
+// precisionOf is the largest standard error (%) of any rider's average so
+// far (each from his own tail; at least 3 passes each), and whose it is.
+func precisionOf(history []map[int64]float64) (float64, int64) {
+	ids := map[int64]bool{}
+	for _, h := range history {
+		for id := range h {
+			ids[id] = true
+		}
+	}
+	worst, who := 0.0, int64(0)
+	for id := range ids {
+		t := riderTail(history, id)
+		_, _, se := tailStats(t)
+		if len(t) < 3 {
+			se = math.Inf(1)
+		}
+		if se*100 > worst || (se*100 == worst && id < who) {
+			worst, who = se*100, id
+		}
+	}
+	return worst, who
 }
 
 // tailMean is each rider's mean scale over the last half of the passes (1

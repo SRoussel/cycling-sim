@@ -748,7 +748,8 @@ func cmdFitRatings(db *database.DB, path string, classics, season2026 bool) {
 					}
 				}
 			}
-			opt.MinPasses = 6
+			opt.MinPasses = 4
+			opt.Precision = 0.35 // about what the settled-average rule reached (fitted26o)
 			fmt.Printf("Starting from the installed fit (%d riders).\n", len(opt.Start))
 		}
 		what = "every 2026 reference (one-day and GC)"

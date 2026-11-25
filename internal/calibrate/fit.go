@@ -231,7 +231,11 @@ func Fit(db *database.DB, base []model.Rider, opt Options) ([]Adjustment, error)
 			now, before := tailMean(history), tailMean(history[:len(history)-1])
 			var sum, most float64
 			for id, v := range now {
-				d := math.Abs(v-before[id]) * 100
+				b, ok := before[id]
+				if !ok {
+					b = 1 // first adjusted this pass: it moved from its base
+				}
+				d := math.Abs(v-b) * 100
 				sum += d
 				most = math.Max(most, d)
 			}

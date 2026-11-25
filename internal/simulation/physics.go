@@ -17,10 +17,6 @@ const (
 	crrGravel   = 0.009
 	bikeWeight  = 8.0 // kg
 	minSpeedMPS = 1.0 // minimum speed 1 m/s (~3.6 km/h) to avoid stalling
-	// HandlingEffectPerPoint controls how much each handling point (1-100)
-	// changes the effective rolling resistance on cobbles.
-	// At 0.022: H=70 → 1.0x, H=93 → 0.494x, H=55 → 1.33x
-	HandlingEffectPerPoint = 0.022
 )
 
 // Drafting: the CdA multiplier rises from the second wheel's value towards a
@@ -78,10 +74,12 @@ func forceRolling(totalMassKg float64, gradientPct float64, surface model.Surfac
 
 	switch surface {
 	case model.SurfaceCobbles:
-		// Apply handling-based rolling resistance on cobbles
-		c = crrCobbles * roughness * HandlingFactor(handling)
+		// Handling acts through the power a rider puts down on a rough road
+		// (RoughRoadFactor), not here as well (Nov 2026: both applied, a
+		// 13-15% swing between Handling 70 and 90 on a steep cobbled climb).
+		c = crrCobbles * roughness
 	case model.SurfaceGravel:
-		c = crrGravel * roughness * HandlingFactor(handling)
+		c = crrGravel * roughness
 	}
 
 	return c * totalMassKg * gravity / math.Sqrt(1+g*g) // cos(atan g)
@@ -127,21 +125,6 @@ func sectorRoughness(seg *model.Segment) float64 {
 		return gravelRoughness(seg.CobbleStars)
 	}
 	return cobbleRoughness(seg.CobbleStars)
-}
-
-// HandlingFactor returns a multiplier to apply to cobbles rolling resistance
-// based on a rider's handling skill (1-100). Higher handling reduces the
-// effective crr on cobbles, giving a physics-plausible speed advantage.
-// H=70 → 1.0, H=93 → 0.586 (eff crr ~0.007), H=55 → 1.27 (eff crr ~0.015).
-func HandlingFactor(handling int) float64 {
-	f := 1.0 - float64(handling-70)*HandlingEffectPerPoint
-	if f < 0.5 {
-		f = 0.5
-	}
-	if f > 1.5 {
-		f = 1.5
-	}
-	return f
 }
 
 // CobbleWPrimeDrain returns extra W' depletion rate (watts) on cobbles

@@ -55,7 +55,7 @@ Go 1.24+, `modernc.org/sqlite` (pure Go). DB path: `CYCLING_SIM_DB` (default `cy
 ### Physics
 - **Speed:** solve 0.5·ρ·CdA·(v+w)|v+w|·v + (gravity + rolling)·v = P for v (bracketed Newton, `solveSpeed`; unique positive root). Headwind w from segment headings and race wind (roads meander ±60°); altitude from integrated gradients, air density by standard atmosphere, aerobic power by Bassett 1999 (~92% at 2000 m).
 - **Drafting:** CdA × `DraftFactor(position)`: 0.65 on one wheel → 0.25 deep in a packed bunch. A fast bunch keeps its depth of shelter (riders deep in it are not capped at the 5th wheel). Single file only on gravel (no shelter beyond the 5th wheel, 70% of the draft kept) and in crosswind echelons (riders beyond a 10-rider echelon lose shelter in the gutter when the front rides hard). Cobbles keep 40% of the draft. Pace lines rotate up to `maxRotation` riders.
-- **Rough roads:** cobbles Crr by sector stars (0.008–0.020), gravel ~0.007–0.011; Handling adds 0.3%/point around 70; light riders lose power to jostling, (mass/72 kg)^0.2 (half on gravel).
+- **Rough roads:** cobbles Crr by sector stars (0.008–0.020), gravel ~0.007–0.011; Handling adds 0.3%/point of power around 70 (its only effect on rough roads); light riders lose power to jostling, (mass/72 kg)^0.2 (half on gravel).
 - **Descents:** a speed cap from Descending and technical roads.
 
 ### Riders

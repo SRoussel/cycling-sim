@@ -74,12 +74,10 @@ func forceRolling(totalMassKg float64, gradientPct float64, surface model.Surfac
 
 	switch surface {
 	case model.SurfaceCobbles:
-		// Handling acts through the power a rider puts down on a rough road
-		// (RoughRoadFactor), not here as well (Nov 2026: both applied, a
-		// 13-15% swing between Handling 70 and 90 on a steep cobbled climb).
-		c = crrCobbles * roughness
+		// Handling and body mass: what the rider loses to the stones.
+		c = crrCobbles * roughness * roughResistanceFactor(handling, totalMassKg-bikeWeight, surface)
 	case model.SurfaceGravel:
-		c = crrGravel * roughness
+		c = crrGravel * roughness * roughResistanceFactor(handling, totalMassKg-bikeWeight, surface)
 	}
 
 	return c * totalMassKg * gravity / math.Sqrt(1+g*g) // cos(atan g)
@@ -278,37 +276,36 @@ func EffectivePower(rider *model.Rider, basePower float64, segment *model.Segmen
 		w := math.Max(0, math.Min(1, climbOf(segment)/terrainClimb))
 		factor = 1 + (ModifierFactor(rider.ClimbingAbility)-1)*w
 	}
-	power := basePower * factor * AltitudePowerFactor(segment.ElevationM)
-	if !isTT && segment.SurfaceType.Unpaved() {
-		power *= RoughRoadFactor(rider, segment.SurfaceType)
-	}
-	return power
+	return basePower * factor * AltitudePowerFactor(segment.ElevationM)
 }
 
-// Rough roads (cobbles, gravel): the classics skill. Handling (riding the
-// cobbles, line, position) adds handlingPerPoint per point around the
-// field's average of 70, without a cap at the top (before Nov 2026 the bonus
-// stopped at Handling 80, so Van der Poel, Pedersen and Tarling were equal on
-// the cobbles). A light rider is jostled more and loses power that a heavier
-// one puts into the road: (mass / jostleRefKg)^jostleExp, half as much on
-// gravel.
+// Rough roads (cobbles, gravel): what a rider loses to the road, not what he
+// puts into it. Handling (line choice: the crown or the gutter, floating over
+// the stones, less braking) scales the rough-road rolling resistance by
+// handlingPerPoint per point around the field's average of 70; a light rider
+// is shaken about more and loses more to vibration, (mass / jostleRefKg)^
+// -jostleExp, half as much on gravel. As resistance, the skill matters most
+// at speed on flat pavé and little on a slow, steep berg (Nov 2026: it was a
+// power bonus, the same share on both, and handling also scaled the
+// resistance a second time at 2.2% a point).
 const (
-	handlingPerPoint = 0.003
+	handlingPerPoint = 0.01
 	jostleRefKg      = 72.0
-	jostleExp        = 0.2
+	jostleExp        = 0.5
 )
 
-// RoughRoadFactor is the share of power a rider puts down on a rough road.
-func RoughRoadFactor(rider *model.Rider, surface model.SurfaceType) float64 {
-	f := 1.0 + float64(rider.Handling-70)*handlingPerPoint
-	if rider.WeightKg > 0 {
+// roughResistanceFactor scales a rough road's rolling resistance for a rider
+// (handling and body mass; 1 for an average 72 kg rider of Handling 70).
+func roughResistanceFactor(handling int, riderMassKg float64, surface model.SurfaceType) float64 {
+	f := 1.0 - float64(handling-70)*handlingPerPoint
+	if riderMassKg > 0 {
 		exp := jostleExp
 		if surface == model.SurfaceGravel {
 			exp /= 2
 		}
-		f *= math.Pow(rider.WeightKg/jostleRefKg, exp)
+		f *= math.Pow(riderMassKg/jostleRefKg, -exp)
 	}
-	return math.Max(0.7, f)
+	return math.Max(0.6, math.Min(1.5, f))
 }
 
 // SprintPower calculates a rider's fresh sprint power output.

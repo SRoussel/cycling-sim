@@ -705,8 +705,20 @@ func SimulateStageRaceWithProgress(stageRace *model.StageRace, stages []StageCon
 		for id, t := range gcTimes {
 			entries = append(entries, gcEntry{riderID: id, time: t})
 		}
+		// Ties (same total time) go by this stage's place, as real
+		// countback does, then rider ID: never map order.
+		stagePos := make(map[int64]int, len(results))
+		for _, res := range results {
+			stagePos[res.RiderID] = res.Position
+		}
 		sort.Slice(entries, func(i, j int) bool {
-			return entries[i].time < entries[j].time
+			if entries[i].time != entries[j].time {
+				return entries[i].time < entries[j].time
+			}
+			if pi, pj := stagePos[entries[i].riderID], stagePos[entries[j].riderID]; pi != pj {
+				return pi < pj
+			}
+			return entries[i].riderID < entries[j].riderID
 		})
 
 		standings := make([]model.GCStanding, len(entries))

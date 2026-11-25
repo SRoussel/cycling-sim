@@ -366,6 +366,14 @@ func RunRealRaceValidationFor(db *database.DB, allRiders []model.Rider, entries 
 				if res.Position >= 1 && res.Position <= 10 {
 					top10Hits[res.RiderID]++
 				}
+				// A rider who abandoned (position 0) has no place or gap: his
+				// result carries the time he'd ridden when he stopped, so his
+				// "gap" was hours ahead of the winner. Nov 2026: averaged in,
+				// a few crashes made Pogačar 704 s faster than himself at
+				// Flanders and the fit lowered him every pass.
+				if res.Position == 0 {
+					continue
+				}
 				posSum[res.RiderID] += float64(res.Position)
 				posCnt[res.RiderID]++
 				gapSum[res.RiderID] += res.TimeGapSeconds

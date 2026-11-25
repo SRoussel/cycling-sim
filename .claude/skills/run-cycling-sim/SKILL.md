@@ -61,15 +61,15 @@ Pages: home `/`, then click a race card for race setup, then Start for `/simulat
 
 ## Run the CLI
 
-Use a scratch DB so you don't touch the saved results in `cycling_sim.db`:
+Use a scratch DB so you don't touch the saved results in the real DB (`~/.config/CyclingSim/cycling_sim.db`, the default; the GUI under `app.sh` uses it too):
 
 ```bash
 export PATH=$HOME/go_install/go/bin:$PATH
-go build ./cmd/cycling-sim/
+go build -o bin/cycling-sim ./cmd/cycling-sim/
 export CYCLING_SIM_DB=$HOME/.cache/cycling-sim-run/smoke.db
-./cycling-sim seed          # "Seed complete!"
-./cycling-sim races
-./cycling-sim run 1 --seed 1   # Milan-San Remo, prints results table
+bin/cycling-sim seed          # "Seed complete!"
+bin/cycling-sim races
+bin/cycling-sim run 1 --seed 1   # Milan-San Remo, prints results table
 ```
 
 ## Run (human path)

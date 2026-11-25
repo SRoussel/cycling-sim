@@ -9,7 +9,7 @@ This file describes the model **as it is now** and how to work on it. The full d
 - **Judge on race character, not on recreating one edition.** A real race is one draw. Use calibration (do the sim's chances come true as often as it says) and each race's ~10-edition history (finish types, margins, GC gaps). Gap-error sums and real-winner rates are diagnostics only. A rider overperforming once is expected; the fit must not turn it into a rating.
 - **2026 is the validation season** (`validate --sets 2 --season 2026`); 2024/2023 references are kept but not used for decisions. `validate --quick` (~10 min, noisy) for iterating.
 - **Keep correct bug fixes**, even if they regress something; fix what was tuned around the bug.
-- **Show the numbers** (per-rider tables) before committing model changes or new fitting rules. A routine refit after an approved model change is applied first and its table shown after (stop and ask first if any rider moves more than ~3 points or a favourite's correction changes sign). Back up the DB before `apply-ratings` (`sqlite3 cycling_sim.db ".backup 'data/local/backups/<name>.db'"`; plain `cp` misses the WAL). Ask before `clear` + `seed` on the real DB.
+- **Show the numbers** (per-rider tables) before committing model changes or new fitting rules. A routine refit after an approved model change is applied first and its table shown after (stop and ask first if any rider moves more than ~3 points or a favourite's correction changes sign). Back up the DB before `apply-ratings` (`sqlite3 ~/.config/CyclingSim/cycling_sim.db ".backup 'data/local/backups/<name>.db'"`; plain `cp` misses the WAL). Ask before `clear` + `seed` on the real DB.
 - **Data sources:** no automated fetching from FirstCycling or ProCyclingStats: PCS blocks bots with Cloudflare (the `procyclingstats` package needs `cloudscraper` to get past it, Nov 2026), and we don't get around a site's bot protection. Pages the user saves in a browser can be read (`import-results`), kept in `data/local/` and never committed. Wikipedia is fine. PCM/WorldDB mod data is the mod authors': read it from the local install, never commit it or bulk-derived data (`data/local/` is gitignored). WorldDB values are one developer's attempt at realism: use them for facts (age, height, weight) and rank order only, never copy their numbers.
 - Never call an LLM inside the race loop. Don't push without asking.
 - Slow test runs are a concern: prefer exact speed-ups; avoid approximate caches that could shift results.
@@ -17,12 +17,12 @@ This file describes the model **as it is now** and how to work on it. The full d
 ## Build & Test
 ```bash
 export PATH=$HOME/go_install/go/bin:$HOME/go/bin:$PATH
-go build ./cmd/cycling-sim/       # CLI
+go build -o bin/cycling-sim ./cmd/cycling-sim/   # CLI (bin/ is gitignored)
 go test ./...                      # all tests (desktop app: go test -tags webkit2_41 ./...)
 cd gui && npx tsc --noEmit         # frontend typecheck
 wails generate module -tags webkit2_41   # after adding Go methods the GUI calls
 ```
-Go 1.24+, `modernc.org/sqlite` (pure Go). DB path: `CYCLING_SIM_DB` (default `cycling_sim.db`; WAL, auto-migrating schema). The `run-cycling-sim` skill drives the GUI headless. Profiling: `data/local/zz_prof_test.go.txt` (BenchmarkZZRaces); trace harnesses `data/local/zz_*_test.go.txt` (copy into `internal/simulation/` to run; `traceChase`/`traceEffort` hooks are nil in normal runs).
+Go 1.24+, `modernc.org/sqlite` (pure Go). DB path: `CYCLING_SIM_DB`, default the app-data folder (`database.DefaultPath`: `~/.config/CyclingSim/cycling_sim.db` here, `%AppData%\CyclingSim` on Windows; WAL, auto-migrating schema). The `run-cycling-sim` skill drives the GUI headless. Profiling: `data/local/zz_prof_test.go.txt` (BenchmarkZZRaces); trace harnesses `data/local/zz_*_test.go.txt` (copy into `internal/simulation/` to run; `traceChase`/`traceEffort` hooks are nil in normal runs).
 
 ## Project structure
 - `main.go`, `app.go`, `interactive_*.go`, `season_api.go`, `rider_profile_api.go` — Wails backend (package main); `gui/` React/Vite frontend
@@ -37,17 +37,17 @@ Go 1.24+, `modernc.org/sqlite` (pure Go). DB path: `CYCLING_SIM_DB` (default `cy
 
 ## CLI
 ```bash
-./cycling-sim seed | riders | courses | races
-./cycling-sim run <race-id> [--incidents] [--seed N]
-./cycling-sim run-stage-race <sr-id> [--seed N]
-./cycling-sim validate --sets 2 --season 2026 [--holdout]   # the check for decisions (~30 min; --holdout adds the never-fitted 2024/2023 references, ~2x)
-./cycling-sim validate --quick                  # one seed set, a third of the runs (~10 min)
-./cycling-sim validate [-v] | --sets N [--cross-season]   # older 2024/2023 references
-./cycling-sim fit-ratings --season=2026 [file]  # fit thresholds to every 2026 reference
-./cycling-sim apply-ratings                     # re-apply rating layers to the DB in place (keeps results)
-./cycling-sim import-stages <mod>/Stages        # real route profiles from the local WorldDB mod
-./cycling-sim import-riders <mod dir>           # WorldDB riders → data/local/riders_worlddb.csv
-./cycling-sim season ... | results <race-id> | gc <sr-id> <stage>
+bin/cycling-sim seed | riders | courses | races
+bin/cycling-sim run <race-id> [--incidents] [--seed N]
+bin/cycling-sim run-stage-race <sr-id> [--seed N]
+bin/cycling-sim validate --sets 2 --season 2026 [--holdout]   # the check for decisions (~30 min; --holdout adds the never-fitted 2024/2023 references, ~2x)
+bin/cycling-sim validate --quick                  # one seed set, a third of the runs (~10 min)
+bin/cycling-sim validate [-v] | --sets N [--cross-season]   # older 2024/2023 references
+bin/cycling-sim fit-ratings --season=2026 [file]  # fit thresholds to every 2026 reference
+bin/cycling-sim apply-ratings                     # re-apply rating layers to the DB in place (keeps results)
+bin/cycling-sim import-stages <mod>/Stages        # real route profiles from the local WorldDB mod
+bin/cycling-sim import-riders <mod dir>           # WorldDB riders → data/local/riders_worlddb.csv
+bin/cycling-sim season ... | results <race-id> | gc <sr-id> <stage>
 ```
 
 ## How the model works

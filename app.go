@@ -31,10 +31,7 @@ type App struct {
 
 // NewApp creates a new App instance
 func NewApp() *App {
-	dbPath := "cycling_sim.db"
-	if envDB := os.Getenv("CYCLING_SIM_DB"); envDB != "" {
-		dbPath = envDB
-	}
+	dbPath := database.DefaultPath()
 
 	db, err := database.Open(dbPath)
 	if err != nil {
@@ -640,7 +637,7 @@ func (a *App) SeedDatabase() string {
 // ClearDatabase clears and recreates the database
 func (a *App) ClearDatabase() string {
 	if a.dbPath == "" {
-		a.dbPath = "cycling_sim.db"
+		a.dbPath = database.DefaultPath()
 	}
 
 	a.sessionsMu.Lock()

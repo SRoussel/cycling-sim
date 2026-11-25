@@ -25,10 +25,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	dbPath := "cycling_sim.db"
-	if envDB := os.Getenv("CYCLING_SIM_DB"); envDB != "" {
-		dbPath = envDB
-	}
+	dbPath := database.DefaultPath()
 
 	cmd := os.Args[1]
 	args, incidents, seedVal := parseFlags(os.Args[2:])
@@ -219,7 +216,7 @@ Commands:
   gc <stage-race-id> <stage>     Show GC standings after a stage
 
 Environment:
-  CYCLING_SIM_DB                 Database file path (default: cycling_sim.db)`)
+  CYCLING_SIM_DB                 Database file path (default: the app-data folder, e.g. ~/.config/CyclingSim/cycling_sim.db)`)
 }
 
 func fatalf(format string, args ...any) {

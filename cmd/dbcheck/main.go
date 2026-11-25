@@ -3,15 +3,11 @@ package main
 import (
 	"cycling_sim/internal/database"
 	"fmt"
-	"os"
 	"sort"
 )
 
 func main() {
-	dbPath := os.Getenv("CYCLING_SIM_DB")
-	if dbPath == "" {
-		dbPath = "cycling_sim.db"
-	}
+	dbPath := database.DefaultPath()
 	db, err := database.Open(dbPath)
 	if err != nil {
 		panic(err)

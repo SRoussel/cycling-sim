@@ -472,3 +472,21 @@ func TestNoFinaleBeforeTheLastClimb(t *testing.T) {
 		t.Fatalf("want the climb moment, got %+v", m)
 	}
 }
+
+// A rider the player let go isn't asked about again before the finale.
+func TestLetGoQuietsTheRider(t *testing.T) {
+	d := New("Us")
+	field := append([]int64{1, 2, 3}, bunch(11, 40)...)
+	atk := simulation.TacticsEvent{Type: "attack", RiderID: 10, Key: true}
+	m := d.Next(race(60, [][]int64{{10}, field}, []float64{0, 5}, atk))
+	if m == nil || m.Kind != "attack" {
+		t.Fatalf("want an attack moment, got %+v", m)
+	}
+	d.Chose(m, "let")
+	if m := d.Next(race(40, [][]int64{{10}, field}, []float64{0, 5}, atk)); m != nil && m.Kind == "attack" {
+		t.Errorf("asked again at 40 km: %+v", m)
+	}
+	if m := d.Next(race(15, [][]int64{{10}, field}, []float64{0, 5}, atk)); m == nil || m.Kind != "attack" {
+		t.Errorf("the finale should ask again, got %+v", m)
+	}
+}

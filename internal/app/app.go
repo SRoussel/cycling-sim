@@ -4,6 +4,7 @@ import (
 	"context"
 	"cycling_sim/internal/director"
 	"fmt"
+	"math"
 	"os"
 	"sort"
 	"sync"
@@ -796,8 +797,14 @@ func (a *App) makeStageRaceProgressCallback(stageRaceID int64, stageCount int, s
 			goal, _ = sess.Goal()
 			gcGoal = sess.GCGoal()
 			gc = gcLines(snapshot.Race, sess.controlledTeam)
+			if snapshot.LastStage != nil { // a new stage: the GC as it stands now
+				gc = reportGCLines(snapshot.LastStage, sess.controlledTeam)
+			}
 			if snapshot.StageStart && !snapshot.TimeTrial {
 				stagePlan = sess.RequestStagePlan(snapshot.StageNumber, snapshot.StageName, director.PlanPoints(snapshot.RouteProfile))
+				if stagePlan != nil {
+					stagePlan.Report = stageReportInfo(snapshot.LastStage, sess.controlledTeam)
+				}
 			}
 		}
 		runtime.EventsEmit(a.ctx, "stage_race_progress", StageRaceProgress{
@@ -805,7 +812,7 @@ func (a *App) makeStageRaceProgressCallback(stageRaceID int64, stageCount int, s
 			StageRaceID:     stageRaceID,
 			StageNumber:     snapshot.StageNumber,
 			StageCount:      stageCount,
-			StageName:       snapshot.StageName,
+			StageName:       stageTitle(snapshot.StageName),
 			StageKm:         snapshot.StageKmCovered,
 			StageKmTotal:    snapshot.StageKmTotal,
 			StageElapsed:    snapshot.StageElapsedTime,
@@ -819,7 +826,7 @@ func (a *App) makeStageRaceProgressCallback(stageRaceID int64, stageCount int, s
 			RiderTelemetry:  snapshot.RiderTelemetry,
 			Profile:         snapshot.RouteProfile,
 			TeamState:       snapshot.TeamState,
-			Events:          withNotes(snapshot.Events, sess),
+			Events:          withNotes(append(reportEvents(snapshot.LastStage), snapshot.Events...), sess),
 			Moment:          moment,
 			Goal:            goal,
 			GCGoal:          gcGoal,
@@ -890,4 +897,37 @@ func mapSimulationResults(results []model.RaceResult, riderMap map[int64]model.R
 		}
 	}
 	return simResults
+}
+
+// reportEvents are the race feed's lines for a finished stage: its winner
+// and the GC leader.
+func reportEvents(r *simulation.StageReport) []string {
+	if r == nil || len(r.Stage) == 0 {
+		return nil
+	}
+	out := []string{fmt.Sprintf("Stage %d: %s (%s) wins", r.StageNumber, r.Stage[0].Name, r.Stage[0].Team)}
+	if len(r.GC) > 1 {
+		out = append(out, fmt.Sprintf("GC: %s leads %s by %s", r.GC[0].Name, r.GC[1].Name, clockGap(r.GC[1].Gap)))
+	}
+	return out
+}
+
+func clockGap(s float64) string {
+	t := int(math.Round(s))
+	if t < 60 {
+		return fmt.Sprintf("%d s", t)
+	}
+	return fmt.Sprintf("%d:%02d", t/60, t%60)
+}
+
+// reportGCLines is the GC strip from a finished stage's standings: the
+// podium and our riders, before the next stage's racing starts.
+func reportGCLines(r *simulation.StageReport, team string) []GCLine {
+	var out []GCLine
+	for _, x := range r.GC {
+		if x.Pos <= 3 || x.Team == team {
+			out = append(out, GCLine{RiderID: x.RiderID, Name: x.Name, Team: x.Team, Pos: x.Pos, Gap: x.Gap, LivePos: x.Pos, LiveGap: x.Gap})
+		}
+	}
+	return out
 }

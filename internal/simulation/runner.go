@@ -86,6 +86,65 @@ type StageProgressSnapshot struct {
 	// plan it); TimeTrial says the stage is one.
 	StageStart bool
 	TimeTrial  bool
+	// LastStage (on a StageStart after the first stage): how the previous
+	// stage went and the GC after it.
+	LastStage *StageReport
+}
+
+// StageReport is a finished stage: its result and the GC after it, with
+// each rider's GC places gained (+) or lost (-) on the day.
+type StageReport struct {
+	StageNumber int
+	StageName   string
+	Stage       []ReportRow // finishing order (abandons left out)
+	GC          []ReportRow // after the stage
+}
+
+// ReportRow is one rider's line in a StageReport.
+type ReportRow struct {
+	RiderID int64
+	Name    string
+	Team    string
+	Pos     int
+	Gap     float64 // seconds behind the stage winner / the GC leader
+	Move    int     // GC: places gained today (0 on the first stage)
+}
+
+// stageReport builds the report of stage i from the results and standings.
+func stageReport(stage StageConfig, results []model.RaceResult, gc, prevGC []model.GCStanding, riders []model.Rider) *StageReport {
+	byID := make(map[int64]model.Rider, len(riders))
+	for _, r := range riders {
+		byID[r.ID] = r
+	}
+	rep := &StageReport{StageNumber: stage.StageNumber}
+	if stage.Race != nil {
+		rep.StageName = stage.Race.Name
+	}
+	for _, res := range results {
+		if res.Position <= 0 {
+			continue
+		}
+		r := byID[res.RiderID]
+		rep.Stage = append(rep.Stage, ReportRow{RiderID: res.RiderID, Name: r.Name, Team: r.Team, Pos: res.Position, Gap: res.TimeGapSeconds})
+	}
+	sort.SliceStable(rep.Stage, func(i, j int) bool { return rep.Stage[i].Pos < rep.Stage[j].Pos })
+	before := make(map[int64]int, len(prevGC))
+	for _, g := range prevGC {
+		before[g.RiderID] = g.GCPosition
+	}
+	lead := 0.0
+	if len(gc) > 0 {
+		lead = gc[0].TotalTimeSeconds
+	}
+	for _, g := range gc {
+		r := byID[g.RiderID]
+		move := 0
+		if p, ok := before[g.RiderID]; ok {
+			move = p - g.GCPosition
+		}
+		rep.GC = append(rep.GC, ReportRow{RiderID: g.RiderID, Name: r.Name, Team: r.Team, Pos: g.GCPosition, Gap: g.TotalTimeSeconds - lead, Move: move})
+	}
+	return rep
 }
 
 func clampPercent(v float64) float64 {
@@ -561,7 +620,16 @@ func SimulateStageRaceWithProgress(stageRace *model.StageRace, stages []StageCon
 		}
 		if onProgress != nil {
 			stageProfile := buildRouteProfile(stage.Course)
+			var last *StageReport
+			if k := len(allStandings); k > 0 && len(allResults) == k {
+				var prev []model.GCStanding
+				if k > 1 {
+					prev = allStandings[k-2]
+				}
+				last = stageReport(stages[stageIdx-1], allResults[k-1], allStandings[k-1], prev, riders)
+			}
 			onProgress(StageProgressSnapshot{
+				LastStage:        last,
 				StageNumber:      stage.StageNumber,
 				StageName:        stage.Race.Name,
 				StageKmCovered:   0,

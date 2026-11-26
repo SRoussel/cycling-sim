@@ -246,6 +246,7 @@ func (s *interactiveSession) Resolve(momentID, optionID string) (string, error) 
 	if !ok {
 		return "", fmt.Errorf("moment %s has no option %q", momentID, optionID)
 	}
+	d.dir.Chose(d.pending, optionID)
 	why := momentWhy(d.pending.Title)
 	for _, c := range opt.Commands {
 		c.Source, c.Why = "decision", why

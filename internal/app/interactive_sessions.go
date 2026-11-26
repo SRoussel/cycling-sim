@@ -18,7 +18,7 @@ type interactiveSession struct {
 	oneShot          map[int64]simulation.Action
 	efforts          map[int64]float64
 	styles           map[int64]riderStyle // the player's dig and work pace per rider
-	trainSprinter    int64 // who the lead-out rides for (0: the fastest finisher in the group)
+	trainSprinter    int64                // who the lead-out rides for (0: the fastest finisher in the group)
 	followMap        map[int64]int64
 	launchingRiderID int64
 	teamOrders       simulation.TeamOrders

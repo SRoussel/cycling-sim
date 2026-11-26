@@ -38,3 +38,18 @@ func TestWatchingDoesNotChangeTheRace(t *testing.T) {
 		}
 	}
 }
+
+// A stage's report: finishing order, the GC after it and places moved.
+func TestStageReport(t *testing.T) {
+	riders := []model.Rider{{ID: 1, Name: "A", Team: "X"}, {ID: 2, Name: "B", Team: "Y"}, {ID: 3, Name: "C", Team: "X"}}
+	res := []model.RaceResult{{RiderID: 2, Position: 1}, {RiderID: 1, Position: 2, TimeGapSeconds: 10}, {RiderID: 3, Position: 0}}
+	prev := []model.GCStanding{{RiderID: 1, GCPosition: 1}, {RiderID: 2, GCPosition: 2}}
+	gc := []model.GCStanding{{RiderID: 2, GCPosition: 1, TotalTimeSeconds: 100}, {RiderID: 1, GCPosition: 2, TotalTimeSeconds: 104}}
+	r := stageReport(StageConfig{StageNumber: 2, Race: &model.Race{Name: "S2"}}, res, gc, prev, riders)
+	if len(r.Stage) != 2 || r.Stage[0].Name != "B" || r.Stage[1].Gap != 10 {
+		t.Errorf("stage rows %+v (abandons left out)", r.Stage)
+	}
+	if r.GC[0].Move != 1 || r.GC[1].Move != -1 || r.GC[1].Gap != 4 {
+		t.Errorf("GC rows %+v", r.GC)
+	}
+}

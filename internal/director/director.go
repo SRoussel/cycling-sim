@@ -55,6 +55,7 @@ type Moment struct {
 	Text        string   `json:"text"`
 	KmRemaining float64  `json:"kmRemaining"`
 	Options     []Option `json:"options"`
+	RiderID     int64    `json:"-"` // attack moments: the attacker
 }
 
 // Option returns the option with the given ID.
@@ -130,6 +131,7 @@ type Director struct {
 	lastMomentKm    float64
 	fired           map[string]bool
 	attackAt        map[int64]float64 // km remaining at the rider's last attack moment
+	letGo           map[int64]bool    // riders the player let go once: asked again only in the final
 	lastAttackKm    float64           // km remaining at the last attack moment
 	droppedAt       float64
 	droppedAsked    map[int64]bool // cards asked about since they were last in front
@@ -148,6 +150,7 @@ func (d *Director) reset() {
 	d.lastMomentKm = math.Inf(1)
 	d.fired = map[string]bool{}
 	d.attackAt = map[int64]float64{}
+	d.letGo = map[int64]bool{}
 	d.lastAttackKm = math.Inf(1)
 	d.droppedAt = math.Inf(1)
 	d.droppedAsked = map[int64]bool{}
@@ -542,6 +545,9 @@ func (d *Director) rivalAttack(w *view) *Moment {
 		if last, seen := d.attackAt[ev.RiderID]; seen && last-km < attackCooldownKm {
 			continue
 		}
+		if d.letGo[ev.RiderID] && km > finalPhaseKm {
+			continue // the player let him go before: not a threat until the finale
+		}
 		spacing := attackSpacingKm
 		if d.KeyOnly {
 			spacing = keyAttackSpacingKm
@@ -591,8 +597,9 @@ func (d *Director) rivalAttack(w *view) *Moment {
 			where = append(where, w.whereIs(id, ag))
 		}
 		m := &Moment{
-			Kind:  "attack",
-			Title: fmt.Sprintf("⚡ %s attacks!", att.Name),
+			Kind:    "attack",
+			RiderID: ev.RiderID,
+			Title:   fmt.Sprintf("⚡ %s attacks!", att.Name),
 			Text: fmt.Sprintf("%s (%s) goes with %.1f km to go%s. Ours: %s.",
 				att.Name, att.Team, km, d.climbContext(km), joinAnd(where)),
 		}
@@ -1159,6 +1166,14 @@ func (d *Director) breakaway(w *view) *Moment {
 			{ID: "ignore", Label: "Don't chase", Help: "Save the team's legs; the break may win.",
 				Orders: []OrderChange{{Kind: "chase", Value: "no"}}},
 		},
+	}
+}
+
+// Chose records the player's choice in a moment: letting an attacker go
+// means his later attacks don't ask again before the finale.
+func (d *Director) Chose(m *Moment, optionID string) {
+	if m != nil && m.Kind == "attack" && optionID == "let" && m.RiderID != 0 {
+		d.letGo[m.RiderID] = true
 	}
 }
 

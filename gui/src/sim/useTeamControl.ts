@@ -93,6 +93,29 @@ export interface StagePlanRequest {
   stage: number
   name: string
   points: director.PlanPoint[]
+  /** How the last stage went (absent before the first). */
+  report?: StageReport
+}
+
+/** A finished stage for the player: top five and ours, GC top ten and ours. */
+export interface StageReport {
+  stage: number
+  name: string
+  top: ReportLine[]
+  ours: ReportLine[]
+  gc: ReportLine[]
+  ourGc: ReportLine[]
+}
+
+export interface ReportLine {
+  riderId: number
+  name: string
+  team: string
+  pos: number
+  /** Seconds behind the stage winner / the GC leader. */
+  gap: number
+  /** GC places gained today (negative: lost). */
+  move: number
 }
 
 /** A rider's place on GC before the stage (pos 0: none yet) and live. */

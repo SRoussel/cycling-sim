@@ -213,3 +213,14 @@ func TestBreakOrderEndsWhenCaught(t *testing.T) {
 		t.Fatalf("caught: the break order should end")
 	}
 }
+
+func TestStageTitle(t *testing.T) {
+	for in, want := range map[string]string{
+		"Tirreno 2026 Stage 2: Camaiore - San Gimignano": "Camaiore - San Gimignano",
+		"Basque Stage 1 - Rolling":                       "Basque Stage 1 - Rolling",
+	} {
+		if got := stageTitle(in); got != want {
+			t.Errorf("stageTitle(%q) = %q, want %q", in, got, want)
+		}
+	}
+}

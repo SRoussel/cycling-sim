@@ -143,6 +143,67 @@ type StagePlanRequest struct {
 	Stage  int                  `json:"stage"`
 	Name   string               `json:"name"`
 	Points []director.PlanPoint `json:"points"`
+	// Report: how the last stage went (nil before the first).
+	Report *StageReportInfo `json:"report,omitempty"`
+}
+
+// StageReportInfo is the last stage for the player: its top five and our
+// riders, the GC's top ten and our riders, with places gained or lost.
+type StageReportInfo struct {
+	Stage int          `json:"stage"`
+	Name  string       `json:"name"`
+	Top   []ReportLine `json:"top"`
+	Ours  []ReportLine `json:"ours"`
+	GC    []ReportLine `json:"gc"`
+	OurGC []ReportLine `json:"ourGc"`
+}
+
+type ReportLine struct {
+	RiderID int64   `json:"riderId"`
+	Name    string  `json:"name"`
+	Team    string  `json:"team"`
+	Pos     int     `json:"pos"`
+	Gap     float64 `json:"gap"`
+	Move    int     `json:"move"`
+}
+
+// stageReportInfo picks the player's view of a finished stage.
+func stageReportInfo(r *simulation.StageReport, team string) *StageReportInfo {
+	if r == nil {
+		return nil
+	}
+	line := func(x simulation.ReportRow) ReportLine {
+		return ReportLine{RiderID: x.RiderID, Name: x.Name, Team: x.Team, Pos: x.Pos, Gap: x.Gap, Move: x.Move}
+	}
+	out := &StageReportInfo{Stage: r.StageNumber, Name: stageTitle(r.StageName), Top: []ReportLine{}, Ours: []ReportLine{}, GC: []ReportLine{}, OurGC: []ReportLine{}}
+	for _, x := range r.Stage {
+		switch {
+		case x.Pos <= 5:
+			out.Top = append(out.Top, line(x))
+		case x.Team == team:
+			out.Ours = append(out.Ours, line(x))
+		}
+	}
+	for _, x := range r.GC {
+		switch {
+		case x.Pos <= 10:
+			out.GC = append(out.GC, line(x))
+		case x.Team == team:
+			out.OurGC = append(out.OurGC, line(x))
+		}
+	}
+	return out
+}
+
+// stageTitle is a stage's route without its race and stage number ("Tirreno
+// 2026 Stage 2: Camaiore - San Gimignano" -> "Camaiore - San Gimignano").
+func stageTitle(name string) string {
+	if i := strings.Index(name, "Stage "); i >= 0 {
+		if j := strings.Index(name[i:], ": "); j >= 0 {
+			return name[i+j+2:]
+		}
+	}
+	return name
 }
 
 // RequestStagePlan pauses before a stage for the player's plan (once per
@@ -159,7 +220,7 @@ func (s *interactiveSession) RequestStagePlan(stage int, name string, points []d
 	}
 	s.director.stagePoints = points
 	s.paused = true
-	return &StagePlanRequest{Stage: stage, Name: name, Points: points}
+	return &StagePlanRequest{Stage: stage, Name: stageTitle(name), Points: points}
 }
 
 // SetStagePlan applies the player's plan for the coming stage and starts it.

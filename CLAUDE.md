@@ -103,12 +103,12 @@ bin/cycling-sim season ... | results <race-id> | gc <sr-id> <stage>
 - WorldDB riders: `import-riders` reads the mod database (`internal/pcmdb`); riders the base files lack get ratings from ridge fits of PCM attributes. Names match ignoring accents, middle names, double surnames and one-letter variants.
 - `data/rider_llm.csv` (offline LLM-drafted profiles for templated riders, `data/llm/`); `data/stage_prestige.csv` (stage prestige); `data/results/` (saved pages for `import-results`).
 
-## Open problems (Nov 2026, in priority order; only what's clearly outside the noise; baseline in docs/model-history.md, 2026-11-25)
-1. **Too few solo wins overall:** 31% of one-day races (95% range 29-34%) vs history 41% (33-50%); per race only Roubaix is clearly off (10% vs 17-69%). With Pogačar added, Lombardia goes to him ~1 in 3 (history: five straight).
-2. **Calibration:** one-day top 10 overconfident (riders given 50-75% make it 41%); GC top 10 given 75-100% make it 71%. Held out (2024/2023, a season off) it's worse: 26% and 53%.
-3. **Stage-race GC spread:** outside history's range at Paris-Nice, Romandie, Suisse (2nd too far back), the Giro, Dauphiné and Vuelta (10th too far back); the Basque Country's 10th too close.
-4. **Week-long races:** too many sprints (2.3-2.6 vs 1.5 per race), too few selections (2.2-2.6 vs 3.5).
-5. **Grand Tour breakaway wins** 7.0-7.1 per race (real 8.5; two or three real races, so weak evidence).
+## Open problems (Nov 2026, in priority order; only what's clearly outside the noise; baseline in docs/model-history.md, 2026-11-25 pacing check)
+1. **Calibration:** top-10 chances overconfident in the 50-75% band (one-day 40%, GC 48%, said ~60%); held out (2024/2023) much worse (22% / 20%). Many GC misses are riders who really lost 10+ minutes (rode for a leader, prepared for classics, gave up GC); letting riders give up GC widened the spread and was reverted.
+2. **Stage-race GC spread:** outside history at Romandie (2nd 2'50", 10th 6'53"), the Giro and Vuelta (10th 24-30'), the Dauphiné (10th 12'29"), Suisse (2nd), the Basque Country (10th too close).
+3. **Week-long races:** too many sprints (2.3-2.4 vs 1.5 per race), too few selections (2.4-2.5 vs 3.5).
+4. **Grand Tour breakaway wins** 7.0-7.3 per race (real 8.5; two or three real races, so weak evidence).
+5. **One-day solo wins** 35% (33-38%) vs history 41% (33-50%): now overlapping; Roubaix and Lombardia lowest.
 6. **Flèche** still splits ~60-75 km out in some runs (finish correct).
 
 ## Future tasks (game speed; the endgame is a Steam desktop game that feels fast, the user, Nov 2026)

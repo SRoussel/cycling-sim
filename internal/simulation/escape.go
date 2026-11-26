@@ -66,6 +66,13 @@ func (s *RaceState) attackPays(rs *RiderState, seg *model.Segment) bool {
 		return false
 	}
 	bestFinisher := !s.IsStageRace && !s.outFinishedByRival(rs)
+	// Stage races: a GC rider saves his attack for a climb while one lies
+	// ahead; on the roads before it the draft gives the chase most of what
+	// he spends (Nov 2026: Pogačar attacked on Romandie's approach road
+	// 20 km out, then twice more before the climb).
+	if s.IsStageRace && !hardSection(seg) && s.climbAhead() {
+		return false
+	}
 	km := s.attackKm(seg)
 	// holdsOver: can a rival hold an attack ridden over the last km of this
 	// climb or sector (his threshold and W' against the attacker's burst)?
@@ -538,11 +545,26 @@ func (s *RaceState) frontSafe(rs *RiderState) bool {
 // the followers, not a 20-second surge anyone with a little reserve can
 // match (Nov 2026: judged per step, a faster sprinter always held Van der
 // Poel's wheel in Flanders). Otherwise (and in stage races) the step.
+// hardSection: a real climb or an unpaved sector, where attacks gain time.
+func hardSection(g *model.Segment) bool {
+	return g.SurfaceType.Unpaved() || climbOf(g) >= terrainClimb
+}
+
+// climbAhead reports whether a hard section lies between here and the finish.
+func (s *RaceState) climbAhead() bool {
+	for i := s.SegIndex + 1; i < len(s.Course); i++ {
+		if hardSection(&s.Course[i]) {
+			return true
+		}
+	}
+	return false
+}
+
 func (s *RaceState) attackKm(seg *model.Segment) float64 {
 	if s == nil || len(s.Course) == 0 || s.SegIndex >= len(s.Course) {
 		return seg.DistanceKm
 	}
-	hard := func(g *model.Segment) bool { return g.SurfaceType.Unpaved() || climbOf(g) >= terrainClimb }
+	hard := hardSection
 	if !hard(seg) {
 		return seg.DistanceKm
 	}

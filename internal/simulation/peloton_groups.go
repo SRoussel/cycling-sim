@@ -224,6 +224,17 @@ func FormGroups(riders []*RiderState, segment *model.Segment, isTT bool, remaini
 			rps[i].placings = true
 			rps[i].sheltered = rps[i].sheltered || state.outsprintsChase(rs)
 		}
+		// Stage races: GC riders chasing a rival contender for themselves
+		// (no domestique doing it for them) race each other: they don't
+		// share a pace line to tow the others up the climb, as a chase of
+		// rivals in a one-day race doesn't (Nov 2026: Romandie's last stage,
+		// every contender behind Pogačar's attack rotated at threshold from
+		// 20 km out and the 6.1-6.3 W/kg riders lost 2-3 minutes from the
+		// foot of the climb).
+		if state != nil && state.IsStageRace && rs.TeamRole != RoleDomestique &&
+			action == ActionChase && (state.limitsLosses(rs) || state.rivalAhead(rs)) {
+			rps[i].placings = true
+		}
 	}
 
 	// A leader chasing a rival sits in while the team does the chasing. When

@@ -60,6 +60,26 @@ Logs and the Chromium profile are in `~/.cache/cycling-sim-run/` (`wails.log`, `
 
 Pages: home `/`, then click a race card for race setup, then Start for `/simulation/:id`. Stage races go through their own cards to `/stage-race/:id` and then `/stage-race-sim/:id`. The live-race panels are in `gui/src/components/race/`, and their state is in `gui/src/sim/useTeamControl.ts`.
 
+## Play a whole race (playtest)
+
+`playtest.mjs` plays a live race to the end once it's started: it answers every stage plan and decision card by preference and prints each card (km, situation, options, pick) as a JSON line. Pick the team with the setup page's `<select>` through the native value setter (React ignores a plain `.value =`), then start:
+
+```bash
+node $S/driver.mjs <<'EOF'
+nav http://localhost:34115/
+click Stage races
+click Show past editions
+click Tirreno-Adriatico 2026
+waitfor Direct a team
+click Direct a team
+eval (() => { const s=document.querySelector('select'); Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value').set.call(s,'Visma-Lease a Bike'); s.dispatchEvent(new Event('change',{bubbles:true})); return s.value })()
+click Start the race
+EOF
+LEADER='Jonas Vingegaard' node $S/playtest.mjs /tmp/cs-shots/tir 'Team sets a hard tempo;Let him go;Leave it;Sit in' > /tmp/cs-shots/tir.log
+```
+
+"Stop for" (every decision / key moments / nothing) is kept in the Chromium profile's localStorage: a profile left on "nothing" plays straight through with no cards.
+
 ## Run the CLI
 
 Use a scratch DB so you don't touch the saved results in the real DB (`~/.config/CyclingSim/cycling_sim.db`, the default; the GUI under `app.sh` uses it too):

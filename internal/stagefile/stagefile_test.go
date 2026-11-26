@@ -140,3 +140,14 @@ func TestLoadSourcesAltitudeScale(t *testing.T) {
 		t.Errorf("altitude scales %v, %v; want 0 (none) and 0.8", src[0].AltScale, src[1].AltScale)
 	}
 }
+
+func TestCutEnd(t *testing.T) {
+	st := &Stage{Profile: []Point{{0, 0}, {100, 10}, {200, 30}, {300, 0}}, Sectors: []Sector{{Name: "a", Start: 50, End: 120}, {Name: "b", Start: 260, End: 280}}}
+	cutEnd(st, 150) // end at 150
+	if st.Length() != 150 || st.Profile[len(st.Profile)-1].Alt != 20 {
+		t.Errorf("profile %v, want ending at 150 (alt 20)", st.Profile)
+	}
+	if len(st.Sectors) != 1 || st.Sectors[0].End != 120 {
+		t.Errorf("sectors %v, want only the first", st.Sectors)
+	}
+}

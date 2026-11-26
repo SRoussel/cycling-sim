@@ -24,6 +24,10 @@ type Source struct {
 	// are taller than the real ones: altitudes are multiplied by it (set from
 	// the real summit heights).
 	AltScale float64
+	// CutKm (optional 6th column) drops this much of the file's end: some
+	// files run on past the finish line (Flèche Wallonne's profiles go on
+	// 2-12 km beyond the top of the Mur, where the race finishes).
+	CutKm float64
 }
 
 // LoadSources reads the course → stage file mapping (Course,File[,Note];
@@ -63,6 +67,13 @@ func LoadSources(path string) ([]Source, error) {
 				return nil, fmt.Errorf("%s: bad altitude scale %q", s.Course, row[4])
 			}
 			s.AltScale = v
+		}
+		if len(row) > 5 && strings.TrimSpace(row[5]) != "" {
+			v, err := strconv.ParseFloat(strings.TrimSpace(row[5]), 64)
+			if err != nil || v < 0 {
+				return nil, fmt.Errorf("%s: bad cut %q", s.Course, row[5])
+			}
+			s.CutKm = v
 		}
 		out = append(out, s)
 	}
@@ -125,6 +136,9 @@ func Build(dir string, sources []Source, distanceKm map[string]float64) ([]Profi
 				st.Profile[i].Alt *= s.AltScale
 			}
 		}
+		if s.CutKm > 0 {
+			cutEnd(st, s.CutKm*1000/DistanceUnitM)
+		}
 		segs, err := Segments(st, km)
 		if err != nil {
 			problems = append(problems, fmt.Sprintf("%s: %v", s.Course, err))
@@ -172,4 +186,35 @@ func Load(path string) (map[string]Profile, error) {
 		out[p.Course] = p
 	}
 	return out, nil
+}
+
+// cutEnd drops the profile beyond Length()-cut (profile units), ending it at
+// an interpolated point, and trims sectors to it.
+func cutEnd(st *Stage, cut float64) {
+	end := st.Length() - cut
+	if end <= 0 {
+		return
+	}
+	var pts []Point
+	for i, p := range st.Profile {
+		if p.D <= end {
+			pts = append(pts, p)
+			continue
+		}
+		if i > 0 && st.Profile[i-1].D < end {
+			a := st.Profile[i-1]
+			f := (end - a.D) / (p.D - a.D)
+			pts = append(pts, Point{D: end, Alt: a.Alt + f*(p.Alt-a.Alt)})
+		}
+		break
+	}
+	st.Profile = pts
+	var secs []Sector
+	for _, sc := range st.Sectors {
+		if sc.Start < end {
+			sc.End = min(sc.End, end)
+			secs = append(secs, sc)
+		}
+	}
+	st.Sectors = secs
 }

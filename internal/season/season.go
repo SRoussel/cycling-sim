@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"math"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -116,6 +117,25 @@ func referenceEdition(name string) bool {
 	return len(last) == 4 && strings.HasPrefix(last, "20")
 }
 
+// editionYear is the year a dated edition's name ends with (0: generic).
+func editionYear(name string) int {
+	if !referenceEdition(name) {
+		return 0
+	}
+	f := strings.Fields(name)
+	y, _ := strconv.Atoi(f[len(f)-1])
+	return y
+}
+
+// baseName is a race's name without an edition year.
+func baseName(name string) string {
+	if !referenceEdition(name) {
+		return name
+	}
+	f := strings.Fields(name)
+	return strings.Join(f[:len(f)-1], " ")
+}
+
 // inYear moves a seeded date into the season's year (same day and month).
 func inYear(t time.Time, year int) time.Time {
 	return time.Date(year, t.Month(), t.Day(), 0, 0, 0, 0, time.UTC)
@@ -153,10 +173,25 @@ func calendarEvents(db *database.DB, s *model.Season) ([]model.SeasonEvent, erro
 	if err != nil {
 		return nil, err
 	}
+	// Stage races ride their newest real route: the dated editions seeded
+	// from real stage files ("Giro d'Italia 2026", "Volta a Catalunya
+	// 2024") over the generic stages, under the race's own name. Nov 2026
+	// playtest: the season's Basque Country had stages named "Rolling" on
+	// straight-ramp profiles while the real routes sat unused.
+	newest := map[string]model.StageRace{}
 	for _, sr := range srs {
-		if referenceEdition(sr.Name) {
-			continue
+		base := baseName(sr.Name)
+		cur, ok := newest[base]
+		if !ok || editionYear(sr.Name) > editionYear(cur.Name) {
+			newest[base] = sr
 		}
+	}
+	srs = srs[:0]
+	for _, sr := range newest {
+		srs = append(srs, sr)
+	}
+	sort.Slice(srs, func(i, j int) bool { return srs[i].ID < srs[j].ID })
+	for _, sr := range srs {
 		full, err := db.GetStageRace(sr.ID)
 		if err != nil || len(full.Stages) == 0 {
 			continue
@@ -174,11 +209,12 @@ func calendarEvents(db *database.DB, s *model.Season) ([]model.SeasonEvent, erro
 				last = race.Date
 			}
 		}
+		name := baseName(sr.Name)
 		cat := model.CategoryWeekLong
-		if isOneOf(sr.Name, grandTours) {
+		if isOneOf(name, grandTours) {
 			cat = model.CategoryGrandTour
 		}
-		events = append(events, model.SeasonEvent{SeasonID: s.ID, Year: s.Year, Kind: model.EventStageRace, RefID: sr.ID, Name: sr.Name, Category: cat, Start: inYear(first, s.Year), End: inYear(last, s.Year)})
+		events = append(events, model.SeasonEvent{SeasonID: s.ID, Year: s.Year, Kind: model.EventStageRace, RefID: sr.ID, Name: name, Category: cat, Start: inYear(first, s.Year), End: inYear(last, s.Year)})
 	}
 	sort.SliceStable(events, func(i, j int) bool { return events[i].Start.Before(events[j].Start) })
 	return events, nil

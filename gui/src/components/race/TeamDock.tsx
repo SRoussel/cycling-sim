@@ -160,6 +160,7 @@ export function TeamDock({ tc, groups }: { tc: TeamControl; kmRemaining: number;
                 <span className="crew-name"><RiderLink id={r.id} name={r.name} seasonId={seasonId} /></span>
                 <span className="crew-where">{whereIs(groups, tc.riderGroups[r.id])}{linePlace(tel?.groupPos, groups.find((g) => g.name === tc.riderGroups[r.id]))}</span>
                 <span className={`crew-status ${mode}`}>{ACTION_WORDS[mode] ?? mode}{why && <> · {why}</>}</span>
+                {tel && <EffortLine effort={effort} perMin={tel.reservePerMin ?? 0} why={tel.why} />}
               </div>
               <div className={`crew-power${effort > 100 ? ' over' : ''}`} title={tel ? `Effort ${Math.round(effort)}% of what he can sustain; ${Math.round(tel.speedKph)} km/h` : ''}>
                 {watts !== null ? <>{watts} W<small>{kg ? `${(watts / kg).toFixed(1)} W/kg` : ''}</small></> : '—'}
@@ -228,5 +229,24 @@ export function TeamDock({ tc, groups }: { tc: TeamControl; kmRemaining: number;
       </ul>
       <p className="crew-key">Power: now, and per kg. Reserve: the anaerobic reserve left (thin bar: fuel). Legs: how far his threshold has faded today.</p>
     </section>
+  )
+}
+
+/** How hard a rider is riding (effort zone) and what's doing to his reserve:
+ * draining, and why, or refilling. */
+function EffortLine({ effort, perMin, why }: { effort: number; perMin: number; why?: string }) {
+  const zone =
+    effort >= 102 ? { label: 'Above threshold', cls: 'above' }
+      : effort >= 90 ? { label: 'Threshold', cls: 'threshold' }
+        : effort >= 75 ? { label: 'Tempo', cls: 'tempo' }
+          : { label: 'Easy', cls: 'easy' }
+  let trend = ''
+  if (why) trend = `reserve ${Math.round(perMin)}%/min: ${why}`
+  else if (perMin > 0.5) trend = 'reserve refilling'
+  return (
+    <span className="crew-effort" title="Effort: power against what he can hold for an hour. Above threshold he spends his reserve; below it the reserve refills. The reason is over the last minute and a half of racing.">
+      <b className={`zone ${zone.cls}`}>{zone.label}</b>
+      {trend && <span className={why ? 'drain' : 'refill'}>{trend}</span>}
+    </span>
   )
 }

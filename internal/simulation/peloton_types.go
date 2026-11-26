@@ -29,6 +29,8 @@ type RiderState struct {
 	WorkKJ           float64  // work done so far this race (for durability)
 	FuelKJ           float64  // carbohydrate left (metabolic kJ, see fuel.go)
 	fuelSet          bool
+	// reserveRecent: recent W' changes by cause (effort_why.go; telemetry only).
+	reserveRecent [nCauses]float64
 }
 
 // Calculate each rider's sustainable power for this segment.

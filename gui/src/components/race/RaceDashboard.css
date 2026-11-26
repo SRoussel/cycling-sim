@@ -948,6 +948,28 @@
 
 .crew-row.commanded .crew-status { color: var(--accent); }
 
+.crew-effort {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 6px;
+  align-items: baseline;
+  margin-top: 3px;
+  font-size: 0.72rem;
+  color: var(--soft);
+}
+.crew-effort .zone {
+  font-weight: 600;
+  padding: 0 5px;
+  border-radius: 3px;
+  background: #22272e;
+  color: var(--muted);
+}
+.crew-effort .zone.tempo { color: var(--soft); }
+.crew-effort .zone.threshold { color: var(--low); }
+.crew-effort .zone.above { color: #0b0d10; background: var(--empty); }
+.crew-effort .drain { color: var(--low); }
+.crew-effort .refill { color: var(--muted); }
+
 .crew-power {
   text-align: right;
   font-family: var(--font-numeric);

@@ -321,10 +321,14 @@ func simulateStep(riders []*RiderState, segment *model.Segment, isTT bool, dista
 			// intended before the group's speed was known.
 			rs.LastSegmentPower = actualPower
 
+			before := rs.WPrime.WPrimeCurrent
 			rs.WPrime.UpdateWithHandling(actualPower, rs.thresholdIntOn(segment), segTime, rs.Rider.Handling, segment.SurfaceType.Unpaved())
 			rs.addWork(actualPower, segTime)
+			rs.noteReserve(reserveCause(rs, group, segment, state), rs.WPrime.WPrimeCurrent-before, segTime)
 			if !isTT {
+				before = rs.WPrime.WPrimeCurrent
 				accordionCost(rs, len(group.Riders), groupSpeed)
+				rs.noteReserve(causeSurges, rs.WPrime.WPrimeCurrent-before, 0)
 			}
 			rs.LastSpeed = groupSpeed
 		}

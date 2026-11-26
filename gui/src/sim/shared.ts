@@ -13,6 +13,10 @@ export interface RiderTelemetryPoint {
   fuelPct?: number
   /** Place in the group's line (1 = in the wind). */
   groupPos?: number
+  /** Reserve's recent trend, % of it per minute (negative: draining). */
+  reservePerMin?: number
+  /** What's draining the reserve ("holding the wheel on the climb"), if it is. */
+  why?: string
   routeKm: number
   routePct: number
 }

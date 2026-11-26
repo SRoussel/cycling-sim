@@ -30,9 +30,13 @@ type RiderTelemetryPoint struct {
 	// FuelPct: carbohydrate left as a share of a full store (fuel.go).
 	FuelPct float64 `json:"fuelPct"`
 	// GroupPos: the rider's place in his group's line (1 = in the wind).
-	GroupPos int     `json:"groupPos,omitempty"`
-	RouteKm  float64 `json:"routeKm"`
-	RoutePct float64 `json:"routePct"`
+	GroupPos int `json:"groupPos,omitempty"`
+	// ReservePerMin: his reserve's recent trend (% of it per minute, negative
+	// when draining) and Why, what's draining it (effort_why.go).
+	ReservePerMin float64 `json:"reservePerMin"`
+	Why           string  `json:"why,omitempty"`
+	RouteKm       float64 `json:"routeKm"`
+	RoutePct      float64 `json:"routePct"`
 }
 
 type ProfilePoint struct {
@@ -199,17 +203,20 @@ func buildRiderTelemetry(states []*RiderState, segment *model.Segment, segmentTi
 			fatiguePct = (1.0 - float64(rs.EffectiveFTP)/float64(rs.Rider.FTPWatts)) * 100.0
 		}
 		wPrimePct := clampPercent(rs.WPrime.FractionRemaining() * 100.0)
+		perMin, why := rs.reserveWhy()
 		out[rs.Rider.ID] = RiderTelemetryPoint{
-			SpeedKph:   speedKph,
-			PowerWatts: powerWatts,
-			EffortPct:  effortPct,
-			FatiguePct: clampPercent(fatiguePct),
-			WPrimePct:  wPrimePct,
-			LegsPct:    clampPercent(legsPct(rs)),
-			FuelPct:    rs.FuelShare() * 100,
-			GroupPos:   rs.GroupPosition,
-			RouteKm:    routeKm,
-			RoutePct:   routePct,
+			ReservePerMin: perMin,
+			Why:           why,
+			SpeedKph:      speedKph,
+			PowerWatts:    powerWatts,
+			EffortPct:     effortPct,
+			FatiguePct:    clampPercent(fatiguePct),
+			WPrimePct:     wPrimePct,
+			LegsPct:       clampPercent(legsPct(rs)),
+			FuelPct:       rs.FuelShare() * 100,
+			GroupPos:      rs.GroupPosition,
+			RouteKm:       routeKm,
+			RoutePct:      routePct,
 		}
 	}
 	return out

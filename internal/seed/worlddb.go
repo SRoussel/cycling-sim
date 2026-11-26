@@ -168,27 +168,59 @@ var unaccent = func() map[rune]string {
 // a longer form of the other (a second surname: "derek gee" / "derek gee
 // west"; a middle name: "daniel martinez" / "daniel felipe martinez"), or a
 // spelling variant of the same surname ("tesfatsion" / "tesfazion": same
-// first name and surname initial, one or two letters apart).
+// first name and surname initial, one or two letters apart), a dropped first
+// given name, or a short first name (shortForm). Nov 2026: four riders were
+// in the database twice (Alexander Cepeda, Thomas Silva, Joshua Kench,
+// Joseph Blackmore).
 func sameRider(a, b string) bool {
 	if a == b {
 		return true
 	}
 	ta, tb := strings.Fields(a), strings.Fields(b)
-	if len(ta) < 2 || len(tb) < 2 || ta[0] != tb[0] {
+	if len(ta) < 2 || len(tb) < 2 {
+		return false
+	}
+	// A first given name dropped ("alexander cepeda" / "jefferson alexander
+	// cepeda"): the shorter name is the end of the longer one.
+	short, long := ta, tb
+	if len(short) > len(long) {
+		short, long = long, short
+	}
+	if len(short) < len(long) && strings.Join(long[len(long)-len(short):], " ") == strings.Join(short, " ") {
+		return true
+	}
+	// A short form of the first name, the rest the same ("josh kench" /
+	// "joshua kench", "joe blackmore" / "joseph blackmore").
+	if len(ta) == len(tb) && ta[0] != tb[0] && strings.Join(ta[1:], " ") == strings.Join(tb[1:], " ") {
+		return shortForm(ta[0], tb[0]) || shortForm(tb[0], ta[0])
+	}
+	if ta[0] != tb[0] {
 		return false
 	}
 	if strings.HasPrefix(a+" ", b+" ") || strings.HasPrefix(b+" ", a+" ") {
 		return true
-	}
-	short, long := ta, tb
-	if len(short) > len(long) {
-		short, long = long, short
 	}
 	if short[len(short)-1] == long[len(long)-1] && subsequence(short, long) {
 		return true // a middle name added
 	}
 	la, lb := ta[len(ta)-1], tb[len(tb)-1]
 	return len(la) >= 6 && len(lb) >= 6 && la[0] == lb[0] && levenshtein(a, b) <= 2
+}
+
+// shortForm reports whether a is a short form of the first name b: its
+// first three or more letters (josh/joshua, alex/alexander) or a usual
+// nickname.
+func shortForm(a, b string) bool {
+	if len(a) >= 3 && len(a) < len(b) && strings.HasPrefix(b, a) {
+		return true
+	}
+	return nicknames[a] == b
+}
+
+var nicknames = map[string]string{
+	"joe": "joseph", "mike": "michael", "nick": "nicholas", "will": "william",
+	"bill": "william", "bob": "robert", "rob": "robert", "tom": "thomas",
+	"jim": "james", "jake": "jacob", "fred": "frederik",
 }
 
 // subsequence reports whether every word of short appears in long, in order.

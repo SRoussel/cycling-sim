@@ -17,6 +17,14 @@ func TestSameRider(t *testing.T) {
 		{"Mads Pedersen", "Mads Würtz Schmidt", false},
 		{"Filippo Ganna", "Filippo Zana", false},
 		{"Daniel Martínez", "Daniel Felipe Martínez", true},
+		{"Jefferson Alexander Cepeda", "Alexander Cepeda", true},
+		{"Guillermo Thomas Silva", "Thomas Silva", true},
+		{"Josh Kench", "Joshua Kench", true},
+		{"Joe Blackmore", "Joseph Blackmore", true},
+		{"Tom Pidcock", "Joe Pidcock", false},
+		{"Ivo Oliveira", "Rui Oliveira", false},
+		{"Anders Halland Johannessen", "Tobias Halland Johannessen", false},
+		{"Ben Swift", "Connor Swift", false},
 	} {
 		if got := sameRider(foldName(c.a), foldName(c.b)); got != c.want {
 			t.Errorf("sameRider(%q, %q) = %v, want %v", c.a, c.b, got, c.want)

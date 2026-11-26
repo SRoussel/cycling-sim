@@ -184,3 +184,26 @@ func (db *DB) SetStagePrestige(stageRaceID int64, stageNumber int, prestige floa
 	}
 	return nil
 }
+
+// StageRaceDistances returns each stage race's total distance (the sum of
+// its stages' courses), by stage race ID.
+func (db *DB) StageRaceDistances() (map[int64]float64, error) {
+	rows, err := db.Query(`
+		SELECT s.stage_race_id, SUM(c.total_distance_km)
+		FROM stage_race_stages s JOIN races r ON r.id = s.race_id JOIN courses c ON c.id = r.course_id
+		GROUP BY s.stage_race_id`)
+	if err != nil {
+		return nil, fmt.Errorf("stage race distances: %w", err)
+	}
+	defer rows.Close()
+	out := map[int64]float64{}
+	for rows.Next() {
+		var id int64
+		var km float64
+		if err := rows.Scan(&id, &km); err != nil {
+			return nil, fmt.Errorf("scanning stage race distance: %w", err)
+		}
+		out[id] = km
+	}
+	return out, rows.Err()
+}

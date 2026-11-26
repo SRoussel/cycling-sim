@@ -125,7 +125,7 @@ export function GapGraphic({ groups, tc, onPick, large = false }: { groups: Race
       <div className="gap-axis" />
       {ticks.map((t, i) => (
         <span key={i} className="gap-tick" style={{ right: `${(t / maxGap) * 94 + 3}%` }}>
-          {t === 0 ? 'Front' : `-${t >= 60 ? `${Math.floor(t / 60)}:${String(Math.round(t % 60)).padStart(2, '0')}` : `${Math.round(t)}s`}`}
+          {t === 0 ? 'Front' : `-${tickLabel(t)}`}
         </span>
       ))}
       {shown.map((g, i) => {
@@ -146,4 +146,10 @@ export function GapGraphic({ groups, tc, onPick, large = false }: { groups: Race
       })}
     </div>
   )
+}
+
+/** A scale tick: whole seconds, rounded before splitting (59.6 s is 1:00, not 0:60). */
+function tickLabel(t: number): string {
+  const r = Math.round(t)
+  return r >= 60 ? `${Math.floor(r / 60)}:${String(r % 60).padStart(2, '0')}` : `${r}s`
 }

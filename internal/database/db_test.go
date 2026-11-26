@@ -133,6 +133,9 @@ func TestStageRaceCRUD(t *testing.T) {
 	if err != nil {
 		t.Fatalf("get stage race: %v", err)
 	}
+	if km, err := db.StageRaceDistances(); err != nil || km[sr.ID] != 300 {
+		t.Errorf("stage race distance %v (%v), want the stages' sum", km[sr.ID], err)
+	}
 	if len(got.Stages) != 2 {
 		t.Errorf("expected 2 stages, got %d", len(got.Stages))
 	}

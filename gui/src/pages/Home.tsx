@@ -106,7 +106,7 @@ function Home() {
   const stageEditions = stageRaces.filter((s) => isEdition(s.name))
   const day = (iso: string) => {
     const d = new Date(iso)
-    return isNaN(d.getTime()) ? iso : d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+    return isNaN(d.getTime()) ? iso : d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' })
   }
 
   const raceRow = (race: app.RaceInfo, withYear = false) => (

@@ -225,7 +225,7 @@ func gcLines(v *simulation.RaceView, team string) []GCLine {
 	}
 	var out []GCLine
 	for id, r := range v.Riders {
-		if r.LiveGCPos == 0 || (r.LiveGCPos != 1 && r.Team != team) {
+		if r.LiveGCPos == 0 || (r.LiveGCPos > 3 && r.Team != team) { // the podium and ours
 			continue
 		}
 		out = append(out, GCLine{RiderID: id, Name: r.Name, Team: r.Team, Pos: r.GCPos, Gap: r.GCGap, LivePos: r.LiveGCPos, LiveGap: r.LiveGCGap})
@@ -364,19 +364,14 @@ func (a *App) GetStageRaces() []StageRaceInfo {
 	if err != nil {
 		return []StageRaceInfo{}
 	}
+	kmOf, _ := a.db.StageRaceDistances() // the real total of its stages' courses
 	result := make([]StageRaceInfo, len(stageRaces))
 	for i, sr := range stageRaces {
-		// Estimate total distance: ~160km average per stage for grand tours
-		stageCount := len(sr.Stages)
-		avgStageKm := 160.0
-		if stageCount <= 8 {
-			avgStageKm = 175.0 // Shorter races tend to have longer stages
-		}
 		result[i] = StageRaceInfo{
 			ID:              sr.ID,
 			Name:            sr.Name,
-			StageCount:      stageCount,
-			TotalDistanceKm: float64(stageCount) * avgStageKm,
+			StageCount:      len(sr.Stages),
+			TotalDistanceKm: kmOf[sr.ID],
 		}
 	}
 	return result

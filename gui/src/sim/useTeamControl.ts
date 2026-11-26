@@ -106,6 +106,15 @@ export interface GCLine {
   liveGap: number
 }
 
+/** How deep a rider digs to hold his group, and how hard he works. */
+export type DigLevel = 'any' | 'reserve' | 'own'
+export type WorkPace = 'auto' | 'tempo' | 'threshold' | 'allout'
+export interface RiderStyle {
+  dig: DigLevel
+  pace: WorkPace
+}
+export const DEFAULT_STYLE: RiderStyle = { dig: 'any', pace: 'auto' }
+
 /** How often the race stops: never, at the moments that decide it, or all. */
 export type DecisionLevel = 'off' | 'key' | 'all'
 
@@ -255,6 +264,9 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
   const [riderPersistentActions, setRiderPersistentActions] = useState<Record<number, string>>({})
   const [riderOneShotQueued, setRiderOneShotQueued] = useState<Record<number, boolean>>({})
   const [riderEffortTargets, setRiderEffortTargets] = useState<Record<number, number>>({})
+  // How each rider spends himself: how deep he digs to hold his group, and
+  // his pace when he does the work (engine: Dig, WorkPace).
+  const [riderStyles, setRiderStyles] = useState<Record<number, RiderStyle>>({})
   const [teamState, setTeamState] = useState<TeamState | null>(null)
   const [sprintTrainOrder, setSprintTrainOrder] = useState<number[]>([])
   const [followMap, setFollowMap] = useState<Record<number, number | null>>({})
@@ -379,6 +391,7 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
     setRiderPersistentActions(Object.fromEntries(riders.map((r) => [r.id, 'hold'])))
     setRiderOneShotQueued({})
     setRiderEffortTargets(Object.fromEntries(riders.map((r) => [r.id, EFFORT_DEFAULT_PCT])))
+    setRiderStyles({})
     const order = riders.map((r) => r.id)
     setSprintTrainOrder(order)
     setFollowMap({})
@@ -544,6 +557,14 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
 
   const handleTacticChange = (riderId: number, next: string) => void sendCommand(riderId, next, 'persistent')
 
+  const setRiderStyle = (riderID: number, style: RiderStyle) => {
+    setRiderStyles((prev) => ({ ...prev, [riderID]: style }))
+    if (active) {
+      App.SetRiderStyle(sessionId!, riderID, style.dig, style.pace).catch((err) => console.error('Failed to set rider style', err))
+    }
+  }
+  const styleOf = (riderID: number): RiderStyle => riderStyles[riderID] ?? DEFAULT_STYLE
+
   const handleEffortChange = (riderID: number, nextEffort: number) => {
     const clamped = clampEffortPct(nextEffort)
     setRiderEffortTargets((prev) => ({ ...prev, [riderID]: clamped }))
@@ -657,6 +678,8 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
     sendCommand,
     handleTacticChange,
     handleEffortChange,
+    setRiderStyle,
+    styleOf,
     trainSprinter,
     setTrainSprinter,
     handleFollowChange,

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useLocation } from 'react-router-dom'
-import { EFFORT_MAX_PCT, EFFORT_MIN_PCT, RaceGroup, formatGap } from '../../sim/shared'
-import { LiveOrder, LiveRider, TEAM_ORDER_KINDS, TEAM_ORDERS, TeamControl, TeamOrderValue } from '../../sim/useTeamControl'
+import { RaceGroup, formatGap } from '../../sim/shared'
+import { DigLevel, LiveOrder, LiveRider, RiderStyle, TEAM_ORDER_KINDS, TEAM_ORDERS, TeamControl, TeamOrderValue, WorkPace } from '../../sim/useTeamControl'
 import { Jersey } from './Jersey'
 import { RiderLink } from '../RiderProfile'
 
@@ -159,7 +159,7 @@ export function TeamDock({ tc, groups }: { tc: TeamControl; kmRemaining: number;
               <div className="crew-who">
                 <span className="crew-name"><RiderLink id={r.id} name={r.name} seasonId={seasonId} /></span>
                 <span className="crew-where">{whereIs(groups, tc.riderGroups[r.id])}{linePlace(tel?.groupPos, groups.find((g) => g.name === tc.riderGroups[r.id]))}</span>
-                <span className={`crew-status ${mode}`}>{ACTION_WORDS[mode] ?? mode}{why && <> · {why}</>}</span>
+                <span className={`crew-status ${mode}`}>{ACTION_WORDS[mode] ?? mode}{styleWords(tc.styleOf(r.id)).map((w) => <span key={w}> · {w}</span>)}{why && <> · {why}</>}</span>
                 {tel && <EffortLine effort={effort} perMin={tel.reservePerMin ?? 0} why={tel.why} />}
               </div>
               <div className={`crew-power${effort > 100 ? ' over' : ''}`} title={tel ? `Effort ${Math.round(effort)}% of what he can sustain; ${Math.round(tel.speedKph)} km/h` : ''}>
@@ -190,23 +190,28 @@ export function TeamDock({ tc, groups }: { tc: TeamControl; kmRemaining: number;
                   disabled={locked}
                   title={`${r.name}: attack now`}
                 >Attack</button>
-                <button type="button" className="crew-more" onClick={() => setManual(open ? null : r.id)} aria-expanded={open} aria-label={`${r.name}: effort and sprint`} title="Effort and sprint">
+                <button type="button" className="crew-more" onClick={() => setManual(open ? null : r.id)} aria-expanded={open} aria-label={`${r.name}: how he rides, sprint`} title="How hard he rides, sprint">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="2" /><circle cx="12" cy="12" r="2" /><circle cx="19" cy="12" r="2" /></svg>
                 </button>
               </div>
               {open && (
                 <div className="crew-manual">
-                  <label className="effort" title="Scales how hard he rides whatever he's doing (100% = normal)">
-                    <span>Effort</span>
-                    <input
-                      type="range"
-                      min={EFFORT_MIN_PCT}
-                      max={EFFORT_MAX_PCT}
-                      step={1}
-                      value={tc.effortTargetForRider(r.id, tel)}
-                      onChange={(e) => tc.handleEffortChange(r.id, Number(e.target.value))}
-                    />
-                    <span>{tc.effortTargetForRider(r.id, tel)}%</span>
+                  <label className="style" title="How deep he digs into his reserve to stay with his group">
+                    <span>Hold the group</span>
+                    <select value={tc.styleOf(r.id).dig} onChange={(e) => tc.setRiderStyle(r.id, { ...tc.styleOf(r.id), dig: e.target.value as DigLevel })}>
+                      <option value="any">At any cost</option>
+                      <option value="reserve">Keep a reserve (30%)</option>
+                      <option value="own">Own pace: let the wheel go</option>
+                    </select>
+                  </label>
+                  <label className="style" title="How hard he rides when he does the work: a turn on the front, a chase, the team's drive">
+                    <span>When he works</span>
+                    <select value={tc.styleOf(r.id).pace} onChange={(e) => tc.setRiderStyle(r.id, { ...tc.styleOf(r.id), pace: e.target.value as WorkPace })}>
+                      <option value="auto">As the race needs</option>
+                      <option value="tempo">Tempo (85%)</option>
+                      <option value="threshold">Threshold</option>
+                      <option value="allout">All out</option>
+                    </select>
                   </label>
                   <div className="sprint">
                     <select
@@ -249,4 +254,15 @@ function EffortLine({ effort, perMin, why }: { effort: number; perMin: number; w
       {trend && <span className={why ? 'drain' : 'refill'}>{trend}</span>}
     </span>
   )
+}
+
+/** The non-default parts of a rider's style, for his status line. */
+function styleWords(st: RiderStyle): string[] {
+  const out: string[] = []
+  if (st.dig === 'reserve') out.push('keeps a reserve')
+  if (st.dig === 'own') out.push('own pace')
+  if (st.pace === 'tempo') out.push('tempo turns')
+  if (st.pace === 'threshold') out.push('threshold turns')
+  if (st.pace === 'allout') out.push('all-out turns')
+  return out
 }

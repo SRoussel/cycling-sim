@@ -182,6 +182,10 @@ export function SetRiderPlan(arg1, arg2, arg3, arg4) {
   return window['go']['app']['App']['SetRiderPlan'](arg1, arg2, arg3, arg4);
 }
 
+export function SetRiderStyle(arg1, arg2, arg3, arg4) {
+  return window['go']['app']['App']['SetRiderStyle'](arg1, arg2, arg3, arg4);
+}
+
 export function SetSeasonSquad(arg1, arg2, arg3) {
   return window['go']['app']['App']['SetSeasonSquad'](arg1, arg2, arg3);
 }

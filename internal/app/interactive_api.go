@@ -234,6 +234,15 @@ func (a *App) SetRiderCommand(sessionID string, riderID int64, action string, mo
 	s.SetRiderCommand(riderID, act, mode)
 }
 
+// SetRiderStyle sets how deep a rider digs to hold his group ("any",
+// "reserve", "own") and his pace when he does the work ("auto", "tempo",
+// "threshold", "allout").
+func (a *App) SetRiderStyle(sessionID string, riderID int64, dig, pace string) {
+	if s := a.getSession(sessionID); s != nil {
+		s.SetRiderStyle(riderID, dig, pace)
+	}
+}
+
 // SetRiderEffort sets a rider's effort target as a percentage [60..130].
 func (a *App) SetRiderEffort(sessionID string, riderID int64, effortPct float64) {
 	s := a.getSession(sessionID)

@@ -150,3 +150,18 @@ func TestTeamOrdersApplyToControlledTeamOnly(t *testing.T) {
 		t.Errorf("other team orders = %+v, want auto", got)
 	}
 }
+
+func TestRiderStyle(t *testing.T) {
+	s := newInteractiveSession("Us")
+	if d, p := s.RiderStyle(1); d != simulation.DigAnyCost || p != simulation.PaceAuto {
+		t.Fatalf("default style: %v %v", d, p)
+	}
+	s.SetRiderStyle(1, "reserve", "tempo")
+	if d, p := s.RiderStyle(1); d != simulation.DigKeepReserve || p != simulation.PaceTempo {
+		t.Errorf("set style: %v %v", d, p)
+	}
+	s.SetRiderStyle(1, "any", "auto")
+	if _, ok := s.styles[1]; ok {
+		t.Error("the default style should clear the entry")
+	}
+}

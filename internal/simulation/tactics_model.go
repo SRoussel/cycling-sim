@@ -42,6 +42,40 @@ type ActionOverrideProvider interface {
 	SprintTrainState(kmRemaining float64) *TeamState
 }
 
+// Dig is how deep a rider digs into his reserve to stay with his group (a
+// player's setting; AI riders always hold on at any cost).
+type Dig int
+
+const (
+	DigAnyCost     Dig = iota // spends his reserve to the last to hold the wheel
+	DigKeepReserve            // holds on only while his reserve stays above keepReserveShare
+	DigOwnPace                // never above threshold to follow: lets the wheel go
+)
+
+// keepReserveShare: the part of his reserve a rider told to keep one won't
+// spend following a wheel.
+const keepReserveShare = 0.3
+
+// WorkPace is how hard a rider rides when he does the work (a turn on the
+// front, a chase, a team's drive): a player's setting.
+type WorkPace int
+
+const (
+	PaceAuto      WorkPace = iota // as the race situation calls for
+	PaceTempo                     // tempoShare of his threshold
+	PaceThreshold                 // his threshold
+	PaceAllOut                    // all he has for the effort (threshold plus reserve)
+)
+
+// tempoShare: a tempo turn, as a share of threshold.
+const tempoShare = 0.85
+
+// RiderStyleProvider (optional, for ActionOverrideProvider) gives a player's
+// rider's dig and work pace.
+type RiderStyleProvider interface {
+	RiderStyle(riderID int64) (Dig, WorkPace)
+}
+
 // Order is a player's standing team order on one question: leave it to the
 // team (OrderAuto), do it (OrderYes) or don't (OrderNo).
 type Order int

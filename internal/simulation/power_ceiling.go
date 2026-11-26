@@ -40,6 +40,17 @@ func (rs *RiderState) maxPowerFor(threshold, base, seconds float64) float64 {
 	return math.Min(p, math.Max(base, c))
 }
 
+// maxPowerAbove is maxPowerFor spending only the reserve above floor (a
+// share of his full W'): a rider keeping something back.
+func (rs *RiderState) maxPowerAbove(threshold, base, seconds, floor float64) float64 {
+	spare := rs.WPrime.WPrimeCurrent - floor*rs.WPrime.WPrimeMax
+	if spare <= 0 || seconds <= 0 {
+		return base
+	}
+	c := powerCeiling(threshold, FatiguedSprintPower(rs), punchGap(rs.Rider), seconds)
+	return math.Min(base+spare/seconds, math.Max(base, c))
+}
+
 // finishKm: the run-in that decides a finish (a sprint, or the last of an
 // uphill finish).
 const finishKm = 1.0

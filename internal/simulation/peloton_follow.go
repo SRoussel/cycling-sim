@@ -267,6 +267,12 @@ func followSplit(rps []riderPower, segment *model.Segment, firstID int, cooperat
 			thr := EffectivePower(r, rp.state.CurrentFTP(), segment, false)
 			capacity := math.Max(rp.power, thr)
 			available := rp.state.maxPowerFor(thr, capacity, segTime)
+			switch rp.dig { // the player's limit on digging in to hold on
+			case DigOwnPace:
+				available = math.Min(available, capacity)
+			case DigKeepReserve:
+				available = rp.state.maxPowerAbove(thr, capacity, segTime, keepReserveShare)
+			}
 			needs := func(cdaFactor float64) float64 {
 				return segmentPower(speed, r.TotalMassKg(), r.CdA*cdaFactor, segment, r.Handling)
 			}

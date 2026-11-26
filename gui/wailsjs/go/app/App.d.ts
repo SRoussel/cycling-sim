@@ -94,6 +94,8 @@ export function SetRiderFollow(arg1:string,arg2:number,arg3:number):Promise<void
 
 export function SetRiderPlan(arg1:number,arg2:number,arg3:Array<number>,arg4:Array<number>):Promise<void>;
 
+export function SetRiderStyle(arg1:string,arg2:number,arg3:string,arg4:string):Promise<void>;
+
 export function SetSeasonSquad(arg1:number,arg2:number,arg3:Array<number>):Promise<void>;
 
 export function SetSprintTrainOrder(arg1:string,arg2:Array<number>):Promise<void>;

@@ -1090,8 +1090,8 @@
   font-size: 0.78rem;
 }
 
-.crew-manual .effort { display: flex; align-items: center; gap: 8px; color: var(--muted); }
-.crew-manual .effort input { accent-color: var(--accent); }
+.crew-manual .style { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 0.75rem; }
+.crew-manual .style span { min-width: 92px; }
 .crew-manual .sprint { display: flex; gap: 6px; align-items: center; }
 .race-dash .crew-manual .sprint button { background: var(--panel-2); color: var(--color-text); }
 

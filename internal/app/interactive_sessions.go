@@ -17,6 +17,7 @@ type interactiveSession struct {
 	overrides        map[int64]simulation.Action
 	oneShot          map[int64]simulation.Action
 	efforts          map[int64]float64
+	styles           map[int64]riderStyle // the player's dig and work pace per rider
 	trainSprinter    int64 // who the lead-out rides for (0: the fastest finisher in the group)
 	followMap        map[int64]int64
 	launchingRiderID int64
@@ -40,6 +41,7 @@ func newInteractiveSession(controlledTeam string) *interactiveSession {
 		overrides:      make(map[int64]simulation.Action),
 		oneShot:        make(map[int64]simulation.Action),
 		efforts:        make(map[int64]float64),
+		styles:         make(map[int64]riderStyle),
 		followMap:      make(map[int64]int64),
 		speed:          0.5,
 		stopCh:         make(chan struct{}),
@@ -355,4 +357,46 @@ func (s *interactiveSession) setTeamOrderLocked(kind string, order simulation.Or
 		return false
 	}
 	return true
+}
+
+// riderStyle is a player's setting for how a rider spends himself.
+type riderStyle struct {
+	dig  simulation.Dig
+	pace simulation.WorkPace
+}
+
+// RiderStyle implements simulation.RiderStyleProvider.
+func (s *interactiveSession) RiderStyle(riderID int64) (simulation.Dig, simulation.WorkPace) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	st := s.styles[riderID]
+	return st.dig, st.pace
+}
+
+// SetRiderStyle sets how deep a rider digs to hold his group ("any",
+// "reserve", "own") and how hard he works ("auto", "tempo", "threshold",
+// "allout"). Unknown values keep the default.
+func (s *interactiveSession) SetRiderStyle(riderID int64, dig, pace string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	st := riderStyle{}
+	switch dig {
+	case "reserve":
+		st.dig = simulation.DigKeepReserve
+	case "own":
+		st.dig = simulation.DigOwnPace
+	}
+	switch pace {
+	case "tempo":
+		st.pace = simulation.PaceTempo
+	case "threshold":
+		st.pace = simulation.PaceThreshold
+	case "allout":
+		st.pace = simulation.PaceAllOut
+	}
+	if st == (riderStyle{}) {
+		delete(s.styles, riderID)
+		return
+	}
+	s.styles[riderID] = st
 }

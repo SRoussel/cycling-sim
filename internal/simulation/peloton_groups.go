@@ -211,6 +211,23 @@ func FormGroups(riders []*RiderState, segment *model.Segment, isTT bool, remaini
 				power *= effortMultiplier
 			}
 		}
+		// The player's work pace for a rider doing the work.
+		dig := DigAnyCost
+		if sp, ok := overridesStyle(state); ok {
+			var pace WorkPace
+			dig, pace = sp.RiderStyle(rs.Rider.ID)
+			if action == ActionChase && pace != PaceAuto {
+				thr := EffectivePower(rs.Rider, rs.CurrentFTP(), segment, false)
+				switch pace {
+				case PaceTempo:
+					power = tempoShare * thr
+				case PaceThreshold:
+					power = thr
+				case PaceAllOut:
+					power = burstPower(rs, segment, remainingDistance)
+				}
+			}
+		}
 		if state != nil && state.LastActions != nil {
 			state.LastActions[rs.Rider.ID] = action
 		}
@@ -238,6 +255,7 @@ func FormGroups(riders []*RiderState, segment *model.Segment, isTT bool, remaini
 			breakaway: breakaway,
 			action:    action,
 			sheltered: shelteredFor(rs, action, state) && (action == ActionConserve || helpers[rs.Rider.Team] > 0),
+			dig:       dig,
 		}
 		// Racing for places, a rider who'd win the group's sprint sits on.
 		if state != nil && action != ActionAttack && state.winGone(rs) {
@@ -968,3 +986,12 @@ func (s *RaceState) limitsLosses(rs *RiderState) bool {
 
 // leadoutKm: a player's lead-out runs the last this many km.
 const leadoutKm = 8.0
+
+// overridesStyle returns the player's rider settings, if the race has them.
+func overridesStyle(state *RaceState) (RiderStyleProvider, bool) {
+	if state == nil || state.Overrides == nil {
+		return nil, false
+	}
+	sp, ok := state.Overrides.(RiderStyleProvider)
+	return sp, ok
+}

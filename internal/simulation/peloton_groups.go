@@ -386,8 +386,8 @@ func assignTeamPositions(rps []riderPower, crosswind bool) {
 		}
 	}
 
-	// Order: domestiques at front (in the wind), then other riders, then
-	// protected riders (sheltered deep in the bunch). In a crosswind the deep
+	// Order: domestiques at front (in the wind), then protected riders, then
+	// the rest (see below). In a crosswind the deep
 	// bunch is the gutter, so each team rides as a unit with its protected
 	// riders right behind a couple of domestiques (see crosswindTeamOrder).
 	// The domestiques share the front in turns: their order rotates every
@@ -396,7 +396,14 @@ func assignTeamPositions(rps []riderPower, crosswind bool) {
 	// Politt at 490-510 W, 108-113% of threshold, for 27 km at a time in
 	// Flanders, then out of fuel; real 3rd).
 	frontDomestiques = rotateTurns(frontDomestiques)
-	order := [][]riderPower{frontDomestiques, others, protectedRiders}
+	// Protected riders sit right behind the domestiques taking turns at the
+	// front, not at the back of the bunch: there the draft is little better
+	// (deep shelter is reached a couple of dozen wheels back) and every
+	// surge arrives amplified (accordionCost). Nov 2026 playtest: a leader
+	// 150th of 154 at Strade had 32% of his reserve left 97 km out; real
+	// teams keep their leaders some 10-30 riders from the front.
+	turns := min(len(frontDomestiques), maxRotation)
+	order := [][]riderPower{frontDomestiques[:turns], protectedRiders, frontDomestiques[turns:], others}
 	if crosswind {
 		order = crosswindTeamOrder(frontDomestiques, protectedRiders, others)
 	}

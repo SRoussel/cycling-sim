@@ -98,10 +98,14 @@ func TestProtectedRidersMoveUpInCrosswind(t *testing.T) {
 	assignTeamPositions(calm, false)
 	windy := build()
 	assignTeamPositions(windy, true)
-	if p := calm[0].state.GroupPosition; p <= echelonCapacity {
-		t.Errorf("in calm air the leader should sit deep in the bunch, got position %d", p)
+	// In calm air a leader sits behind the domestiques taking turns, well
+	// clear of the back of the bunch (accordion); a crosswind moves him up
+	// behind his own team's riders.
+	pc, pw := calm[0].state.GroupPosition, windy[0].state.GroupPosition
+	if pc <= maxRotation || pc > len(calm)/2 {
+		t.Errorf("in calm air the leader should sit behind the turns, not at the back: position %d", pc)
 	}
-	if p := windy[0].state.GroupPosition; p > len(windy)-3 {
-		t.Errorf("in a crosswind the leader should move up, got position %d", p)
+	if pw >= pc {
+		t.Errorf("in a crosswind the leader should move up: position %d (calm %d)", pw, pc)
 	}
 }

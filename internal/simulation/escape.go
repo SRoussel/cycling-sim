@@ -71,13 +71,17 @@ func (s *RaceState) attackPays(rs *RiderState, seg *model.Segment) bool {
 	// climb or sector (his threshold and W' against the attacker's burst)?
 	holdsOver := func(o *RiderState, km float64) bool { return s.holdsAttack(rs, o, seg, km) }
 	holds := func(o *RiderState) bool { return holdsOver(o, km) }
-	// One-day races: attack as late on the climb as it still works. If an
+	// Attack as late on the climb as it still works. If an
 	// attack over the last half of what's left would drop as many rival
 	// leaders, wait (Nov 2026: favourites went from the foot of the Poggio,
 	// riding 3.8 km at their burst, and the whole bunch shattered; real
 	// attacks come near the top, unless only a long effort drops a punchy
 	// rival).
-	if !s.IsStageRace && km/2 >= fineStepKm {
+	// Stage races too (Nov 2026: judged over one road segment, GC
+	// favourites attacked 20 km from a summit finish and the race strung
+	// out from the approach roads; real GC fights start on the last
+	// climb's final kilometres).
+	if km/2 >= fineStepKm {
 		dropped := func(km float64) int {
 			n := 0
 			for _, o := range s.Road {
@@ -535,7 +539,7 @@ func (s *RaceState) frontSafe(rs *RiderState) bool {
 // match (Nov 2026: judged per step, a faster sprinter always held Van der
 // Poel's wheel in Flanders). Otherwise (and in stage races) the step.
 func (s *RaceState) attackKm(seg *model.Segment) float64 {
-	if s == nil || s.IsStageRace || len(s.Course) == 0 || s.SegIndex >= len(s.Course) {
+	if s == nil || len(s.Course) == 0 || s.SegIndex >= len(s.Course) {
 		return seg.DistanceKm
 	}
 	hard := func(g *model.Segment) bool { return g.SurfaceType.Unpaved() || climbOf(g) >= terrainClimb }

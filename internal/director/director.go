@@ -25,6 +25,7 @@ type Command struct {
 	Mode          string // persistent, oneshot
 	ForKm         float64
 	AtKmRemaining float64
+	WhileAhead    bool   // ends once the rider is no longer up the road (a break's orders)
 	Note          string // logged when a scheduled command fires
 	Source        string // who gave it: decision or plan (set by the session)
 	Why           string // what it's for, shown on the team panel
@@ -402,6 +403,24 @@ func (w *view) isCard(id int64) bool {
 	return false
 }
 
+// near: rider id rides in group ref or close enough behind it to join in
+// (an attack or a tempo there is his to make).
+func (w *view) near(id int64, ref int) bool {
+	g := w.groupOf[id]
+	return g <= ref || w.gap(g)-w.gap(ref) <= followGapS
+}
+
+// Ahead reports whether rider id is up the road of the race's largest
+// group (in a break): a break rider's orders end once he is caught.
+func Ahead(v *simulation.RaceView, id int64) bool {
+	if v == nil {
+		return true
+	}
+	w := newView(v, "")
+	g, ok := w.groupOf[id]
+	return ok && g < w.main
+}
+
 // helpers returns the team's riders in group gi who aren't cards (and not
 // except), most reserve first.
 func (w *view) helpers(gi int, except int64) []int64 {
@@ -745,12 +764,12 @@ func (d *Director) leaderDropped(w *view) *Moment {
 // finale: the run-in, once.
 func (d *Director) finale(w *view) *Moment {
 	km := w.KmRemaining
-	if km > finaleKm || d.fired["finale"] {
-		return nil
+	if km > finaleKm || d.fired["finale"] || d.decisiveAhead(km) {
+		return nil // (a decisive climb or sector still to come: its own moment decides)
 	}
 	mineFront := w.myRiders(0)
 	if len(mineFront) == 0 {
-		return nil
+		return d.chaseFinale(w)
 	}
 	d.fired["finale"] = true
 	size := len(w.Road[0].IDs)
@@ -803,6 +822,69 @@ func (d *Director) finale(w *view) *Moment {
 		Title:   "🏁 The finale",
 		Text:    text,
 		Options: finaleOptions(w, front, km),
+	}
+}
+
+// decisiveAhead reports whether a decisive climb or sector still lies
+// (wholly or partly) ahead with km to go.
+func (d *Director) decisiveAhead(km float64) bool {
+	pos := d.totalKm - km
+	for _, c := range d.climbs {
+		if d.decisive[c.StartKm] && c.StartKm+c.LengthKm > pos {
+			return true
+		}
+	}
+	for _, sec := range d.sectors {
+		if d.decisiveSectors[sec.StartKm] && sec.StartKm+sec.LengthKm > pos {
+			return true
+		}
+	}
+	return false
+}
+
+// chaseFinale: the run-in with our best card in a group chasing the front,
+// close enough that the race isn't over for him.
+func (d *Director) chaseFinale(w *view) *Moment {
+	km := w.KmRemaining
+	var p int64
+	for _, c := range w.cards() {
+		if gap := w.gap(w.groupOf[c]); gap <= math.Max(60, 6*km) {
+			p = c
+			break
+		}
+	}
+	if p == 0 {
+		return nil
+	}
+	d.fired["finale"] = true
+	pg := w.groupOf[p]
+	behind := w.gap(pg)
+	ours := w.myRiders(pg)
+	pr := w.Riders[p]
+	text := fmt.Sprintf("%.1f km to go, %s %s behind the front group of %d. Ours in %s: %s.",
+		km, pr.Name, fmtGap(behind), len(w.Road[0].IDs), w.groupLabel(pg), joinAnd(climbWhere(w, ours, pg)))
+	var opts []Option
+	if pr.WPrimePct >= lowReservePct {
+		opts = append(opts, Option{ID: "bridge", Label: fmt.Sprintf("%s bridges across", pr.Name),
+			Help:     "Attack the chase group and ride across alone: he arrives with less for the finish.",
+			Commands: []Command{{RiderID: p, Action: "attack", Mode: "oneshot"}}})
+	}
+	var chase, wait []Command
+	for _, id := range ours {
+		chase = append(chase, Command{RiderID: id, Action: "chase", Mode: "persistent"})
+		wait = append(wait, Command{RiderID: id, Action: "conserve", Mode: "persistent", ForKm: math.Max(0, km-1)})
+	}
+	help := "He rides full turns in the chase group to bring the front back."
+	if len(ours) > 1 {
+		help = fmt.Sprintf("Our %d riders there ride full turns to bring the front back.", len(ours))
+	}
+	return &Moment{
+		Kind:  "finale",
+		Title: "🏁 The finale: chasing",
+		Text:  text,
+		Options: append(opts,
+			Option{ID: "chase", Label: "Chase the front", Help: help, Commands: chase},
+			Option{ID: "wait", Label: "Sit on, race for the places", Help: "Let the others chase; save everything for the line.", Commands: wait}),
 	}
 }
 
@@ -883,7 +965,7 @@ func (d *Director) keyClimb(w *view) *Moment {
 		}
 		attackers := 0
 		for _, id := range inRace {
-			if attackers == 2 || w.Riders[id].WPrimePct < lowReservePct {
+			if attackers == 2 || w.Riders[id].WPrimePct < lowReservePct || !w.near(id, pg) {
 				continue
 			}
 			attackers++
@@ -958,7 +1040,7 @@ func (d *Director) cobbles(w *view) *Moment {
 		at := d.totalKm - sec.StartKm - sec.LengthKm/3
 		attackers := 0
 		for _, id := range inRace {
-			if attackers == 2 || w.Riders[id].WPrimePct < lowReservePct {
+			if attackers == 2 || w.Riders[id].WPrimePct < lowReservePct || !w.near(id, pg) {
 				continue
 			}
 			attackers++
@@ -1023,7 +1105,7 @@ func (d *Director) breakaway(w *view) *Moment {
 				Text:  fmt.Sprintf("%s is %s ahead of %s with %.0f km to go, reserve %.0f%%, legs %.0f%%.", rb.Name, fmtGap(gap), w.groupLabel(w.main), km, rb.WPrimePct, rb.LegsPct),
 				Options: []Option{
 					{ID: "commit", Label: "Commit: ride to the line", Help: "He rides his limit alone: a long way, but nobody to share the work with the chase either.",
-						Commands: []Command{{RiderID: r, Action: "chase", Mode: "persistent"}}},
+						Commands: []Command{{RiderID: r, Action: "chase", Mode: "persistent", WhileAhead: true}}},
 					{ID: "wait", Label: "Sit up and wait for the group", Help: "Save his legs for later; the group will catch him.",
 						Commands: []Command{{RiderID: r, Action: "conserve", Mode: "persistent", ForKm: 5}}},
 					{ID: "auto", Label: "Let him decide", Help: "He judges it himself."},
@@ -1037,9 +1119,9 @@ func (d *Director) breakaway(w *view) *Moment {
 				len(ahead), fmtGap(gap), km, names(w, ahead, 8)),
 			Options: []Option{
 				{ID: "work", Label: "Ride to keep it away", Help: "He takes full turns: the break goes faster, he tires sooner.",
-					Commands: []Command{{RiderID: r, Action: "chase", Mode: "persistent"}}},
+					Commands: []Command{{RiderID: r, Action: "chase", Mode: "persistent", WhileAhead: true}}},
 				{ID: "sit", Label: "Sit on, save for the finish", Help: "He skips turns: fresher at the end, but the break may be caught.",
-					Commands: []Command{{RiderID: r, Action: "conserve", Mode: "persistent"}}},
+					Commands: []Command{{RiderID: r, Action: "conserve", Mode: "persistent", WhileAhead: true}}},
 				{ID: "auto", Label: "Let him race", Help: "He decides for himself."},
 			},
 		}

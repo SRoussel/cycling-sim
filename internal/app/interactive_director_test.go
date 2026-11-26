@@ -181,3 +181,35 @@ func TestLiveReportsWhoSetWhat(t *testing.T) {
 		t.Errorf("the decision's pace order handed back: %+v", o)
 	}
 }
+
+// A break rider's "take turns" order lasts while he is up the road and ends
+// once the bunch catches him (no chasing the bunch's front for 100 km).
+func TestBreakOrderEndsWhenCaught(t *testing.T) {
+	s := newInteractiveSession("Us")
+	s.Observe(nil, &simulation.RouteProfile{TotalKm: 200}, 150, 0)
+	s.director.pending = &director.Moment{ID: "m1", Options: []director.Option{{
+		ID: "work", Commands: []director.Command{{RiderID: 1, Action: "chase", Mode: "persistent", WhileAhead: true}},
+	}}}
+	if _, err := s.Resolve("m1", "work"); err != nil {
+		t.Fatal(err)
+	}
+	view := func(km float64, groups ...[]int64) *simulation.RaceView {
+		v := &simulation.RaceView{KmRemaining: km, KmTotal: 200, Riders: map[int64]simulation.RiderBrief{}}
+		for _, ids := range groups {
+			v.Road = append(v.Road, simulation.RoadGroup{IDs: ids})
+			for _, id := range ids {
+				v.Riders[id] = simulation.RiderBrief{Team: "Rivals"}
+			}
+		}
+		return v
+	}
+	bunch := []int64{10, 11, 12, 13, 14, 15}
+	s.Observe(view(120, []int64{1, 2}, bunch), nil, 120, 0)
+	if a, ok := s.ActionOverride(1); !ok || a != simulation.ActionChase {
+		t.Fatalf("still in the break: the order holds")
+	}
+	s.Observe(view(90, append([]int64{1, 2}, bunch...)), nil, 90, 0)
+	if _, ok := s.ActionOverride(1); ok {
+		t.Fatalf("caught: the break order should end")
+	}
+}

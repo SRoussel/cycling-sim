@@ -82,6 +82,7 @@ func (s *interactiveSession) Observe(view *simulation.RaceView, profile *simulat
 	s.resolvePlanLocked(view)
 	s.tickPlanLocked()
 	s.tickLocked()
+	s.endCaughtLocked(view)
 	d.dir.Watch(view)
 	if view == nil || !d.enabled || d.pending != nil {
 		return nil
@@ -134,6 +135,28 @@ func (s *interactiveSession) tickLocked() {
 	d.orders = orders
 }
 
+// endCaughtLocked ends the break orders of riders who are no longer up the
+// road: once caught, a rider told to take turns in the break goes back to
+// his own judgement instead of riding the front of the bunch.
+func (s *interactiveSession) endCaughtLocked(view *simulation.RaceView) {
+	if view == nil {
+		return
+	}
+	d := &s.director
+	timed := d.timed[:0]
+	for _, t := range d.timed {
+		if t.cmd.WhileAhead && !director.Ahead(view, t.cmd.RiderID) {
+			if s.overrides[t.cmd.RiderID] == actionOf(t.cmd.Action) {
+				delete(s.overrides, t.cmd.RiderID)
+				s.markRiderLocked(t.cmd.RiderID, "", "")
+			}
+			continue
+		}
+		timed = append(timed, t)
+	}
+	d.timed = timed
+}
+
 func actionOf(name string) simulation.Action {
 	switch name {
 	case "attack":
@@ -172,8 +195,12 @@ func (s *interactiveSession) applyCommandLocked(c director.Command) {
 	default:
 		s.overrides[c.RiderID] = act
 		d.timed = dropTimed(d.timed, c.RiderID)
-		if c.ForKm > 0 {
-			d.timed = append(d.timed, timedCommand{cmd: c, untilKm: d.km - c.ForKm})
+		if c.ForKm > 0 || c.WhileAhead {
+			until := d.km - c.ForKm
+			if c.ForKm == 0 {
+				until = -1 // ended by the catch, not by distance
+			}
+			d.timed = append(d.timed, timedCommand{cmd: c, untilKm: until})
 		}
 		s.markRiderLocked(c.RiderID, c.Source, c.Why)
 	}

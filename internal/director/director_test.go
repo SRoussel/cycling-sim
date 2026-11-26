@@ -394,3 +394,81 @@ func TestPlanPoints(t *testing.T) {
 		t.Errorf("attack a third into the Carrefour (~18.3 km to go): %.1f", at)
 	}
 }
+
+// Our leader in a chase group close behind still gets a finale.
+func TestFinaleFromTheChase(t *testing.T) {
+	d := New("Us")
+	v := race(11, [][]int64{bunch(10, 14), append([]int64{1, 2}, bunch(20, 25)...), bunch(30, 60)}, []float64{0, 25, 90})
+	if m := d.Next(v); m == nil || m.Kind != "dropped" {
+		t.Fatalf("first the dropped moment, got %+v", m)
+	}
+	v.KmRemaining = 9
+	m := d.Next(v)
+	if m == nil || m.Kind != "finale" {
+		t.Fatalf("want a chase finale, got %+v", m)
+	}
+	if _, ok := m.Option("bridge"); !ok {
+		t.Errorf("the leader should be able to bridge: %+v", m.Options)
+	}
+	if o, _ := m.Option("chase"); len(o.Commands) != 2 {
+		t.Errorf("both our riders in the chase should ride: %+v", o)
+	}
+	// Minutes behind, the race is gone: no finale.
+	d2 := New("Us")
+	v2 := race(11, [][]int64{bunch(10, 14), append([]int64{1, 2}, bunch(20, 25)...)}, []float64{0, 240})
+	if m := d2.Next(v2); m != nil && m.Kind == "finale" {
+		t.Errorf("4 min behind is no finale: %+v", m)
+	}
+}
+
+// A rider minutes behind is not offered an attack on the climb ahead.
+func TestClimbAttackOnlyForRidersThere(t *testing.T) {
+	d := New("Us")
+	pts := []simulation.ProfilePoint{{Km: 0}, {Km: 200}, {Km: 206, Elev: 360}, {Km: 250, Elev: 360}}
+	d.SetRoute(&simulation.RouteProfile{TotalKm: 250, Points: pts})
+	v := race(51, [][]int64{append([]int64{1, 2}, bunch(10, 30)...), append([]int64{3}, bunch(31, 80)...)}, []float64{0, 300})
+	// make rider 3 a card (a sprinter)
+	b := v.Riders[3]
+	b.Role = simulation.RoleSprinter
+	v.Riders[3] = b
+	d.Next(v) // rider 3 is dropped: that moment first
+	v.KmRemaining = 49
+	m := d.Next(v)
+	if m == nil || m.Kind != "climb" {
+		t.Fatalf("want a climb moment, got %+v", m)
+	}
+	if _, ok := m.Option("attack-top-3"); ok {
+		t.Errorf("rider 5 min behind offered an attack: %+v", m.Options)
+	}
+	if _, ok := m.Option("attack-top-1"); !ok {
+		t.Errorf("the leader should be offered the attack: %+v", m.Options)
+	}
+}
+
+func TestAhead(t *testing.T) {
+	v := race(50, [][]int64{{1, 70}, bunch(10, 60)}, []float64{0, 120})
+	if !Ahead(v, 1) || Ahead(v, 10) {
+		t.Errorf("rider 1 is in the break, 10 in the bunch")
+	}
+	v = race(40, [][]int64{append([]int64{1}, bunch(10, 60)...)}, []float64{0})
+	if Ahead(v, 1) {
+		t.Errorf("caught: no longer ahead")
+	}
+}
+
+// No finale moment while a decisive climb is still to come: on a summit
+// finish the climb is the finale.
+func TestNoFinaleBeforeTheLastClimb(t *testing.T) {
+	d := New("Us")
+	// 250 km, a 4 km climb at 6% from km 244 (6 to go) to 248.
+	pts := []simulation.ProfilePoint{{Km: 0}, {Km: 244}, {Km: 248, Elev: 240}, {Km: 250, Elev: 240}}
+	d.SetRoute(&simulation.RouteProfile{TotalKm: 250, Points: pts})
+	field := append([]int64{1, 2, 3, 10}, bunch(11, 40)...)
+	if m := d.Next(race(11, [][]int64{field}, []float64{0})); m != nil && m.Kind == "finale" {
+		t.Fatalf("finale before the final climb: %+v", m)
+	}
+	m := d.Next(race(8, [][]int64{field}, []float64{0}))
+	if m == nil || m.Kind != "climb" {
+		t.Fatalf("want the climb moment, got %+v", m)
+	}
+}

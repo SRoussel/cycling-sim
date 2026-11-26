@@ -107,7 +107,7 @@ func (s *interactiveSession) Live() *LiveTeam {
 			lr.Source, lr.Note = src.source, src.note
 		}
 		for _, t := range d.timed {
-			if t.cmd.RiderID == id {
+			if t.cmd.RiderID == id && t.untilKm >= 0 { // (-1: until caught)
 				lr.KmLeft = d.km - t.untilKm
 			}
 		}

@@ -449,7 +449,9 @@ func SimulateRoadRaceWithProgress(config RaceConfig, onProgress func(ProgressSna
 				j++
 			}
 			if j-i > 1 {
-				SprintFinish(states[i:j], rng)
+				SprintFinish(states[i:j], rng, func(team string) bool {
+					return raceState != nil && raceState.teamOrders(team).Leadout == OrderNo
+				})
 			}
 			i = j
 		}

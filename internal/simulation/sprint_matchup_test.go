@@ -45,3 +45,28 @@ func TestSprintFinish_SpecialistBeatsPuncheurMostly(t *testing.T) {
 		t.Errorf("sprinter win rate %.0f%% outside expected 55-95%%", rate*100)
 	}
 }
+
+// A team sprints for its fastest finisher: his teammate leads him out and
+// rolls in behind a slower rival who contests the sprint, unless the team
+// races every man for himself.
+func TestSprintFinish_TeamLeadsOutItsSprinter(t *testing.T) {
+	mk := func(id int64, team string, sprint int) *model.Rider {
+		return &model.Rider{ID: id, Name: team, Team: team, WeightKg: 74, HeightCm: 182, FTPWatts: 400,
+			MaxSprintWatts: sprint, SprintAbility: 80, Endurance: 75, Handling: 75, CdA: 0.33}
+	}
+	sprinter, leadOut, rival := mk(1, "A", 1900), mk(2, "A", 1650), mk(3, "B", 1300)
+	run := func(everyMan bool) (lead, riv float64) {
+		st := func(r *model.Rider) *RiderState {
+			return &RiderState{Rider: r, EffectiveFTP: 400, FormFactor: 1, WPrime: NewWPrimeState(r)}
+		}
+		s, l, r := st(sprinter), st(leadOut), st(rival)
+		SprintFinish([]*RiderState{s, l, r}, rand.New(rand.NewSource(1)), func(string) bool { return everyMan })
+		return l.TotalTime, r.TotalTime
+	}
+	if l, r := run(false); l <= r {
+		t.Errorf("the lead-out man should finish behind the rival who sprints (%.2f vs %.2f)", l, r)
+	}
+	if l, r := run(true); l >= r {
+		t.Errorf("every man for himself: the faster teammate beats the rival (%.2f vs %.2f)", l, r)
+	}
+}

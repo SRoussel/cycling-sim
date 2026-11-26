@@ -339,6 +339,7 @@ func RunRealRaceValidationFor(db *database.DB, allRiders []model.Rider, entries 
 		})
 		finish := FinishShape{Runs: len(allRuns)}
 		var margins []float64
+		runGaps := map[int64][]float64{}
 		for _, simResults := range allRuns {
 			gaps := make([]float64, 0, 20)
 			for p := 1; p <= 20; p++ {
@@ -376,6 +377,7 @@ func RunRealRaceValidationFor(db *database.DB, allRiders []model.Rider, entries 
 				}
 				posSum[res.RiderID] += float64(res.Position)
 				posCnt[res.RiderID]++
+				runGaps[res.RiderID] = append(runGaps[res.RiderID], res.TimeGapSeconds)
 				gapSum[res.RiderID] += res.TimeGapSeconds
 				gapCnt[res.RiderID]++
 			}
@@ -486,7 +488,7 @@ func RunRealRaceValidationFor(db *database.DB, allRiders []model.Rider, entries 
 			Riders:               checks,
 			Intruders:            intruders,
 			Finish:               &finish,
-			Calib:                entry.calibIfKnown(calibPoints(posCnt, top10Hits, wins, runs, entry.Top10RiderIDs)),
+			Calib:                entry.calibIfKnown(withGaps(calibPoints(posCnt, top10Hits, wins, runs, entry.Top10RiderIDs), runGaps)),
 		})
 	}
 	return results
@@ -734,7 +736,7 @@ func RunRealStageRaceValidationFor(db *database.DB, allRiders []model.Rider, ent
 			Details: fmt.Sprintf("Matched %d | Corr %.2f | GC top-10 overlap %.0f%% (≥%.0f%%) | GC gap MAE %.0fs over %d (≤%.0fs), median-gap MAE %.0fs | Real winner wins %.0f%%",
 				len(matched), corr, overlap, realPassTop10Target, mae, n, realStageRaceGapMAE, medMAE, winPct),
 			Riders: checks, Intruders: intruders, Spread: spread,
-			Calib:     entry.calibIfKnown(calibPoints(gapN, top10, wins, runs, entry.Top10RiderIDs)),
+			Calib:     entry.calibIfKnown(withGaps(calibPoints(gapN, top10, wins, runs, entry.Top10RiderIDs), gapAll)),
 			StageRace: entry.InternalName, Outcomes: outcomes,
 		})
 	}

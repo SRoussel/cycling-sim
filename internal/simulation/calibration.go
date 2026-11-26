@@ -21,6 +21,17 @@ type CalibPoint struct {
 	In10, Won bool    // what he did
 	Runs      int     // simulations behind the chances
 	RiderID   int64
+	// Gaps: his time behind the winner (GC leader) in each run he finished
+	// (Runs - len(Gaps) runs he abandoned); for the misses diagnostic.
+	Gaps []float64 `json:"-"`
+}
+
+// withGaps attaches each rider's per-run gaps to his point.
+func withGaps(pts []CalibPoint, gaps map[int64][]float64) []CalibPoint {
+	for i := range pts {
+		pts[i].Gaps = gaps[pts[i].RiderID]
+	}
+	return pts
 }
 
 // calibPoints builds the field's points: every rider who started in the

@@ -9,7 +9,7 @@ import (
 
 // SprintFinish resolves a bunch sprint among riders who arrive together.
 // It modifies riders' TotalTime to create small gaps based on SprintAbility.
-func SprintFinish(riders []*RiderState, rng *rand.Rand) {
+func SprintFinish(riders []*RiderState, rng *rand.Rand, everyMan ...func(team string) bool) {
 	if len(riders) <= 1 {
 		return
 	}
@@ -19,10 +19,28 @@ func SprintFinish(riders []*RiderState, rng *rand.Rand) {
 		sprintTime float64
 	}
 
+	// Each team sprints for its fastest finisher in the group; his
+	// teammates lead him out and roll in behind the riders contesting it
+	// (Nov 2026: every rider sprinted for himself, so a Van der Poel
+	// leading out Philipsen still placed in the top 10). A team told
+	// "every man for himself" keeps everyone sprinting.
+	expected := func(rs *RiderState) float64 { return FatiguedSprintPower(rs) * rs.FormFactor }
+	best := map[string]*RiderState{}
+	for _, rs := range riders {
+		t := rs.Rider.Team
+		if b, ok := best[t]; !ok || expected(rs) > expected(b) || (expected(rs) == expected(b) && rs.Rider.ID < b.Rider.ID) {
+			best[t] = rs
+		}
+	}
+	contests := func(rs *RiderState) bool {
+		t := rs.Rider.Team
+		return t == "" || best[t] == rs || (len(everyMan) > 0 && everyMan[0] != nil && everyMan[0](t))
+	}
+
 	results := make([]sprintResult, len(riders))
 	for i, rs := range riders {
 		// Sprint power with modifier and randomness
-		sprintPower := FatiguedSprintPower(rs) * rs.FormFactor
+		sprintPower := expected(rs)
 		// Add sprint-specific randomness (sprints are volatile)
 		sprintPower *= 1.0 + rng.NormFloat64()*0.03
 
@@ -35,18 +53,25 @@ func SprintFinish(riders []*RiderState, rng *rand.Rand) {
 		results[i] = sprintResult{rs: rs, sprintTime: sprintTime}
 	}
 
-	sort.Slice(results, func(i, j int) bool {
+	sort.SliceStable(results, func(i, j int) bool {
+		ci, cj := contests(results[i].rs), contests(results[j].rs)
+		if ci != cj {
+			return ci
+		}
 		return results[i].sprintTime < results[j].sprintTime
 	})
 
-	// The sprint winner gets their time, others get small gaps
+	// The sprint winner gets their time, others get small gaps (in finishing
+	// order: a lead-out man is never ahead of a rider who contested it).
 	winnerTime := results[0].sprintTime
+	prev := 0.0
 	for i, res := range results {
 		gap := res.sprintTime - winnerTime
 		// Sprints produce very small time gaps (usually <1 second across top finishers)
-		if i > 0 && gap < 0.01 {
-			gap = 0.01 * float64(i) // minimum separation
+		if i > 0 && gap < prev+0.01 {
+			gap = prev + 0.01 // minimum separation
 		}
+		prev = gap
 		res.rs.TotalTime += gap
 	}
 }

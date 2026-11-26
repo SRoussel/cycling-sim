@@ -23,10 +23,23 @@ func Prestige(e model.SeasonEvent) float64 {
 		return 75
 	case e.Category == model.CategoryMonument:
 		return 65
+	case e.Category == model.CategoryWeekLong && isOneOf(e.Name, lesserWorldTour):
+		return 30
 	case e.Category == model.CategoryWeekLong:
 		return 45
+	case isOneOf(e.Name, lesserWorldTour):
+		return 25
 	}
 	return 35
+}
+
+// lesserWorldTour: WorldTour races the stars don't build their year around
+// (they rank below the spring classics and the big week-long races).
+var lesserWorldTour = []string{
+	"Tour Down Under", "UAE Tour", "Renewi Tour", "Tour de Pologne", "Tour of Guangxi",
+	"Cadel Evans Great Ocean Road Race", "Tour of Bruges", "Dwars door Vlaanderen",
+	"Eschborn-Frankfurt", "Copenhagen Sprint", "Hamburg Cyclassics", "Bretagne Classic",
+	"Grand Prix Cycliste de Quebec",
 }
 
 // schedule is one rider's planned events.

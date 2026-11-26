@@ -459,6 +459,7 @@ func seedCourses(db *database.DB) (map[string]int64, int, int) {
 	}
 	courses = append(courses, realStageCourses(courses)...)
 	courses = append(courses, classic2026Courses(courses)...)
+	courses = append(courses, worldTourClassicCourses(courses)...)
 	// Real route profiles imported from locally installed stage files
 	// (cycling-sim import-stages) replace the hand-written segments.
 	if local, err := stagefile.Load(DataPath(LocalProfilesFile)); err == nil {
@@ -635,6 +636,7 @@ func seedRaces(db *database.DB, cIDs map[string]int64) (map[string]int64, int, i
 
 	races = append(races, realStageRaceRaces(cIDs)...)
 	races = append(races, classic2026Races(cIDs)...)
+	races = append(races, worldTourClassicRaces(cIDs)...)
 
 	ids := make(map[string]int64)
 	if existing, err := db.ListRaces(); err == nil {

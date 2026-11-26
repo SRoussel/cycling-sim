@@ -79,6 +79,7 @@ type StageRaceStage struct {
 var StageRaceNamePrefixes = []string{
 	"TdF ", "Giro ", "Vuelta ", "Paris-Nice ", "Tirreno ",
 	"Suisse ", "Dauphine ", "Basque ", "Romandie ", "Catalunya ",
+	"TDU ", "UAE Tour ", "Renewi ", "Pologne ", "Guangxi ",
 }
 
 // IsStageRaceStageName reports whether name matches a known stage-race stage prefix.

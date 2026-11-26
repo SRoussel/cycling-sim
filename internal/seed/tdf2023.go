@@ -48,6 +48,11 @@ func realStageRaces() []realStageRace {
 		{Basque2023, "Basque 2023", basque2023Stages()},
 		{Suisse2023, "Suisse 2023", suisse2023Stages()},
 		{Dauphine2023, "Dauphine 2023", dauphine2023Stages()},
+		{TourDownUnder2026, "TDU 2026", tourDownUnder2026Stages()},
+		{UAETour2026, "UAE Tour 2026", uaeTour2026Stages()},
+		{RenewiTour2024, "Renewi 2024", renewiTour2024Stages()},
+		{Pologne2024, "Pologne 2024", pologne2024Stages()},
+		{Guangxi2023, "Guangxi 2023", guangxi2023Stages()},
 	}
 }
 

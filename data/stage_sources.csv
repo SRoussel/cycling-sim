@@ -4,9 +4,10 @@
 # Years were chosen to match the reference results (2023 hold-out, 2024 validation)
 # where a file exists; Note says when the route year differs. An optional 4th column
 # gives the sectors' surface: stage files don't say, so "gravel" marks strade bianche
-# (default cobbles).
+# (default cobbles). An optional 5th column scales a file's altitudes where its climbs are
+# taller than the real ones (from the real summit heights, English Wikipedia).
 Course,File,Note
-Milan-San Remo,topclas_sanremo_2023.cds,
+Milan-San Remo,topclas_sanremo_2023.cds,Cipressa and Poggio ~20% too tall in the file (summits 283/199 m; real 239/160 m),,0.82
 Tour of Flanders,topclas_rondevv_2022.cds,2022 route (no 2023/2024 file); same finale
 Paris-Roubaix,topclas_roubaix_2023.cds,
 Liege-Bastogne-Liege,topclas_lbl_2023.cds,
@@ -82,7 +83,7 @@ E3 Saxo Classic 2026,topclas_harelbeke_2026.cds,
 Gent-Wevelgem 2026,topclas_gwevelgem_2026.cds,
 Tour of Flanders 2026,topclas_rondevv_2026.cds,
 Paris-Roubaix 2026,topclas_roubaix_2026.cds,
-La Fleche Wallonne 2026,topclas_fleche_2026.cds,
+La Fleche Wallonne 2026,topclas_fleche_2024.cds,2024 route: the mod's 2026 file ends 13 km after the Mur (the race finished on it)
 Giro 2026 Stage 1: Nesebar - Burgas,top_giro_01_2026.cds,
 Giro 2026 Stage 2: Burgas - Veliko Tarnovo,top_giro_02_2026.cds,
 Giro 2026 Stage 3: Plovdiv - Sofia,top_giro_03_2026.cds,

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"cycling_sim/internal/model"
@@ -19,6 +20,10 @@ type Source struct {
 	// Surface of the file's sectors: "cobbles" (default) or "gravel". Stage
 	// files don't say what a sector is made of.
 	Surface model.SurfaceType
+	// AltScale (optional 5th column, 0 = none) corrects a file whose climbs
+	// are taller than the real ones: altitudes are multiplied by it (set from
+	// the real summit heights).
+	AltScale float64
 }
 
 // LoadSources reads the course → stage file mapping (Course,File[,Note];
@@ -51,6 +56,13 @@ func LoadSources(path string) ([]Source, error) {
 		s.Surface = model.SurfaceCobbles
 		if len(row) > 3 && strings.EqualFold(strings.TrimSpace(row[3]), string(model.SurfaceGravel)) {
 			s.Surface = model.SurfaceGravel
+		}
+		if len(row) > 4 && strings.TrimSpace(row[4]) != "" {
+			v, err := strconv.ParseFloat(strings.TrimSpace(row[4]), 64)
+			if err != nil || v <= 0 {
+				return nil, fmt.Errorf("%s: bad altitude scale %q", s.Course, row[4])
+			}
+			s.AltScale = v
 		}
 		out = append(out, s)
 	}
@@ -107,6 +119,11 @@ func Build(dir string, sources []Source, distanceKm map[string]float64) ([]Profi
 		if err != nil {
 			problems = append(problems, fmt.Sprintf("%s: %v", s.Course, err))
 			continue
+		}
+		if s.AltScale > 0 {
+			for i := range st.Profile {
+				st.Profile[i].Alt *= s.AltScale
+			}
 		}
 		segs, err := Segments(st, km)
 		if err != nil {

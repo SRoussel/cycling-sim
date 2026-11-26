@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"math"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -125,5 +126,17 @@ func TestSaveLoadRoundTrip(t *testing.T) {
 	}
 	if missing, err := Load(filepath.Join(t.TempDir(), "none.json")); err != nil || len(missing) != 0 {
 		t.Error("a missing profiles file should load as empty")
+	}
+}
+
+func TestLoadSourcesAltitudeScale(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "s.csv")
+	os.WriteFile(path, []byte("Course,File,Note\nA,a.cds,\nB,b.cds,too tall,,0.8\n"), 0o644)
+	src, err := LoadSources(path)
+	if err != nil || len(src) != 2 {
+		t.Fatalf("%v %+v", err, src)
+	}
+	if src[0].AltScale != 0 || src[1].AltScale != 0.8 {
+		t.Errorf("altitude scales %v, %v; want 0 (none) and 0.8", src[0].AltScale, src[1].AltScale)
 	}
 }

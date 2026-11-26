@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"sort"
+	"time"
 
 	"cycling_sim/internal/database"
 	"cycling_sim/internal/model"
@@ -343,6 +344,13 @@ func finish(db *database.DB, p *Prepared, results []model.SeasonResult) error {
 	if err := db.SaveSeasonRiders(p.Season.ID, srs); err != nil {
 		return err
 	}
+	names := make(map[int64]string, len(srs))
+	for _, sr := range srs {
+		names[sr.ID] = sr.Name
+	}
+	if err := db.AddNews(raceNews(p, results, names, end)); err != nil {
+		return err
+	}
 	p.Event.Done = true
 	if err := db.SaveSeasonEvents([]model.SeasonEvent{*p.Event}); err != nil {
 		return err
@@ -373,4 +381,55 @@ func applyMorale(srs []model.SeasonRider, p *Prepared, results []model.SeasonRes
 		}
 		sr.Morale = math.Max(0, math.Min(100, sr.Morale))
 	}
+}
+
+// raceNews reports a finished event: who won it (the GC for a stage race),
+// our stage wins, and our best result.
+func raceNews(p *Prepared, results []model.SeasonResult, names map[int64]string, date time.Time) []model.NewsItem {
+	ours := p.Season.Team
+	item := func(mine bool, format string, args ...any) model.NewsItem {
+		return model.NewsItem{SeasonID: p.Season.ID, Year: p.Season.Year, Date: date, Mine: mine, Text: fmt.Sprintf(format, args...)}
+	}
+	final := model.ResultRace
+	if p.Stages != nil {
+		final = model.ResultGC
+	}
+	var news []model.NewsItem
+	var best *model.SeasonResult
+	for i := range results {
+		r := &results[i]
+		switch {
+		case r.Kind == final && r.Position == 1:
+			news = append(news, item(r.Team == ours, "%s (%s) wins %s.", names[r.RiderID], r.Team, p.Event.Name))
+		case r.Kind == model.ResultStage && r.Position == 1 && r.Team == ours:
+			news = append(news, item(true, "%s wins stage %d of %s.", names[r.RiderID], r.Stage, p.Event.Name))
+		}
+		if r.Kind == final && r.Team == ours && r.Position > 0 && (best == nil || r.Position < best.Position) {
+			best = r
+		}
+	}
+	if best != nil && best.Position > 1 {
+		what := "at"
+		if final == model.ResultGC {
+			what = "on GC at"
+		}
+		news = append(news, item(true, "Our best %s %s: %s, %s.", what, p.Event.Name, names[best.RiderID], ordinal(best.Position)))
+	}
+	return news
+}
+
+// ordinal is 1st, 2nd, 3rd, 4th... 11th, 21st.
+func ordinal(n int) string {
+	suffix := "th"
+	if n%100 < 11 || n%100 > 13 {
+		switch n % 10 {
+		case 1:
+			suffix = "st"
+		case 2:
+			suffix = "nd"
+		case 3:
+			suffix = "rd"
+		}
+	}
+	return fmt.Sprintf("%d%s", n, suffix)
 }

@@ -2,6 +2,7 @@ package season
 
 import (
 	"testing"
+	"time"
 
 	"cycling_sim/internal/database"
 	"cycling_sim/internal/model"
@@ -226,5 +227,24 @@ func TestYearEndAndStart(t *testing.T) {
 	objs, _ := db.ListObjectives(s.ID, s.Year)
 	if len(objs) < 2 {
 		t.Errorf("%d objectives", len(objs))
+	}
+}
+
+func TestRaceNews(t *testing.T) {
+	p := &Prepared{Season: &model.Season{ID: 1, Year: 2026, Team: "EF"}, Event: &model.SeasonEvent{Name: "Strade Bianche"}}
+	names := map[int64]string{1: "Tadej Pogačar", 2: "Madis Mihkels"}
+	res := []model.SeasonResult{
+		{RiderID: 1, Team: "UAE", Kind: model.ResultRace, Position: 1},
+		{RiderID: 2, Team: "EF", Kind: model.ResultRace, Position: 66},
+	}
+	news := raceNews(p, res, names, time.Time{})
+	if len(news) != 2 || news[0].Text != "Tadej Pogačar (UAE) wins Strade Bianche." || news[0].Mine ||
+		news[1].Text != "Our best at Strade Bianche: Madis Mihkels, 66th." || !news[1].Mine {
+		t.Errorf("news %+v", news)
+	}
+	for n, want := range map[int]string{1: "1st", 2: "2nd", 11: "11th", 12: "12th", 21: "21st", 103: "103rd"} {
+		if got := ordinal(n); got != want {
+			t.Errorf("ordinal(%d) = %s, want %s", n, got, want)
+		}
 	}
 }

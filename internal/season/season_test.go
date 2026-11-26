@@ -248,3 +248,100 @@ func TestRaceNews(t *testing.T) {
 		}
 	}
 }
+
+// Transfers: AI teams renew their best riders at the start of the year; the
+// riders left can only agree to join from 1 August, and ask more to drop to
+// a weaker team.
+func TestTransfers(t *testing.T) {
+	db := seededDB(t)
+	team := someTeam(t, db)
+	s, _ := New(db, team, "")
+	if s.RenewedYear != s.Year {
+		t.Fatalf("a new season's AI renewals: year %d, want %d", s.RenewedYear, s.Year)
+	}
+	srs, _ := db.ListSeasonRiders(s.ID)
+	values := Values(db, activeRiders(srs))
+	ranks := TeamRanks(activeRiders(srs), values)
+	// The best AI rider whose contract ends this year and wasn't renewed.
+	var target *model.SeasonRider
+	renewed, expiring := 0, 0
+	for i := range srs {
+		sr := &srs[i]
+		if sr.Retired || sr.Team == "" || sr.Team == team || sr.ContractEnd > s.Year {
+			continue
+		}
+		expiring++
+		if sr.NextTeam == sr.Team {
+			renewed++
+			continue
+		}
+		if target == nil || values[sr.ID] > values[target.ID] {
+			target = sr
+		}
+	}
+	if expiring == 0 || renewed*2 < expiring {
+		t.Fatalf("AI teams renewed %d of %d expiring contracts", renewed, expiring)
+	}
+	if target == nil {
+		t.Skip("every expiring AI rider was renewed")
+	}
+	ok, msg, err := Offer(db, s, target.ID, 99999, 2)
+	if err != nil || ok {
+		t.Fatalf("signed before the transfer period: %v %q", err, msg)
+	}
+	s.Date = TransferOpens(s.Year)
+	steps := ranks[team] - ranks[target.Team]
+	ask := AskingSalaryTo(*target, values[target.ID], true, steps)
+	if steps > 0 && ask <= AskingSalary(*target, values[target.ID], true) {
+		t.Errorf("no premium for a step down of %d places", steps)
+	}
+	if ok, msg, _ := Offer(db, s, target.ID, ask-10, 2); ok {
+		t.Errorf("signed below his asking salary: %q", msg)
+	}
+}
+
+// The player plans a rider's races and form targets.
+func TestRiderPlan(t *testing.T) {
+	db := seededDB(t)
+	team := someTeam(t, db)
+	s, _ := New(db, team, "")
+	srs, _ := db.ListSeasonRiders(s.ID)
+	var rid int64
+	for _, sr := range srs {
+		if sr.Team == team {
+			rid = sr.ID
+			break
+		}
+	}
+	_, plan, err := RiderPlan(db, s, rid)
+	if err != nil || len(plan) == 0 {
+		t.Fatalf("plan: %v (%d events)", err, len(plan))
+	}
+	// Ride and peak for one race only: the last with room for him.
+	var last model.SeasonEvent
+	for _, p := range plan {
+		if p.Planned || p.Squad < p.Size {
+			last = p.Event
+		}
+	}
+	if last.ID == 0 {
+		t.Skip("every squad is full")
+	}
+	if err := SetRiderPlan(db, s, rid, []int64{last.ID}, []int64{last.ID}); err != nil {
+		t.Fatal(err)
+	}
+	_, plan, _ = RiderPlan(db, s, rid)
+	for _, p := range plan {
+		if p.Planned != (p.Event.ID == last.ID) || p.Peak != (p.Event.ID == last.ID) {
+			t.Errorf("%s: planned %v peak %v", p.Event.Name, p.Planned, p.Peak)
+		}
+	}
+	for _, p := range plan {
+		if p.Event.ID == last.ID && p.FormPct < 99.9 {
+			t.Errorf("form at his target %.1f%%, want 100%%", p.FormPct)
+		}
+	}
+	if err := SetRiderPlan(db, s, rid, nil, []int64{1, 2, 3, 4, 5}); err == nil {
+		t.Error("five peaks accepted")
+	}
+}

@@ -98,6 +98,26 @@ func FormGroups(riders []*RiderState, segment *model.Segment, isTT bool, remaini
 	if traceChase != nil {
 		traceChase(state, riders, plan)
 	}
+	// Each team's riders in this road group, fastest finisher first (who a
+	// player's lead-out rides for: only riders with him take part).
+	var teamGroups map[string][]int64
+	if state != nil && state.Overrides != nil && remainingDistance <= leadoutKm {
+		byTeam := map[string][]*RiderState{}
+		for _, rs := range riders {
+			if !rs.DNF {
+				byTeam[rs.Rider.Team] = append(byTeam[rs.Rider.Team], rs)
+			}
+		}
+		teamGroups = make(map[string][]int64, len(byTeam))
+		for t, rs := range byTeam {
+			sort.SliceStable(rs, func(i, j int) bool { return state.outFinishes(rs[i], rs[j]) })
+			ids := make([]int64, len(rs))
+			for i, r := range rs {
+				ids[i] = r.Rider.ID
+			}
+			teamGroups[t] = ids
+		}
+	}
 	rps := make([]riderPower, len(riders))
 	for i, rs := range riders {
 		var power float64
@@ -115,7 +135,7 @@ func FormGroups(riders []*RiderState, segment *model.Segment, isTT bool, remaini
 			}
 		}
 		if state != nil && state.Overrides != nil {
-			if sprintAction, ok := state.Overrides.SprintTrainDirective(rs.Rider.ID, rs.Rider.Team, remainingDistance); ok {
+			if sprintAction, ok := state.Overrides.SprintTrainDirective(rs.Rider.ID, rs.Rider.Team, remainingDistance, teamGroups[rs.Rider.Team]); ok {
 				if action == ActionHold || sprintAction == ActionAttack {
 					action = sprintAction
 				}
@@ -945,3 +965,6 @@ func (s *RaceState) limitsLosses(rs *RiderState) bool {
 	}
 	return false
 }
+
+// leadoutKm: a player's lead-out runs the last this many km.
+const leadoutKm = 8.0

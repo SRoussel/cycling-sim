@@ -43,36 +43,47 @@ func TestSessionEffortClamped(t *testing.T) {
 
 func TestSprintTrainDirectives(t *testing.T) {
 	s := newInteractiveSession("Team A")
-	s.SetSprintTrainOrder([]int64{3, 3, 0, 4, 5}) // dupes and invalid IDs dropped
-	if st := s.SprintTrainState(20); st == nil || len(st.SprintTrainOrder) != 3 {
-		t.Fatalf("order not deduped: %+v", st)
-	}
+	group := []int64{5, 3, 4} // the team's riders in one road group, fastest finisher first
 
-	if _, ok := s.SprintTrainDirective(3, "Team A", 20); ok {
+	if _, ok := s.SprintTrainDirective(3, "Team A", 20, group); ok {
 		t.Error("no directive expected far from finish")
 	}
-	if _, ok := s.SprintTrainDirective(3, "Team B", 5); ok {
+	if _, ok := s.SprintTrainDirective(3, "Team B", 5, group); ok {
 		t.Error("other teams must not be directed")
 	}
-	if _, ok := s.SprintTrainDirective(3, "Team A", 5); ok {
+	if _, ok := s.SprintTrainDirective(3, "Team A", 5, group); ok {
 		t.Error("the train runs only on the lead-out order")
 	}
-	if st := s.SprintTrainState(5); st.SprintTrainPhase != "idle" {
-		t.Errorf("phase without lead-out order = %s, want idle", st.SprintTrainPhase)
+	if st := s.SprintTrainState(5); st != nil {
+		t.Errorf("no lead-out order: no train state, got %+v", st)
 	}
 	s.SetTeamOrder("leadout", simulation.OrderYes)
-	if a, _ := s.SprintTrainDirective(3, "Team A", 5); a != simulation.ActionChase {
-		t.Errorf("lead-out rider should chase, got %v", a)
+	if a, _ := s.SprintTrainDirective(3, "Team A", 5, group); a != simulation.ActionChase {
+		t.Errorf("a teammate with the sprinter leads out, got %v", a)
 	}
-	if a, _ := s.SprintTrainDirective(5, "Team A", 5); a != simulation.ActionConserve {
-		t.Errorf("last in train (sprinter) should conserve, got %v", a)
+	if a, _ := s.SprintTrainDirective(5, "Team A", 5, group); a != simulation.ActionConserve {
+		t.Errorf("the group's fastest finisher is the sprinter and sits in, got %v", a)
 	}
-	if st := s.SprintTrainState(5); st.SprintTrainPhase != "following" {
-		t.Errorf("phase = %s, want following", st.SprintTrainPhase)
+	if _, ok := s.SprintTrainDirective(7, "Team A", 5, []int64{7}); ok {
+		t.Error("a rider without a teammate in his group races on his own judgement")
+	}
+	// The player's choice of sprinter wins where he is in the group.
+	s.SetSprintTrainOrder([]int64{0, 4})
+	if a, _ := s.SprintTrainDirective(4, "Team A", 5, group); a != simulation.ActionConserve {
+		t.Errorf("the chosen sprinter sits in, got %v", a)
+	}
+	if a, _ := s.SprintTrainDirective(5, "Team A", 5, group); a != simulation.ActionChase {
+		t.Errorf("the fastest finisher leads out the chosen sprinter, got %v", a)
+	}
+	if a, _ := s.SprintTrainDirective(5, "Team A", 5, []int64{5, 3}); a != simulation.ActionConserve {
+		t.Errorf("without the chosen sprinter, a group rides for its own fastest finisher, got %v", a)
+	}
+	if st := s.SprintTrainState(5); st.SprintTrainPhase != "following" || len(st.SprintTrainOrder) != 1 || st.SprintTrainOrder[0] != 4 {
+		t.Errorf("state = %+v, want following for rider 4", st)
 	}
 
 	s.LaunchSprint(5)
-	if a, _ := s.SprintTrainDirective(5, "Team A", 1); a != simulation.ActionAttack {
+	if a, _ := s.SprintTrainDirective(5, "Team A", 1, group); a != simulation.ActionAttack {
 		t.Errorf("launching rider should attack, got %v", a)
 	}
 	if st := s.SprintTrainState(1); st.SprintTrainPhase != "launch" {

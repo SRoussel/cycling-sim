@@ -26,6 +26,8 @@ export function GetRaceResults(arg1:number):Promise<app.RaceResults>;
 
 export function GetRaces():Promise<Array<app.RaceInfo>>;
 
+export function GetRiderPlan(arg1:number,arg2:number):Promise<app.RiderPlanInfo>;
+
 export function GetRiderProfile(arg1:number,arg2:number):Promise<app.RiderProfile>;
 
 export function GetRiders():Promise<Array<app.RiderInfo>>;
@@ -89,6 +91,8 @@ export function SetRiderCommand(arg1:string,arg2:number,arg3:string,arg4:string)
 export function SetRiderEffort(arg1:string,arg2:number,arg3:number):Promise<void>;
 
 export function SetRiderFollow(arg1:string,arg2:number,arg3:number):Promise<void>;
+
+export function SetRiderPlan(arg1:number,arg2:number,arg3:Array<number>,arg4:Array<number>):Promise<void>;
 
 export function SetSeasonSquad(arg1:number,arg2:number,arg3:Array<number>):Promise<void>;
 

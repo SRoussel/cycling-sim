@@ -5,6 +5,7 @@ import (
 	"math"
 	"math/rand"
 	"sort"
+	"time"
 
 	"cycling_sim/internal/database"
 	"cycling_sim/internal/model"
@@ -52,6 +53,11 @@ func NextWageBill(srs []model.SeasonRider, team string, year int) (bill, riders 
 		}
 	}
 	return bill, riders
+}
+
+// TeamRanks ranks teams by strength (1 = strongest): see teamStrength.
+func TeamRanks(riders []model.Rider, values map[int64]float64) map[string]int {
+	return teamStrength(riders, values)
 }
 
 // teamStrength ranks teams by their eight best riders' values (1 = strongest).
@@ -298,12 +304,27 @@ func BoardConfidence(ps []Progress) float64 {
 // AskingSalary is what a rider wants to sign (thousand euro/year): his value's
 // salary, more if he's unhappy and more again to leave his team.
 func AskingSalary(sr model.SeasonRider, value float64, leaving bool) int {
+	return AskingSalaryTo(sr, value, leaving, 0)
+}
+
+// AskingSalaryTo is the asking salary to move to a team stepsDown places
+// weaker than his own (team strength ranks): 3% more per place (a rider
+// leaving the best team for the 15th asks ~40% more).
+func AskingSalaryTo(sr model.SeasonRider, value float64, leaving bool, stepsDown int) int {
 	ask := float64(SalaryFor(value, sr.Age+1)) * (1 + (MoraleNeutral-sr.Morale)/200)
 	if leaving {
-		ask *= 1.15
+		ask *= 1.15 * (1 + stepDownPremium*float64(max(0, stepsDown)))
 	}
 	return int(math.Round(ask/10) * 10)
 }
+
+// stepDownPremium: the extra salary a rider asks per place of team strength
+// he'd drop by moving.
+const stepDownPremium = 0.03
+
+// TransferOpens is the first day other teams' riders may agree to join for
+// next year (the UCI transfer period opens on 1 August).
+func TransferOpens(year int) time.Time { return time.Date(year, 8, 1, 0, 0, 0, 0, time.UTC) }
 
 // MaxRoster is the most riders a team may have under contract.
 const MaxRoster = 30
@@ -314,6 +335,9 @@ const MaxRoster = 30
 // The rider accepts at his asking salary or more, if the team can pay and
 // has room. Returns whether he signed and his answer.
 func Offer(db *database.DB, s *model.Season, riderID int64, salary, years int) (bool, string, error) {
+	if err := EnsureRenewals(db, s); err != nil {
+		return false, "", err
+	}
 	srs, err := db.ListSeasonRiders(s.ID)
 	if err != nil {
 		return false, "", err
@@ -337,13 +361,21 @@ func Offer(db *database.DB, s *model.Season, riderID int64, salary, years int) (
 		return false, fmt.Sprintf("%s is under contract until %d.", sr.Name, sr.ContractEnd), nil
 	case years < 1 || years > 4:
 		return false, "Contracts run 1 to 4 years.", nil
+	case sr.Team != "" && sr.Team != s.Team && s.Phase == model.PhaseRacing && s.Date.Before(TransferOpens(s.Year)):
+		return false, fmt.Sprintf("%s rides for %s: other teams' riders can agree to join from 1 August (the transfer period).", sr.Name, sr.Team), nil
 	}
 	values := Values(db, activeRiders(srs))
 	v, ok := values[sr.ID]
 	if !ok {
 		v = valueOf(db, sr.Rider, activeRiders(srs))
 	}
-	ask := AskingSalary(*sr, v, sr.Team != s.Team && sr.Team != "")
+	leaving := sr.Team != s.Team && sr.Team != ""
+	steps := 0
+	if leaving {
+		rank := teamStrength(activeRiders(srs), values)
+		steps = rank[s.Team] - rank[sr.Team]
+	}
+	ask := AskingSalaryTo(*sr, v, leaving, steps)
 	if salary < ask {
 		return false, fmt.Sprintf("%s wants at least %s a year.", sr.Name, Money(ask)), nil
 	}

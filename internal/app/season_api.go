@@ -84,6 +84,12 @@ type SeasonHub struct {
 	Teams         []StandingRow     `json:"teams"`
 	News          []NewsInfo        `json:"news"`
 	YearOver      bool              `json:"yearOver"`
+	// TransferOpen: other teams' riders may agree to join for next year
+	// (from 1 August, the UCI transfer period; always in the off-season).
+	TransferOpen bool `json:"transferOpen"`
+	// ProjectedBudget: next year's budget if the board's confidence stays
+	// where it is (the board sets it at the year's end).
+	ProjectedBudget int `json:"projectedBudget"`
 }
 
 type SeasonRiderInfo struct {
@@ -242,6 +248,7 @@ func (a *App) GetSeasonHub(id int64) (SeasonHub, error) {
 	hub := SeasonHub{Season: seasonInfo(s), Wages: season.WageBill(srs, s.Team), Objectives: []ObjectiveInfo{},
 		Events: []SeasonEventInfo{}, Riders: []StandingRow{}, Teams: []StandingRow{}, News: []NewsInfo{}}
 	hub.NextCommitted, hub.NextRiders = season.NextWageBill(srs, s.Team, s.Year)
+	hub.TransferOpen = s.Phase == model.PhaseOffseason || !s.Date.Before(season.TransferOpens(s.Year))
 	for _, sr := range srs {
 		if sr.Team == s.Team && !sr.Retired {
 			hub.Roster++
@@ -256,6 +263,7 @@ func (a *App) GetSeasonHub(id int64) (SeasonHub, error) {
 			hub.Objectives = append(hub.Objectives, ObjectiveInfo{Text: p.Text, Kind: p.Kind, Target: p.Target, Current: p.Current, Met: p.Met, Decided: p.Decided})
 		}
 		hub.Confidence = season.BoardConfidence(ps)
+		hub.ProjectedBudget = season.NextBudget(s.Budget, hub.Confidence)
 	}
 	// In the off-season the calendar is the year just raced (the next one
 	// is drawn up when the year starts).
@@ -324,6 +332,7 @@ func (a *App) seasonRiderInfos(s *model.Season, srs []model.SeasonRider, pick fu
 		}
 	}
 	values := season.Values(a.db, active)
+	ranks := season.TeamRanks(active, values)
 	year := s.Year
 	if s.Phase == model.PhaseOffseason {
 		year--
@@ -359,7 +368,7 @@ func (a *App) seasonRiderInfos(s *model.Season, srs []model.SeasonRider, pick fu
 			SprintW: r.MaxSprintWatts, Value: v, Salary: sr.Salary, ContractEnd: sr.ContractEnd, NextTeam: sr.NextTeam,
 			NextSalary: sr.NextSalary, Morale: sr.Morale, Load: sr.Load, RaceDays: sr.RaceDays,
 			Points: pts[sr.ID].Points, Wins: pts[sr.ID].Wins, Programme: programme[sr.ID],
-			Ask: season.AskingSalary(sr, v, sr.Team != s.Team && sr.Team != ""),
+			Ask: season.AskingSalaryTo(sr, v, sr.Team != s.Team && sr.Team != "", ranks[s.Team]-ranks[sr.Team]),
 		}
 		if info.Programme == nil {
 			info.Programme = []string{}
@@ -388,8 +397,14 @@ func (a *App) GetSeasonRoster(id int64) ([]SeasonRiderInfo, error) {
 // other teams' riders whose contracts end this year (they join next year);
 // in the off-season, the free agents (they join now).
 func (a *App) GetSeasonMarket(id int64) ([]SeasonRiderInfo, error) {
+	a.seasonMu.Lock()
+	defer a.seasonMu.Unlock()
 	s, err := a.loadSeason(id)
 	if err != nil {
+		return nil, err
+	}
+	// The AI teams renew before anyone can approach their riders.
+	if err := season.EnsureRenewals(a.db, s); err != nil {
 		return nil, err
 	}
 	srs, err := a.db.ListSeasonRiders(s.ID)
@@ -738,4 +753,54 @@ func newsInfos(items []model.NewsItem) []NewsInfo {
 		}
 	}
 	return out
+}
+
+// RiderPlanInfo is one of the player's riders' races to come: which he
+// rides and which he peaks for.
+type RiderPlanInfo struct {
+	RiderID   int64           `json:"riderId"`
+	Name      string          `json:"name"`
+	Specialty string          `json:"specialty"`
+	MaxPeaks  int             `json:"maxPeaks"`
+	Events    []PlanEventInfo `json:"events"`
+}
+
+type PlanEventInfo struct {
+	Event   SeasonEventInfo `json:"event"`
+	Planned bool            `json:"planned"`
+	Peak    bool            `json:"peak"`
+	FormPct float64         `json:"formPct"`
+	Squad   int             `json:"squad"`
+	Size    int             `json:"size"`
+}
+
+// GetRiderPlan returns a rider's plan for the rest of the year.
+func (a *App) GetRiderPlan(id, riderID int64) (RiderPlanInfo, error) {
+	s, err := a.loadSeason(id)
+	if err != nil {
+		return RiderPlanInfo{}, err
+	}
+	sr, plan, err := season.RiderPlan(a.db, s, riderID)
+	if err != nil {
+		return RiderPlanInfo{}, err
+	}
+	out := RiderPlanInfo{RiderID: sr.ID, Name: sr.Name, Specialty: simulation.SpecialtyName(&sr.Rider),
+		MaxPeaks: model.MaxPeaks, Events: []PlanEventInfo{}}
+	for _, p := range plan {
+		out.Events = append(out.Events, PlanEventInfo{Event: eventInfo(p.Event), Planned: p.Planned, Peak: p.Peak,
+			FormPct: p.FormPct, Squad: p.Squad, Size: p.Size})
+	}
+	return out, nil
+}
+
+// SetRiderPlan sets which races to come a rider rides and peaks for (no
+// peaks: his specialty's).
+func (a *App) SetRiderPlan(id, riderID int64, planned, peaks []int64) error {
+	a.seasonMu.Lock()
+	defer a.seasonMu.Unlock()
+	s, err := a.loadSeason(id)
+	if err != nil {
+		return err
+	}
+	return season.SetRiderPlan(a.db, s, riderID, planned, peaks)
 }

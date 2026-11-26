@@ -57,6 +57,7 @@ func New(db *database.DB, team, name string) (*model.Season, error) {
 			Potential:   potential(rng),
 		})
 	}
+	renewAITeams(srs, values, s, rng) // before the transfer period, as each year
 	if err := db.SaveSeasonRiders(s.ID, srs); err != nil {
 		return nil, err
 	}

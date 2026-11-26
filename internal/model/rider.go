@@ -3,6 +3,9 @@ package model
 import "fmt"
 
 // Rider represents a professional cyclist with physical and ability attributes.
+// MaxPeaks: the most form targets a rider can have in a season.
+const MaxPeaks = 4
+
 type Rider struct {
 	ID                int64
 	Name              string
@@ -30,6 +33,11 @@ type Rider struct {
 	// between days). 0 means unset (average, 70).
 	Punch         int
 	Repeatability int
+	// PeakDays: the days of the year his seasonal form peaks on, when the
+	// player chose his targets (season mode; 0 = unused, all 0: the peaks of
+	// his specialty, simulation.SeasonForm). An array, so Rider stays
+	// comparable. Not stored with the riders.
+	PeakDays [MaxPeaks]float64
 }
 
 // PunchRating is Punch, 70 when unset.
@@ -111,4 +119,15 @@ func (r *Rider) Validate() error {
 // TotalMassKg returns rider weight plus assumed bike+gear weight (8 kg).
 func (r *Rider) TotalMassKg() float64 {
 	return r.WeightKg + 8.0
+}
+
+// Peaks returns the rider's chosen peak days (none: his specialty's).
+func (r Rider) Peaks() []float64 {
+	var out []float64
+	for _, d := range r.PeakDays {
+		if d > 0 {
+			out = append(out, d)
+		}
+	}
+	return out
 }

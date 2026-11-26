@@ -119,30 +119,14 @@ func EndYear(db *database.DB, s *model.Season) ([]model.NewsItem, error) {
 		}
 	}
 	old := s.Budget
-	s.Budget = int(math.Round(float64(s.Budget)*(0.88+0.24*conf/100)/10) * 10)
+	s.Budget = NextBudget(s.Budget, conf)
 	say(true, "The board's verdict on %d: %d of %d objectives met, confidence %.0f%%. Budget for %d: %s (was %s).",
 		s.Year, met, len(progress), conf, s.Year+1, Money(s.Budget), Money(old))
 
-	// 2. AI teams renew the riders they want: their 24 best, under 35.
-	values := Values(db, activeRiders(srs))
-	byTeam := map[string][]int{}
-	for i, sr := range srs {
-		if !sr.Retired && sr.Team != "" && sr.Team != s.Team {
-			byTeam[sr.Team] = append(byTeam[sr.Team], i)
-		}
-	}
-	for _, idx := range byTeam {
-		sort.SliceStable(idx, func(a, b int) bool { return values[srs[idx[a]].ID] > values[srs[idx[b]].ID] })
-		for rank, i := range idx {
-			sr := &srs[i]
-			if sr.ContractEnd > s.Year || sr.NextTeam != "" {
-				continue
-			}
-			if rank < 24 && sr.Age < 35 && rng.Float64() < 0.85 {
-				sr.NextTeam, sr.NextSalary = sr.Team, SalaryFor(values[sr.ID], sr.Age+1)
-				sr.NextContractEnd = s.Year + 1 + rng.Intn(3)
-			}
-		}
+	// 2. AI teams renew the riders they want (normally done at the start
+	// of the year; a season made before that rule does it now).
+	if s.RenewedYear < s.Year {
+		renewAITeams(srs, Values(db, activeRiders(srs)), s, rng)
 	}
 
 	// 3. Contracts: signings move, unsigned riders are free.
@@ -166,6 +150,7 @@ func EndYear(db *database.DB, s *model.Season) ([]model.NewsItem, error) {
 		}
 	}
 
+	values := Values(db, activeRiders(srs))
 	// 4. Retirements, then ageing.
 	retired := 0
 	for i := range srs {
@@ -367,6 +352,9 @@ func StartYear(db *database.DB, s *model.Season) ([]model.NewsItem, error) {
 			news = append(news, model.NewsItem{SeasonID: s.ID, Year: s.Year, Date: date, Text: fmt.Sprintf("%s signs for %s.", sr.Name, best)})
 		}
 	}
+	// AI teams extend the contracts that end this year before the transfer
+	// period opens.
+	renewAITeams(srs, values, s, rng)
 	if err := db.SaveSeasonRiders(s.ID, srs); err != nil {
 		return nil, err
 	}
@@ -388,4 +376,64 @@ func StartYear(db *database.DB, s *model.Season) ([]model.NewsItem, error) {
 		return nil, err
 	}
 	return news, nil
+}
+
+// renewAITeams: AI teams extend the contracts ending this year of the riders
+// they want: their 24 best under 35, the eight best nearly always. Teams do
+// it early in the year, before the transfer period (1 August) lets other
+// teams approach their riders. Marks the year done on s.
+func renewAITeams(srs []model.SeasonRider, values map[int64]float64, s *model.Season, rng *rand.Rand) {
+	byTeam := map[string][]int{}
+	for i, sr := range srs {
+		if !sr.Retired && sr.Team != "" && sr.Team != s.Team {
+			byTeam[sr.Team] = append(byTeam[sr.Team], i)
+		}
+	}
+	teams := make([]string, 0, len(byTeam))
+	for t := range byTeam {
+		teams = append(teams, t)
+	}
+	sort.Strings(teams) // a fixed order: the draws don't depend on map order
+	for _, t := range teams {
+		idx := byTeam[t]
+		sort.SliceStable(idx, func(a, b int) bool { return values[srs[idx[a]].ID] > values[srs[idx[b]].ID] })
+		for rank, i := range idx {
+			sr := &srs[i]
+			if sr.ContractEnd > s.Year || sr.NextTeam != "" {
+				continue
+			}
+			keep := 0.85
+			if rank < 8 {
+				keep = 0.95
+			}
+			if rank < 24 && sr.Age < 35 && rng.Float64() < keep {
+				sr.NextTeam, sr.NextSalary = sr.Team, SalaryFor(values[sr.ID], sr.Age+1)
+				sr.NextContractEnd = s.Year + 1 + rng.Intn(3)
+			}
+		}
+	}
+	s.RenewedYear = s.Year
+}
+
+// EnsureRenewals runs the AI teams' renewals for the season's year if they
+// haven't been (seasons made before the rule; a new year's start does it).
+func EnsureRenewals(db *database.DB, s *model.Season) error {
+	if s.RenewedYear >= s.Year || s.Phase != model.PhaseRacing {
+		return nil
+	}
+	srs, err := db.ListSeasonRiders(s.ID)
+	if err != nil {
+		return err
+	}
+	renewAITeams(srs, Values(db, activeRiders(srs)), s, rngFor(s, 3))
+	if err := db.SaveSeasonRiders(s.ID, srs); err != nil {
+		return err
+	}
+	return db.UpdateSeason(s)
+}
+
+// NextBudget is next year's budget from this year's and the board's
+// confidence (%): from 88% of it at no confidence to 112% at full.
+func NextBudget(budget int, confidence float64) int {
+	return int(math.Round(float64(budget)*(0.88+0.24*confidence/100)/10) * 10)
 }

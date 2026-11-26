@@ -89,6 +89,9 @@ func SeasonForm(r *model.Rider, date time.Time) float64 {
 		return 1
 	}
 	peaks := peaksOf(r)
+	if chosen := r.Peaks(); len(chosen) > 0 { // targets the player chose
+		peaks = chosen
+	}
 	if len(peaks) == 0 {
 		return 1
 	}

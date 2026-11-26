@@ -382,7 +382,7 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
     const order = riders.map((r) => r.id)
     setSprintTrainOrder(order)
     setFollowMap({})
-    setTeamState({ sprintTrainOrder: order, followMap: {}, sprintTrainPhase: 'idle' })
+    setTeamState({ sprintTrainOrder: [], followMap: {}, sprintTrainPhase: 'idle' })
     setRiderGroups({})
     setRouteProfile(null)
     setRouteKm(0)
@@ -556,15 +556,13 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
     }, EFFORT_DEBOUNCE_MS)
   }
 
-  const moveSprintTrainRider = (riderID: number, direction: -1 | 1) => {
-    const order = [...normalizedSprintOrder]
-    const idx = order.indexOf(riderID)
-    const target = idx + direction
-    if (idx < 0 || target < 0 || target >= order.length) return
-    ;[order[idx], order[target]] = [order[target], order[idx]]
-    setSprintTrainOrder(order)
+  // Who the lead-out rides for (null: the team's fastest finisher in each group).
+  const trainSprinter: number | null = teamState?.sprintTrainOrder?.[0] ?? null
+  const setTrainSprinter = (riderID: number | null) => {
+    const order = riderID ? [riderID] : []
+    setTeamState((prev) => ({ ...(prev ?? { followMap: {}, sprintTrainPhase: 'idle' }), sprintTrainOrder: order }))
     if (active) {
-      App.SetSprintTrainOrder(sessionId!, order).catch((err) => console.error('Failed to set sprint train order', err))
+      App.SetSprintTrainOrder(sessionId!, order).catch((err) => console.error('Failed to set the lead-out sprinter', err))
     }
   }
 
@@ -659,7 +657,8 @@ export function useTeamControl(opts: { interactiveMode: boolean; initialTeam: st
     sendCommand,
     handleTacticChange,
     handleEffortChange,
-    moveSprintTrainRider,
+    trainSprinter,
+    setTrainSprinter,
     handleFollowChange,
     handleLaunchSprint,
     handleTeamOrder,

@@ -3,6 +3,8 @@ package database
 import (
 	"database/sql"
 	"fmt"
+	"strconv"
+	"strings"
 	"time"
 
 	"cycling_sim/internal/model"
@@ -17,7 +19,8 @@ CREATE TABLE IF NOT EXISTS seasons (
 	start_year INTEGER NOT NULL,
 	date TEXT NOT NULL,
 	phase TEXT NOT NULL DEFAULT 'racing',
-	budget INTEGER NOT NULL DEFAULT 0
+	budget INTEGER NOT NULL DEFAULT 0,
+	renewed_year INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS season_riders (
@@ -54,6 +57,7 @@ CREATE TABLE IF NOT EXISTS season_riders (
 	next_team TEXT NOT NULL DEFAULT '',
 	next_salary INTEGER NOT NULL DEFAULT 0,
 	next_contract_end INTEGER NOT NULL DEFAULT 0,
+	peaks TEXT NOT NULL DEFAULT '',
 	PRIMARY KEY (season_id, rider_id),
 	FOREIGN KEY (season_id) REFERENCES seasons(id) ON DELETE CASCADE
 );
@@ -130,8 +134,8 @@ func parseDate(s string) time.Time {
 
 // CreateSeason inserts a season and assigns its ID.
 func (db *DB) CreateSeason(s *model.Season) error {
-	res, err := db.Exec(`INSERT INTO seasons (name, team, year, start_year, date, phase, budget) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-		s.Name, s.Team, s.Year, s.StartYear, s.Date.Format(dateLayout), s.Phase, s.Budget)
+	res, err := db.Exec(`INSERT INTO seasons (name, team, year, start_year, date, phase, budget, renewed_year) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		s.Name, s.Team, s.Year, s.StartYear, s.Date.Format(dateLayout), s.Phase, s.Budget, s.RenewedYear)
 	if err != nil {
 		return fmt.Errorf("inserting season: %w", err)
 	}
@@ -141,8 +145,8 @@ func (db *DB) CreateSeason(s *model.Season) error {
 
 // UpdateSeason saves a season's year, date and team.
 func (db *DB) UpdateSeason(s *model.Season) error {
-	_, err := db.Exec(`UPDATE seasons SET name = ?, team = ?, year = ?, date = ?, phase = ?, budget = ? WHERE id = ?`,
-		s.Name, s.Team, s.Year, s.Date.Format(dateLayout), s.Phase, s.Budget, s.ID)
+	_, err := db.Exec(`UPDATE seasons SET name = ?, team = ?, year = ?, date = ?, phase = ?, budget = ?, renewed_year = ? WHERE id = ?`,
+		s.Name, s.Team, s.Year, s.Date.Format(dateLayout), s.Phase, s.Budget, s.RenewedYear, s.ID)
 	return err
 }
 
@@ -150,8 +154,8 @@ func (db *DB) UpdateSeason(s *model.Season) error {
 func (db *DB) GetSeason(id int64) (*model.Season, error) {
 	var s model.Season
 	var date string
-	err := db.QueryRow(`SELECT id, name, team, year, start_year, date, phase, budget FROM seasons WHERE id = ?`, id).
-		Scan(&s.ID, &s.Name, &s.Team, &s.Year, &s.StartYear, &date, &s.Phase, &s.Budget)
+	err := db.QueryRow(`SELECT id, name, team, year, start_year, date, phase, budget, renewed_year FROM seasons WHERE id = ?`, id).
+		Scan(&s.ID, &s.Name, &s.Team, &s.Year, &s.StartYear, &date, &s.Phase, &s.Budget, &s.RenewedYear)
 	if err != nil {
 		return nil, fmt.Errorf("getting season %d: %w", id, err)
 	}
@@ -161,7 +165,7 @@ func (db *DB) GetSeason(id int64) (*model.Season, error) {
 
 // ListSeasons returns every season, newest first.
 func (db *DB) ListSeasons() ([]model.Season, error) {
-	rows, err := db.Query(`SELECT id, name, team, year, start_year, date, phase, budget FROM seasons ORDER BY id DESC`)
+	rows, err := db.Query(`SELECT id, name, team, year, start_year, date, phase, budget, renewed_year FROM seasons ORDER BY id DESC`)
 	if err != nil {
 		return nil, err
 	}
@@ -170,7 +174,7 @@ func (db *DB) ListSeasons() ([]model.Season, error) {
 	for rows.Next() {
 		var s model.Season
 		var date string
-		if err := rows.Scan(&s.ID, &s.Name, &s.Team, &s.Year, &s.StartYear, &date, &s.Phase, &s.Budget); err != nil {
+		if err := rows.Scan(&s.ID, &s.Name, &s.Team, &s.Year, &s.StartYear, &date, &s.Phase, &s.Budget, &s.RenewedYear); err != nil {
 			return nil, err
 		}
 		s.Date = parseDate(date)
@@ -212,8 +216,8 @@ func (db *DB) SaveSeasonRiders(seasonID int64, riders []model.SeasonRider) error
 	stmt, err := tx.Prepare(`INSERT OR REPLACE INTO season_riders (season_id, rider_id, name, team, nationality, age,
 		weight_kg, height_cm, ftp_watts, max_sprint_watts, vo2max_watts, cda, climbing_ability, sprint_ability,
 		tt_ability, descending_ability, handling, endurance, recovery, consistency, tactical_awareness, punch, repeatability,
-		contract_end, salary, morale, load, race_days, retired, potential, next_team, next_salary, next_contract_end)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+		contract_end, salary, morale, load, race_days, retired, potential, next_team, next_salary, next_contract_end, peaks)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
 	if err != nil {
 		return err
 	}
@@ -224,7 +228,7 @@ func (db *DB) SaveSeasonRiders(seasonID int64, riders []model.SeasonRider) error
 			r.FTPWatts, r.MaxSprintWatts, r.VO2MaxWatts, r.CdA, r.ClimbingAbility, r.SprintAbility, r.TTAbility,
 			r.DescendingAbility, r.Handling, r.Endurance, r.Recovery, r.Consistency, r.TacticalAwareness,
 			r.PunchRating(), r.RepeatabilityRating(), sr.ContractEnd, sr.Salary, sr.Morale, sr.Load, sr.RaceDays, boolInt(sr.Retired), sr.Potential,
-			sr.NextTeam, sr.NextSalary, sr.NextContractEnd); err != nil {
+			sr.NextTeam, sr.NextSalary, sr.NextContractEnd, joinDays(r.Peaks())); err != nil {
 			return fmt.Errorf("saving season rider %d: %w", r.ID, err)
 		}
 	}
@@ -236,7 +240,7 @@ func (db *DB) ListSeasonRiders(seasonID int64) ([]model.SeasonRider, error) {
 	rows, err := db.Query(`SELECT rider_id, name, team, nationality, age, weight_kg, height_cm, ftp_watts,
 		max_sprint_watts, vo2max_watts, cda, climbing_ability, sprint_ability, tt_ability, descending_ability,
 		handling, endurance, recovery, consistency, tactical_awareness, punch, repeatability, contract_end, salary, morale, load,
-		race_days, retired, potential, next_team, next_salary, next_contract_end
+		race_days, retired, potential, next_team, next_salary, next_contract_end, peaks
 		FROM season_riders WHERE season_id = ? ORDER BY rider_id`, seasonID)
 	if err != nil {
 		return nil, err
@@ -246,15 +250,17 @@ func (db *DB) ListSeasonRiders(seasonID int64) ([]model.SeasonRider, error) {
 	for rows.Next() {
 		var sr model.SeasonRider
 		var retired int
+		var peaks string
 		r := &sr.Rider
 		if err := rows.Scan(&r.ID, &r.Name, &r.Team, &r.Nationality, &r.Age, &r.WeightKg, &r.HeightCm,
 			&r.FTPWatts, &r.MaxSprintWatts, &r.VO2MaxWatts, &r.CdA, &r.ClimbingAbility, &r.SprintAbility,
 			&r.TTAbility, &r.DescendingAbility, &r.Handling, &r.Endurance, &r.Recovery, &r.Consistency,
 			&r.TacticalAwareness, &r.Punch, &r.Repeatability, &sr.ContractEnd, &sr.Salary, &sr.Morale, &sr.Load, &sr.RaceDays, &retired,
-			&sr.Potential, &sr.NextTeam, &sr.NextSalary, &sr.NextContractEnd); err != nil {
+			&sr.Potential, &sr.NextTeam, &sr.NextSalary, &sr.NextContractEnd, &peaks); err != nil {
 			return nil, err
 		}
 		sr.Retired = retired != 0
+		copy(r.PeakDays[:], splitDays(peaks))
 		out = append(out, sr)
 	}
 	return out, rows.Err()
@@ -414,6 +420,8 @@ var seasonMigrations = []string{
 	`ALTER TABLE season_riders ADD COLUMN next_team TEXT NOT NULL DEFAULT ''`,
 	`ALTER TABLE season_riders ADD COLUMN next_salary INTEGER NOT NULL DEFAULT 0`,
 	`ALTER TABLE season_riders ADD COLUMN next_contract_end INTEGER NOT NULL DEFAULT 0`,
+	`ALTER TABLE season_riders ADD COLUMN peaks TEXT NOT NULL DEFAULT ''`,
+	`ALTER TABLE seasons ADD COLUMN renewed_year INTEGER NOT NULL DEFAULT 0`,
 }
 
 // SaveObjectives replaces a year's objectives.
@@ -489,4 +497,23 @@ func (db *DB) ListNews(seasonID int64, limit int) ([]model.NewsItem, error) {
 		out = append(out, n)
 	}
 	return out, rows.Err()
+}
+
+// joinDays and splitDays store a rider's peak days ("95,111").
+func joinDays(ds []float64) string {
+	parts := make([]string, len(ds))
+	for i, d := range ds {
+		parts[i] = strconv.FormatFloat(d, 'f', -1, 64)
+	}
+	return strings.Join(parts, ",")
+}
+
+func splitDays(s string) []float64 {
+	var out []float64
+	for _, p := range strings.Split(s, ",") {
+		if v, err := strconv.ParseFloat(strings.TrimSpace(p), 64); err == nil {
+			out = append(out, v)
+		}
+	}
+	return out
 }

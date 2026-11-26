@@ -103,18 +103,19 @@ export function TeamDock({ tc, groups }: { tc: TeamControl; kmRemaining: number;
               </div>
               {why && <small className="order-why">{why}</small>}
               {kind === 'leadout' && current === 'yes' && (
-                <details className="train">
-                  <summary>Train order</summary>
-                  <ol>
-                    {tc.normalizedSprintOrder.map((id, idx) => (
-                      <li key={id}>
-                        <span>{tc.teamRiderByID[id]?.name || `Rider ${id}`}</span>
-                        <button type="button" onClick={() => tc.moveSprintTrainRider(id, -1)} disabled={idx === 0} aria-label="Move up">↑</button>
-                        <button type="button" onClick={() => tc.moveSprintTrainRider(id, 1)} disabled={idx === tc.normalizedSprintOrder.length - 1} aria-label="Move down">↓</button>
-                      </li>
+                <label className="train">
+                  <span>Lead out for</span>
+                  <select
+                    value={tc.trainSprinter ?? ''}
+                    onChange={(e) => tc.setTrainSprinter(e.target.value === '' ? null : Number(e.target.value))}
+                    title="The train rides only in the group its sprinter is in; teammates elsewhere race for themselves"
+                  >
+                    <option value="">Fastest finisher in each group</option>
+                    {tc.teamRiders.map((r) => (
+                      <option key={r.id} value={r.id}>{r.name}</option>
                     ))}
-                  </ol>
-                </details>
+                  </select>
+                </label>
               )}
             </div>
           )

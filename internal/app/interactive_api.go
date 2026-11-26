@@ -244,7 +244,8 @@ func (a *App) SetRiderEffort(sessionID string, riderID int64, effortPct float64)
 	s.SetRiderEffort(riderID, effortMultiplier)
 }
 
-// SetSprintTrainOrder sets ordered rider IDs for sprint-train behavior.
+// SetSprintTrainOrder sets who the lead-out rides for: the first rider ID
+// (none: the team's fastest finisher in each group).
 func (a *App) SetSprintTrainOrder(sessionID string, riderIDs []int64) {
 	s := a.getSession(sessionID)
 	if s == nil {

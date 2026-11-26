@@ -21,7 +21,7 @@ func (o *staticActionOverride) ActionOverride(riderID int64) (Action, bool) {
 
 func (o *staticActionOverride) ConsumeOneShot(int64) (Action, bool)    { return ActionHold, false }
 func (o *staticActionOverride) EffortMultiplier(int64) (float64, bool) { return 1.0, false }
-func (o *staticActionOverride) SprintTrainDirective(int64, string, float64) (Action, bool) {
+func (o *staticActionOverride) SprintTrainDirective(int64, string, float64, []int64) (Action, bool) {
 	return ActionHold, false
 }
 func (o *staticActionOverride) SprintTrainState(float64) *TeamState { return nil }

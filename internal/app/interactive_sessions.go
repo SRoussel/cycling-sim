@@ -17,7 +17,7 @@ type interactiveSession struct {
 	overrides        map[int64]simulation.Action
 	oneShot          map[int64]simulation.Action
 	efforts          map[int64]float64
-	sprintTrainOrder []int64
+	trainSprinter    int64 // who the lead-out rides for (0: the fastest finisher in the group)
 	followMap        map[int64]int64
 	launchingRiderID int64
 	teamOrders       simulation.TeamOrders
@@ -83,8 +83,13 @@ func (s *interactiveSession) EffortMultiplier(riderID int64) (float64, bool) {
 	return m, ok
 }
 
-// SprintTrainDirective implements simulation.ActionOverrideProvider.
-func (s *interactiveSession) SprintTrainDirective(riderID int64, riderTeam string, kmRemaining float64) (simulation.Action, bool) {
+// SprintTrainDirective implements simulation.ActionOverrideProvider. On the
+// player's lead-out order the train rides for the sprinter in each road
+// group: the rider the player chose if he's in it, otherwise the team's
+// fastest finisher there (teamGroup is ordered fastest first). His
+// teammates in that group ride the front; he sits in. Riders without a
+// teammate in their group race on their own judgement.
+func (s *interactiveSession) SprintTrainDirective(riderID int64, riderTeam string, kmRemaining float64, teamGroup []int64) (simulation.Action, bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -101,21 +106,19 @@ func (s *interactiveSession) SprintTrainDirective(riderID int64, riderTeam strin
 		return simulation.ActionChase, true
 	}
 	// The sprint train runs only on the player's lead-out order.
-	if s.teamOrders.Leadout != simulation.OrderYes {
+	if s.teamOrders.Leadout != simulation.OrderYes || len(teamGroup) < 2 {
 		return simulation.ActionHold, false
 	}
-
-	for idx, id := range s.sprintTrainOrder {
-		if id != riderID {
-			continue
+	sprinter := teamGroup[0]
+	for _, id := range teamGroup {
+		if s.trainSprinter != 0 && id == s.trainSprinter {
+			sprinter = id
 		}
-		if idx == len(s.sprintTrainOrder)-1 {
-			return simulation.ActionConserve, true
-		}
-		return simulation.ActionChase, true
 	}
-
-	return simulation.ActionHold, false
+	if riderID == sprinter {
+		return simulation.ActionConserve, true
+	}
+	return simulation.ActionChase, true
 }
 
 // SprintTrainState implements simulation.ActionOverrideProvider.
@@ -123,8 +126,10 @@ func (s *interactiveSession) SprintTrainState(kmRemaining float64) *simulation.T
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	order := make([]int64, len(s.sprintTrainOrder))
-	copy(order, s.sprintTrainOrder)
+	var order []int64 // the chosen sprinter, if any
+	if s.trainSprinter != 0 {
+		order = []int64{s.trainSprinter}
+	}
 
 	follow := make(map[int64]*int64, len(s.followMap))
 	for riderID, followID := range s.followMap {
@@ -135,7 +140,7 @@ func (s *interactiveSession) SprintTrainState(kmRemaining float64) *simulation.T
 	phase := "idle"
 	if s.launchingRiderID != 0 {
 		phase = "launch"
-	} else if kmRemaining <= 8.0 && ((len(order) > 0 && s.teamOrders.Leadout == simulation.OrderYes) || len(follow) > 0) {
+	} else if kmRemaining <= 8.0 && (s.teamOrders.Leadout == simulation.OrderYes || len(follow) > 0) {
 		phase = "following"
 	}
 
@@ -145,7 +150,7 @@ func (s *interactiveSession) SprintTrainState(kmRemaining float64) *simulation.T
 		launching = &id
 	}
 
-	if len(order) == 0 && len(follow) == 0 && launching == nil {
+	if len(order) == 0 && len(follow) == 0 && launching == nil && s.teamOrders.Leadout != simulation.OrderYes {
 		return nil
 	}
 	return &simulation.TeamState{
@@ -243,20 +248,18 @@ func (s *interactiveSession) SetRiderEffort(riderID int64, effortMultiplier floa
 	s.efforts[riderID] = effortMultiplier
 }
 
+// SetSprintTrainOrder sets who the lead-out rides for: the first valid ID
+// (none: the team's fastest finisher in each group).
 func (s *interactiveSession) SetSprintTrainOrder(riderIDs []int64) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-
-	seen := make(map[int64]bool, len(riderIDs))
-	order := make([]int64, 0, len(riderIDs))
+	s.trainSprinter = 0
 	for _, id := range riderIDs {
-		if id <= 0 || seen[id] {
-			continue
+		if id > 0 {
+			s.trainSprinter = id
+			break
 		}
-		seen[id] = true
-		order = append(order, id)
 	}
-	s.sprintTrainOrder = order
 }
 
 func (s *interactiveSession) SetRiderFollow(riderID int64, followRiderID int64, enabled bool) {

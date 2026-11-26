@@ -35,7 +35,9 @@ type ActionOverrideProvider interface {
 	// EffortMultiplier returns a per-rider effort multiplier (1.0 = neutral).
 	EffortMultiplier(riderID int64) (float64, bool)
 	// SprintTrainDirective returns a sprint-train tactical action for a rider.
-	SprintTrainDirective(riderID int64, riderTeam string, kmRemaining float64) (Action, bool)
+	// teamGroup is his team's riders in his road group, fastest finisher
+	// first: a lead-out only works in the group its sprinter is in.
+	SprintTrainDirective(riderID int64, riderTeam string, kmRemaining float64, teamGroup []int64) (Action, bool)
 	// SprintTrainState returns current sprint-train state for progress payloads.
 	SprintTrainState(kmRemaining float64) *TeamState
 }
@@ -62,8 +64,9 @@ const (
 //     those with the leader pace them back to the main field (protectWaits,
 //     protectChase).
 //   - Leadout: Yes, the player's sprint train (the session's
-//     SprintTrainDirective) runs the last 8 km; No, nobody leads out: the
-//     domestiques race the finale for themselves.
+//     SprintTrainDirective) runs the last 8 km in the group its sprinter is
+//     in (the player's choice, or the team's fastest finisher there); No,
+//     nobody leads out: the domestiques race the finale for themselves.
 //   - Ambition (stage races): Yes, ride for the stage (the team hunts it, as
 //     setHunting decides for AI teams); No, ride for GC (no stage hunting, no
 //     chase for the team's sprinter).

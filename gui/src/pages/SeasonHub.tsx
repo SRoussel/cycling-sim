@@ -9,7 +9,7 @@ import { formatGap } from '../sim/shared'
 import './Season.css'
 import { teamColor } from '../sim/teamColors'
 
-type Tab = 'overview' | 'calendar' | 'team' | 'standings' | 'contracts'
+type Tab = 'overview' | 'calendar' | 'team' | 'standings' | 'contracts' | 'finances'
 
 /** The season of the page (rider panels compare within its field). */
 function useSeasonId(): number {
@@ -91,7 +91,7 @@ function SeasonHub() {
           <span className="muted">{s.name} · {offseason ? `transfer window before ${s.year}` : `${s.year} · ${s.date}`} · {hub.roster} riders</span>
           <h1><i className="team-bar" style={{ background: teamColor(s.team) }} />{s.team}</h1>
         </div>
-        <div className="season-money">
+        <div className="season-money" role="button" tabIndex={0} title="Open the finances" onClick={() => setTab('finances')} onKeyDown={(e) => e.key === 'Enter' && setTab('finances')}>
           <div title="Your wage budget for the year"><span>Budget</span><b>{money(s.budget)}</b></div>
           <div title="Salaries of the riders under contract now"><span>Wages</span><b className={hub.wages > s.budget ? 'warn' : ''}>{money(hub.wages)}</b></div>
           {!offseason && (
@@ -108,7 +108,7 @@ function SeasonHub() {
       </header>
 
       <nav className="season-tabs" role="tablist">
-        {(['overview', 'calendar', 'team', 'standings', 'contracts'] as Tab[]).map((t) => (
+        {(['overview', 'calendar', 'team', 'finances', 'standings', 'contracts'] as Tab[]).map((t) => (
           <button key={t} role="tab" aria-selected={tab === t} className={tab === t ? 'on' : ''} onClick={() => setTab(t)}>
             {t === 'contracts' ? (offseason ? 'Transfer window' : 'Contracts') : t[0].toUpperCase() + t.slice(1)}
           </button>
@@ -120,6 +120,7 @@ function SeasonHub() {
       {tab === 'team' && <Team hub={hub} reload={reload} />}
       {tab === 'standings' && <Standings hub={hub} />}
       {tab === 'contracts' && <Contracts hub={hub} reload={reload} />}
+      {tab === 'finances' && <Finances hub={hub} openTab={setTab} />}
     </div>
   )
 }
@@ -161,8 +162,11 @@ function Overview({ hub, reload, openTab, justRaced, onRaced }: {
     {!offseason && <SeasonStrip hub={hub} />}
     <div className="season-grid">
       <div className="season-main">
-        {justRaced > 0 && <RaceSummary hub={hub} eventId={justRaced} onClose={() => onRaced(0)} />}
+        {/* The next race first: its Simulate button stays where it was when
+            the last race's result arrives (below it), so races can be
+            simulated one after another without scrolling. */}
         {hub.next && !offseason && <NextRace hub={hub} reload={reload} onRaced={onRaced} />}
+        {justRaced > 0 && <RaceSummary hub={hub} eventId={justRaced} onClose={() => onRaced(0)} />}
         {hub.yearOver && (
           <section className="card next-race">
             <h2>The {s.year} season is over</h2>
@@ -578,7 +582,10 @@ function Team({ hub, reload }: { hub: app.SeasonHub; reload: () => Promise<void>
     load()
   }, [load])
   const year = hub.season.year
+  const [planFor, setPlanFor] = useState<number | null>(null)
   return (
+    <>
+    {planFor !== null && <RiderPlanCard seasonId={hub.season.id} riderId={planFor} onClose={() => { setPlanFor(null); load() }} />}
     <section className="card">
       <h2>{hub.season.team}: {roster.length} riders · wages {money(roster.reduce((a, r) => a + r.salary, 0))}</h2>
       <div className="roster-wrap">
@@ -612,7 +619,11 @@ function Team({ hub, reload }: { hub: app.SeasonHub; reload: () => Promise<void>
                 </td>
                 <td className="season-cell">{r.raceDays} days{r.points ? ` · ${r.points} pts` : ''}{r.wins ? <b> · {r.wins} {r.wins === 1 ? 'win' : 'wins'}</b> : ''}</td>
                 <td className={r.morale < 45 ? 'warn' : ''}>{Math.round(r.morale)}</td>
-                <td className="programme-cell">{r.programme.length ? r.programme.join(', ') : <span className="muted">—</span>}</td>
+                <td className="programme-cell">
+                  <button className="link" onClick={() => setPlanFor(r.id)} title="Choose his races and the ones he peaks for">
+                    {r.programme.length ? r.programme.join(', ') : 'No races planned'}
+                  </button>
+                </td>
                 <td className={`num${r.contractEnd <= year && !r.nextTeam ? ' warn' : ''}`}>
                   {r.nextTeam ? (r.nextTeam === hub.season.team ? `renewed${r.contractEnd > year ? ` to ${r.contractEnd}` : ''}` : `→ ${r.nextTeam}`) : `to ${r.contractEnd}`}
                   <small className="sub">{money(r.salary)}</small>
@@ -622,8 +633,167 @@ function Team({ hub, reload }: { hub: app.SeasonHub; reload: () => Promise<void>
           </tbody>
         </table>
       </div>
-      <p className="muted small">Programmes are the team's plan for each rider; change a race's squad on the overview before it starts.</p>
+      <p className="muted small">Click a rider's programme to choose his races and the ones he peaks for. A race's squad can still change on the overview before it starts.</p>
       <button className="link" onClick={() => { load(); reload() }}>Refresh</button>
+    </section>
+    </>
+  )
+}
+
+/** The money: this year's budget and wages, next year's commitments and
+ * the board's budget, every rider's salary and contract. */
+function Finances({ hub, openTab }: { hub: app.SeasonHub; openTab: (t: Tab) => void }) {
+  const s = hub.season
+  const offseason = s.phase === 'offseason'
+  const [roster, setRoster] = useState<app.SeasonRiderInfo[]>([])
+  useEffect(() => {
+    App.GetSeasonRoster(s.id).then(setRoster)
+  }, [s.id])
+  const room = s.budget - hub.wages
+  const nextBudget = offseason ? s.budget : hub.projectedBudget
+  const nextRoom = nextBudget - hub.nextCommitted
+  const year = s.year
+  const sorted = [...roster].sort((a, b) => b.salary - a.salary)
+  const expiring = roster.filter((r) => r.contractEnd <= year && !r.nextTeam)
+  const leaving = roster.filter((r) => r.nextTeam && r.nextTeam !== s.team)
+  const line = (label: string, value: string, note?: string, warn?: boolean) => (
+    <div className="fin-line">
+      <span>{label}</span>
+      <b className={warn ? 'warn' : ''}>{value}</b>
+      {note && <small className="muted">{note}</small>}
+    </div>
+  )
+  return (
+    <div className="finances">
+      <div className="fin-grid">
+        <section className="card">
+          <h2>{offseason ? `${year} (starting)` : `This year, ${year}`}</h2>
+          {line('Wage budget', money(s.budget), 'what the board lets you spend on salaries')}
+          {line('Wages', money(hub.wages), `${hub.roster} riders under contract now`, hub.wages > s.budget)}
+          {line('Room', money(room), room < 0 ? 'over budget' : offseason ? 'to sign free agents now' : 'unused this year', room < 0)}
+        </section>
+        {!offseason && (
+          <section className="card">
+            <h2>Next year, {year + 1}</h2>
+            {line('Budget (projected)', money(nextBudget), `the board sets it at the year's end: now ${Math.round(hub.confidence)}% confidence (88% of this year's at none, 112% at full)`)}
+            {line('Committed', money(hub.nextCommitted), `${hub.nextRiders} riders under contract or signed for ${year + 1}`, hub.nextCommitted > nextBudget)}
+            {line('Room to sign', money(nextRoom), nextRoom < 0 ? 'over the projected budget' : `for renewals and signings (${expiring.length} of your riders still to renew)`, nextRoom < 0)}
+            <div className="actions">
+              <button className="secondary" onClick={() => openTab('contracts')}>Contracts and transfers</button>
+            </div>
+          </section>
+        )}
+      </div>
+      <section className="card">
+        <h2>Salaries</h2>
+        <table className="roster">
+          <thead>
+            <tr>
+              <th>Rider</th>
+              <th className="num">Salary</th>
+              <th>Contract</th>
+              <th>Next year</th>
+            </tr>
+          </thead>
+          <tbody>
+            {sorted.map((r) => (
+              <tr key={r.id}>
+                <td>{r.name}<small className="sub">{r.age} · {r.specialty}</small></td>
+                <td className="num">{money(r.salary)}</td>
+                <td className={r.contractEnd <= year && !r.nextTeam ? 'warn' : ''}>to {r.contractEnd}</td>
+                <td>
+                  {r.nextTeam
+                    ? r.nextTeam === s.team ? `renewed at ${money(r.nextSalary)}` : `leaves for ${r.nextTeam}`
+                    : r.contractEnd > year ? money(r.salary) : <span className="muted">out of contract</span>}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {leaving.length > 0 && <p className="muted small">{leaving.length} {leaving.length === 1 ? 'rider has' : 'riders have'} signed elsewhere for next year.</p>}
+      </section>
+    </div>
+  )
+}
+
+/** One rider's races to come: which he rides and which he peaks for. */
+function RiderPlanCard({ seasonId, riderId, onClose }: { seasonId: number; riderId: number; onClose: () => void }) {
+  const [plan, setPlan] = useState<app.RiderPlanInfo | null>(null)
+  const [error, setError] = useState('')
+  const [saving, setSaving] = useState(false)
+  const load = useCallback(async () => setPlan(await App.GetRiderPlan(seasonId, riderId)), [seasonId, riderId])
+  useEffect(() => {
+    load()
+  }, [load])
+  if (!plan) return <section className="card"><div className="empty-state">Loading his programme…</div></section>
+
+  const peaks = plan.events.filter((e) => e.peak).map((e) => e.event.id)
+  const planned = plan.events.filter((e) => e.planned).map((e) => e.event.id)
+  const save = async (nextPlanned: number[], nextPeaks: number[]) => {
+    setSaving(true)
+    setError('')
+    try {
+      await App.SetRiderPlan(seasonId, riderId, nextPlanned, nextPeaks)
+      await load()
+    } catch (e) {
+      const msg = String(e)
+      setError(msg.charAt(0).toUpperCase() + msg.slice(1) + '.')
+    } finally {
+      setSaving(false)
+    }
+  }
+  const toggleRide = (id: number) =>
+    save(planned.includes(id) ? planned.filter((x) => x !== id) : [...planned, id], peaks)
+  const togglePeak = (id: number) => {
+    if (!peaks.includes(id) && peaks.length >= plan.maxPeaks) {
+      setError(`He can peak for ${plan.maxPeaks} races at most: drop one first.`)
+      return
+    }
+    save(planned, peaks.includes(id) ? peaks.filter((x) => x !== id) : [...peaks, id])
+  }
+  const days = plan.events.filter((e) => e.planned).reduce((a, e) => a + e.event.days, 0)
+
+  return (
+    <section className="card rider-plan">
+      <div className="card-head">
+        <h2>{plan.name}'s programme</h2>
+        <button className="secondary" onClick={onClose}>Done</button>
+      </div>
+      <p className="muted small">
+        {plan.specialty} · {days} race days planned ·{' '}
+        {peaks.length ? `peaks for ${peaks.length} of ${plan.maxPeaks}` : 'peaks as a ' + plan.specialty.toLowerCase() + ' does (pick up to ' + plan.maxPeaks + ' targets to change it)'}.
+        Form is his threshold on the day against his peak: about two weeks either side of a target he's close to his best, far from all of them about 4% down.
+      </p>
+      {error && <div className="reply no">{error}</div>}
+      <div className="roster-wrap">
+        <table className="roster plan">
+          <thead>
+            <tr>
+              <th>Race</th>
+              <th>Dates</th>
+              <th className="num" title="Seasonal form on the day (100% = at his peak)">Form</th>
+              <th title="He rides it">Rides</th>
+              <th title="He peaks for it">Peak</th>
+              <th className="num" title="Riders the team has planned for it, of the squad size">Squad</th>
+            </tr>
+          </thead>
+          <tbody>
+            {plan.events.map((p) => {
+              const full = !p.planned && p.squad >= p.size
+              return (
+                <tr key={p.event.id} className={p.planned ? 'picked' : ''}>
+                  <td>{p.event.name} <CategoryBadge category={p.event.category} /></td>
+                  <td className="muted">{eventDates(p.event)}</td>
+                  <td className={`num${p.formPct < 98 ? ' warn' : ''}`}>{p.formPct.toFixed(0)}%</td>
+                  <td><input type="checkbox" checked={p.planned} disabled={saving} title={full ? 'The squad is full: take someone out first' : ''} onChange={() => toggleRide(p.event.id)} /></td>
+                  <td><input type="checkbox" checked={p.peak} disabled={saving} onChange={() => togglePeak(p.event.id)} /></td>
+                  <td className={`num${full ? ' muted' : ''}`}>{p.squad}/{p.size}</td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
     </section>
   )
 }
@@ -725,7 +895,11 @@ function Contracts({ hub, reload }: { hub: app.SeasonHub; reload: () => Promise<
             {['Climber', 'Puncheur', 'Cobbles', 'Sprinter', 'All-rounder'].map((t) => <option key={t} value={t}>{t}</option>)}
           </select>
         </div>
-        <p className="muted small">They sign at their asking salary or more if you have the budget and a place (30 riders at most). Riders leaving a team want 15% more.</p>
+        <p className="muted small">
+          {offseason
+            ? 'They sign at their asking salary or more if you have the budget and a place (30 riders at most).'
+            : <>Riders the other teams didn't renew. {hub.transferOpen ? 'The transfer period is open:' : <b>They can agree to join from 1 August (the transfer period):</b>} they sign for next year at their asking salary or more, if you have the budget and a place (30 riders at most). Leaving a team they want 15% more, and 3% more again for each place your team ranks below theirs.</>}
+        </p>
         <OfferTable riders={shown} onOffer={offer} action="Sign" showTeam />
       </section>
     </div>

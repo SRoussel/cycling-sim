@@ -222,6 +222,80 @@ export namespace app {
 	        this.message = source["message"];
 	    }
 	}
+	export class SeasonEventInfo {
+	    id: number;
+	    kind: string;
+	    refId: number;
+	    name: string;
+	    category: string;
+	    start: string;
+	    end: string;
+	    days: number;
+	    done: boolean;
+	    podium: string[];
+	    mine: string;
+	    points: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new SeasonEventInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.kind = source["kind"];
+	        this.refId = source["refId"];
+	        this.name = source["name"];
+	        this.category = source["category"];
+	        this.start = source["start"];
+	        this.end = source["end"];
+	        this.days = source["days"];
+	        this.done = source["done"];
+	        this.podium = source["podium"];
+	        this.mine = source["mine"];
+	        this.points = source["points"];
+	    }
+	}
+	export class PlanEventInfo {
+	    event: SeasonEventInfo;
+	    planned: boolean;
+	    peak: boolean;
+	    formPct: number;
+	    squad: number;
+	    size: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new PlanEventInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.event = this.convertValues(source["event"], SeasonEventInfo);
+	        this.planned = source["planned"];
+	        this.peak = source["peak"];
+	        this.formPct = source["formPct"];
+	        this.squad = source["squad"];
+	        this.size = source["size"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
 	export class PointsStanding {
 	    position: number;
 	    riderName: string;
@@ -385,6 +459,44 @@ export namespace app {
 		}
 	}
 	
+	export class RiderPlanInfo {
+	    riderId: number;
+	    name: string;
+	    specialty: string;
+	    maxPeaks: number;
+	    events: PlanEventInfo[];
+	
+	    static createFrom(source: any = {}) {
+	        return new RiderPlanInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.riderId = source["riderId"];
+	        this.name = source["name"];
+	        this.specialty = source["specialty"];
+	        this.maxPeaks = source["maxPeaks"];
+	        this.events = this.convertValues(source["events"], PlanEventInfo);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
 	export class RiderProfile {
 	    id: number;
 	    name: string;
@@ -433,40 +545,7 @@ export namespace app {
 		    return a;
 		}
 	}
-	export class SeasonEventInfo {
-	    id: number;
-	    kind: string;
-	    refId: number;
-	    name: string;
-	    category: string;
-	    start: string;
-	    end: string;
-	    days: number;
-	    done: boolean;
-	    podium: string[];
-	    mine: string;
-	    points: number;
 	
-	    static createFrom(source: any = {}) {
-	        return new SeasonEventInfo(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.id = source["id"];
-	        this.kind = source["kind"];
-	        this.refId = source["refId"];
-	        this.name = source["name"];
-	        this.category = source["category"];
-	        this.start = source["start"];
-	        this.end = source["end"];
-	        this.days = source["days"];
-	        this.done = source["done"];
-	        this.podium = source["podium"];
-	        this.mine = source["mine"];
-	        this.points = source["points"];
-	    }
-	}
 	export class StandingRow {
 	    pos: number;
 	    riderId: number;
@@ -531,6 +610,8 @@ export namespace app {
 	    teams: StandingRow[];
 	    news: NewsInfo[];
 	    yearOver: boolean;
+	    transferOpen: boolean;
+	    projectedBudget: number;
 	
 	    static createFrom(source: any = {}) {
 	        return new SeasonHub(source);
@@ -551,6 +632,8 @@ export namespace app {
 	        this.teams = this.convertValues(source["teams"], StandingRow);
 	        this.news = this.convertValues(source["news"], NewsInfo);
 	        this.yearOver = source["yearOver"];
+	        this.transferOpen = source["transferOpen"];
+	        this.projectedBudget = source["projectedBudget"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

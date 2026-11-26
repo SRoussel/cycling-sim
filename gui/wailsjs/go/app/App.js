@@ -46,6 +46,10 @@ export function GetRaces() {
   return window['go']['app']['App']['GetRaces']();
 }
 
+export function GetRiderPlan(arg1, arg2) {
+  return window['go']['app']['App']['GetRiderPlan'](arg1, arg2);
+}
+
 export function GetRiderProfile(arg1, arg2) {
   return window['go']['app']['App']['GetRiderProfile'](arg1, arg2);
 }
@@ -172,6 +176,10 @@ export function SetRiderEffort(arg1, arg2, arg3) {
 
 export function SetRiderFollow(arg1, arg2, arg3) {
   return window['go']['app']['App']['SetRiderFollow'](arg1, arg2, arg3);
+}
+
+export function SetRiderPlan(arg1, arg2, arg3, arg4) {
+  return window['go']['app']['App']['SetRiderPlan'](arg1, arg2, arg3, arg4);
 }
 
 export function SetSeasonSquad(arg1, arg2, arg3) {

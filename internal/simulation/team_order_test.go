@@ -9,12 +9,12 @@ import (
 // orders is a minimal ActionOverrideProvider with team orders.
 type orders map[string]TeamOrders
 
-func (orders) ActionOverride(int64) (Action, bool)                        { return 0, false }
-func (orders) ConsumeOneShot(int64) (Action, bool)                        { return 0, false }
-func (orders) EffortMultiplier(int64) (float64, bool)                     { return 0, false }
-func (orders) SprintTrainDirective(int64, string, float64) (Action, bool) { return 0, false }
-func (orders) SprintTrainState(float64) *TeamState                        { return nil }
-func (o orders) TeamOrders(team string) TeamOrders                        { return o[team] }
+func (orders) ActionOverride(int64) (Action, bool)                                 { return 0, false }
+func (orders) ConsumeOneShot(int64) (Action, bool)                                 { return 0, false }
+func (orders) EffortMultiplier(int64) (float64, bool)                              { return 0, false }
+func (orders) SprintTrainDirective(int64, string, float64, []int64) (Action, bool) { return 0, false }
+func (orders) SprintTrainState(float64) *TeamState                                 { return nil }
+func (o orders) TeamOrders(team string) TeamOrders                                 { return o[team] }
 
 // A player's chase order decides whether their team joins the chase of a
 // break: Chase makes an uninvolved team chase, Don't chase keeps a team

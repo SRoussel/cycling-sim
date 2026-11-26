@@ -14,6 +14,9 @@ type Season struct {
 	Date      time.Time // the season's current date (after the last event)
 	Phase     string    // PhaseRacing, or PhaseOffseason between years
 	Budget    int       // the player's team's wage budget for the year (thousand euro)
+	// RenewedYear: the year whose expiring contracts the AI teams have
+	// already renewed (they do it at the start of the year).
+	RenewedYear int
 }
 
 // Season phases: racing through the calendar, or the off-season transfer

@@ -130,13 +130,13 @@ export interface GCLine {
 }
 
 /** How deep a rider digs to hold his group, and how hard he works. */
-export type DigLevel = 'any' | 'reserve' | 'own'
+export type DigLevel = 'auto' | 'any' | 'reserve' | 'own'
 export type WorkPace = 'auto' | 'tempo' | 'threshold' | 'allout'
 export interface RiderStyle {
   dig: DigLevel
   pace: WorkPace
 }
-export const DEFAULT_STYLE: RiderStyle = { dig: 'any', pace: 'auto' }
+export const DEFAULT_STYLE: RiderStyle = { dig: 'auto', pace: 'auto' }
 
 /** How often the race stops: never, at the moments that decide it, or all. */
 export type DecisionLevel = 'off' | 'key' | 'all'

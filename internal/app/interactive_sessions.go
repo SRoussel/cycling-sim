@@ -373,14 +373,16 @@ func (s *interactiveSession) RiderStyle(riderID int64) (simulation.Dig, simulati
 	return st.dig, st.pace
 }
 
-// SetRiderStyle sets how deep a rider digs to hold his group ("any",
-// "reserve", "own") and how hard he works ("auto", "tempo", "threshold",
-// "allout"). Unknown values keep the default.
+// SetRiderStyle sets how deep a rider digs to hold his group ("auto": his
+// own choice, "any", "reserve", "own") and how hard he works ("auto",
+// "tempo", "threshold", "allout"). Unknown values keep the default.
 func (s *interactiveSession) SetRiderStyle(riderID int64, dig, pace string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	st := riderStyle{}
 	switch dig {
+	case "any":
+		st.dig = simulation.DigAnyCost
 	case "reserve":
 		st.dig = simulation.DigKeepReserve
 	case "own":

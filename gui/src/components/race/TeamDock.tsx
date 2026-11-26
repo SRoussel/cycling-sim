@@ -199,6 +199,7 @@ export function TeamDock({ tc, groups }: { tc: TeamControl; kmRemaining: number;
                   <label className="style" title="How deep he digs into his reserve to stay with his group">
                     <span>Hold the group</span>
                     <select value={tc.styleOf(r.id).dig} onChange={(e) => tc.setRiderStyle(r.id, { ...tc.styleOf(r.id), dig: e.target.value as DigLevel })}>
+                      <option value="auto">His own choice</option>
                       <option value="any">At any cost</option>
                       <option value="reserve">Keep a reserve (30%)</option>
                       <option value="own">Own pace: let the wheel go</option>
@@ -259,6 +260,7 @@ function EffortLine({ effort, perMin, why }: { effort: number; perMin: number; w
 /** The non-default parts of a rider's style, for his status line. */
 function styleWords(st: RiderStyle): string[] {
   const out: string[] = []
+  if (st.dig === 'any') out.push('holds on at any cost')
   if (st.dig === 'reserve') out.push('keeps a reserve')
   if (st.dig === 'own') out.push('own pace')
   if (st.pace === 'tempo') out.push('tempo turns')

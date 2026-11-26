@@ -43,11 +43,12 @@ type ActionOverrideProvider interface {
 }
 
 // Dig is how deep a rider digs into his reserve to stay with his group (a
-// player's setting; AI riders always hold on at any cost).
+// player's setting, or the rider's own choice: riderDig).
 type Dig int
 
 const (
-	DigAnyCost     Dig = iota // spends his reserve to the last to hold the wheel
+	DigAuto        Dig = iota // as the rider decides (riderDig): at any cost unless he has no reason to
+	DigAnyCost                // spends his reserve to the last to hold the wheel
 	DigKeepReserve            // holds on only while his reserve stays above keepReserveShare
 	DigOwnPace                // never above threshold to follow: lets the wheel go
 )

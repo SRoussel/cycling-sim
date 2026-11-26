@@ -212,7 +212,7 @@ func FormGroups(riders []*RiderState, segment *model.Segment, isTT bool, remaini
 			}
 		}
 		// The player's work pace for a rider doing the work.
-		dig := DigAnyCost
+		dig := DigAuto
 		if sp, ok := overridesStyle(state); ok {
 			var pace WorkPace
 			dig, pace = sp.RiderStyle(rs.Rider.ID)
@@ -255,7 +255,7 @@ func FormGroups(riders []*RiderState, segment *model.Segment, isTT bool, remaini
 			breakaway: breakaway,
 			action:    action,
 			sheltered: shelteredFor(rs, action, state) && (action == ActionConserve || helpers[rs.Rider.Team] > 0),
-			dig:       dig,
+			dig:       riderDig(rs, dig, segment, state),
 		}
 		// Racing for places, a rider who'd win the group's sprint sits on.
 		if state != nil && action != ActionAttack && state.winGone(rs) {
@@ -994,4 +994,21 @@ func overridesStyle(state *RaceState) (RiderStyleProvider, bool) {
 	}
 	sp, ok := state.Overrides.(RiderStyleProvider)
 	return sp, ok
+}
+
+// riderDig is how deep a rider digs to hold his group: the player's setting,
+// or his own choice. Stage races: a classics specialist (cobbles) doesn't
+// race the GC, so on the climbs he rides his own pace (Nov 2026 calibration
+// misses: Van der Poel and Van Aert were given 70-80% for Tirreno's GC top 10
+// and lost 30 and 19 minutes; in the real race they ride for stages and let
+// the mountains go). Not in the final 20 km, where he may race for the stage.
+func riderDig(rs *RiderState, set Dig, segment *model.Segment, state *RaceState) Dig {
+	if set != DigAuto {
+		return set
+	}
+	if state != nil && state.IsStageRace && state.Phase != PhaseFinal &&
+		climbOf(segment) >= terrainClimb && specialtyOf(rs.Rider) == specCobbles {
+		return DigOwnPace
+	}
+	return DigAnyCost
 }

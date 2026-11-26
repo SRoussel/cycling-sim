@@ -98,6 +98,8 @@ func main() {
 			fatalf("Error applying ratings: %v\n", err)
 		}
 		fmt.Printf("Updated %d riders from riders.csv + %s (saved results kept).\n", n, strings.Join(seed.RatingLayers, " + "))
+	case "crossval":
+		cmdCrossVal(db)
 	case "fit-ratings":
 		out := seed.DataPath(seed.FittedFile)
 		classics, season2026 := false, false
@@ -209,6 +211,7 @@ Commands:
                                  riders in the DB, keeping saved results
   fit-ratings [--classics] [file] Fit rider thresholds to the 2024 Tour GC
   fit-ratings --season=2026 [file]  Fit to every 2026 reference (ridge prior, ±10%)
+  crossval                          Calibration out of sample: fit on half the 2026 references, judge the other half (~1.5 h)
                                  (--classics: also the one-day races) by
                                  simulation; writes file (default
                                  data/rider_fitted.csv) and updates the DB
@@ -1008,4 +1011,97 @@ func printHistory(results []simulation.SeedSetResult) {
 		bLo, bHi := simulation.Wilson95(realTog, realN)
 		fmt.Printf("  %-26s top 10 within 5 s %3.0f%% of runs (%2.0f-%2.0f%%; history %.0f of %.0f editions, %2.0f%%: %2.0f-%2.0f%%)\n", "", simTog/simN*100, tLo*100, tHi*100, realTog, realN, realTog/realN*100, bLo*100, bHi*100)
 	}
+}
+
+// cmdCrossVal measures calibration out of sample within 2026: the 2026
+// references split in two halves; ratings fitted (cold, from the unfitted
+// base) on each half are judged on the other half, against the installed
+// ratings (fitted on every race, so in sample) on the same races and seeds.
+// Nothing is written: the folds' ratings live in memory. ~1.5 hours.
+func cmdCrossVal(db *database.DB) {
+	riders, err := db.ListRiders()
+	if err != nil || len(riders) == 0 {
+		fatalf("No riders in the database: run 'cycling-sim seed' first.\n")
+	}
+	unfitted, err := seed.UnfittedFTPs()
+	if err != nil {
+		fatalf("Error building base ratings: %v\n", err)
+	}
+	base := make([]model.Rider, len(riders))
+	copy(base, riders)
+	for i := range base {
+		if ftp, ok := unfitted[seed.NormalizeName(base[i].Name)]; ok {
+			base[i].FTPWatts = ftp
+		}
+	}
+	oneDay, stage, err := simulation.Load2026References(seed.DataPath("reference_2026.csv"), seed.DataPath("startlists_2026.csv"), riders)
+	if err != nil {
+		fatalf("Error reading the 2026 references: %v\n", err)
+	}
+	byName := func(es []simulation.RealRaceEntry) {
+		sort.Slice(es, func(i, j int) bool { return es[i].DisplayName < es[j].DisplayName })
+	}
+	byName(oneDay)
+	byName(stage)
+	split := func(es []simulation.RealRaceEntry) (a, b []simulation.RealRaceEntry) {
+		for i, e := range es {
+			if i%2 == 0 {
+				a = append(a, e)
+			} else {
+				b = append(b, e)
+			}
+		}
+		return a, b
+	}
+	oa, ob := split(oneDay)
+	sa, sb := split(stage)
+	folds := []struct{ trainOne, trainStage, testOne, testStage []simulation.RealRaceEntry }{
+		{oa, sa, ob, sb}, {ob, sb, oa, sa},
+	}
+	var outOf, in []simulation.SeedSetResult
+	for k, f := range folds {
+		var names []string
+		for _, e := range append(append([]simulation.RealRaceEntry{}, f.trainOne...), f.trainStage...) {
+			names = append(names, e.DisplayName)
+		}
+		fmt.Printf("Fold %d: fitting on %s\n", k+1, strings.Join(names, ", "))
+		opt := calibrate.DefaultOptions()
+		opt.OneDay, opt.Stage = f.trainOne, f.trainStage
+		opt.Weight = map[string]float64{}
+		for _, e := range append(append([]simulation.RealRaceEntry{}, f.trainOne...), f.trainStage...) {
+			if !strings.HasSuffix(e.InternalName, " 2026") {
+				opt.Weight[e.DisplayName] = 0.5
+			}
+		}
+		opt.Prior, opt.MaxChange = 1, 0.10
+		opt.Iterations, opt.Runs, opt.StageRuns = 20, 30, 16
+		opt.MinPasses, opt.Precision = 4, 0.35
+		opt.Log = func(format string, args ...any) { fmt.Printf(format, args...) }
+		adj, err := calibrate.Fit(db, base, opt)
+		if err != nil {
+			fatalf("Fit failed: %v\n", err)
+		}
+		scale := map[int64]float64{}
+		for _, a := range adj {
+			scale[a.RiderID] = a.Scale
+		}
+		foldRiders := make([]model.Rider, len(base))
+		copy(foldRiders, base)
+		for i := range foldRiders {
+			if sc, ok := scale[foldRiders[i].ID]; ok {
+				foldRiders[i].FTPWatts = int(math.Round(float64(foldRiders[i].FTPWatts) * sc))
+			}
+		}
+		fmt.Printf("Fold %d: judging the other half with the fold's ratings and with the installed ones\n", k+1)
+		r, _ := simulation.RunSeedSetsWith(db, foldRiders, 1, f.testOne, f.testStage, nil)
+		outOf = append(outOf, r...)
+		r, _ = simulation.RunSeedSetsWith(db, riders, 1, f.testOne, f.testStage, nil)
+		in = append(in, r...)
+	}
+	fmt.Println()
+	fmt.Println("== Out of sample: each race judged by ratings fitted on the other half")
+	printCalibration(outOf)
+	fmt.Println()
+	fmt.Println("== In sample: the same races and seeds, installed ratings (fitted on every race)")
+	printCalibration(in)
 }

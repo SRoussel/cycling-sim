@@ -266,6 +266,12 @@ func RunSeedSetsFor(db *database.DB, sets int, oneDay, stage []RealRaceEntry, sh
 	if err != nil || len(riders) == 0 {
 		return nil, nil
 	}
+	return RunSeedSetsWith(db, riders, sets, oneDay, stage, shapeRefs)
+}
+
+// RunSeedSetsWith is RunSeedSetsFor with given riders (ratings other than
+// the database's: cross-validation folds).
+func RunSeedSetsWith(db *database.DB, riders []model.Rider, sets int, oneDay, stage []RealRaceEntry, shapeRefs []RealShape) ([]SeedSetResult, [][]ShapeResult) {
 	defer func(b int64) { ValidationSeedBase = b }(ValidationSeedBase)
 	var out []SeedSetResult
 	var shapes [][]ShapeResult

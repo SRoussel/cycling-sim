@@ -113,5 +113,4 @@ bin/cycling-sim season ... | results <race-id> | gc <sr-id> <stage>
 
 ## Future tasks (game speed; the endgame is a Steam desktop game that feels fast, the user, Nov 2026)
 Wails stays the shell: on Windows it is WebView2 calling Go in-process; the time goes to the engine. Exact speed-ups only (same results).
-1. **Simulate a season's background races in parallel.** Races on the same day don't depend on each other: run them on all cores, each with its own seed, so results stay identical to the serial run (check that). Expected ~8-15x on a season advance.
-2. **Profile a full season advance** (CPU profile, as for the earlier race speed-up in docs/model-history.md) and take the exact wins it shows. Do it while nothing else is using the cores (a running fit skews timings).
+- Measured (2026-11-25, after the engine speed-up): a whole simulated season (21 events) takes ~20 s, ~1 s per event and ~4 s for a Grand Tour, 23 MB. Events depend on the state the previous one left (load, morale, date), so running them in parallel would save a few seconds a year: not worth it. If a Grand Tour's 4 s feels slow in the GUI, profile one (`BenchmarkZZRaces` with `ZZ_GT=1`).

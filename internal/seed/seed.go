@@ -508,7 +508,7 @@ func seedRaces(db *database.DB, cIDs map[string]int64) (map[string]int64, int, i
 		{Name: "Liege-Bastogne-Liege", CourseID: cIDs["Liege-Bastogne-Liege"], RaceType: model.RaceTypeRoad, Date: d(2025, 4, 27), Temperature: 14, WindSpeedKmh: 12},
 		{Name: "Il Lombardia", CourseID: cIDs["Il Lombardia"], RaceType: model.RaceTypeRoad, Date: d(2025, 10, 11), Temperature: 16, WindSpeedKmh: 8},
 
-		{Name: "Strade Bianche", CourseID: cIDs["Strade Bianche"], RaceType: model.RaceTypeRoad, Date: d(2025, 3, 8), Temperature: 12, WindSpeedKmh: 10},
+		{Name: "Strade Bianche", CourseID: cIDs["Strade Bianche"], RaceType: model.RaceTypeRoad, Date: d(2025, 3, 7), Temperature: 12, WindSpeedKmh: 10},
 		// Editions whose route differs from the course above (validation references).
 		{Name: "Strade Bianche 2024", CourseID: cIDs["Strade Bianche 2024"], RaceType: model.RaceTypeRoad, Date: d(2024, 3, 2), Temperature: 12, WindSpeedKmh: 10},
 		{Name: "Il Lombardia 2023", CourseID: cIDs["Il Lombardia 2023"], RaceType: model.RaceTypeRoad, Date: d(2023, 10, 7), Temperature: 16, WindSpeedKmh: 8},

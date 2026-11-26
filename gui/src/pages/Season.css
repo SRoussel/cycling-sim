@@ -698,3 +698,7 @@ table.squad td:nth-child(3) {
 }
 
 table.standings td.num { font-family: var(--font-numeric); font-size: 0.8rem; }
+/* Names wrap; numbers stay on one line (long team names pushed the wins
+   column out of the side panel). */
+table.standings { width: 100%; }
+table.standings td:not(.num):not(.pos) { white-space: normal; }

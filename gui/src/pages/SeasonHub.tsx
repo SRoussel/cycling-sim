@@ -492,7 +492,7 @@ function TeamTable({ rows, mineRow }: { rows: app.StandingRow[]; mineRow?: app.S
             <td className="pos">{t.pos}</td>
             <td><Jersey team={t.team} /> {t.team}</td>
             <td className="num">{t.points}</td>
-            <td className="num muted">{t.wins} W</td>
+            <td className="num muted wins">{t.wins} {t.wins === 1 ? 'win' : 'wins'}</td>
           </tr>
         ))}
         {shown.length === 0 && <tr><td className="muted">No points yet.</td></tr>}
@@ -653,7 +653,7 @@ function Standings({ hub }: { hub: app.SeasonHub }) {
                 <td><RiderLink id={r.riderId} name={r.name} seasonId={sid} /></td>
                 <td className="muted"><Jersey team={r.team} /> {r.team}</td>
                 <td className="num">{r.points}</td>
-                <td className="num muted">{r.wins} W</td>
+                <td className="num muted wins">{r.wins} {r.wins === 1 ? 'win' : 'wins'}</td>
               </tr>
             ))}
             {hub.riders.length === 0 && <tr><td className="muted">No points yet.</td></tr>}

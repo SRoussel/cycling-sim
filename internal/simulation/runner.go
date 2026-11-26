@@ -148,10 +148,17 @@ func buildRouteProfile(course *model.Course) *RouteProfile {
 	km := 0.0
 	elev := 0.0
 	points = append(points, ProfilePoint{Km: km, Elev: elev})
+	low := 0.0
 	for _, seg := range course.Segments {
 		km += seg.DistanceKm
 		elev += seg.DistanceKm * 1000.0 * (seg.GradientPct / 100.0)
+		low = math.Min(low, elev)
 		points = append(points, ProfilePoint{Km: km, Elev: elev})
+	}
+	// Heights above the course's lowest point, as the physics takes them
+	// (withElevation): from the start the profile went below sea level.
+	for i := range points {
+		points[i].Elev -= low
 	}
 	return &RouteProfile{TotalKm: course.TotalDistanceKm, Points: points, Sectors: routeSectors(course)}
 }

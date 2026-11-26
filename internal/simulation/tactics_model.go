@@ -146,6 +146,9 @@ type RaceState struct {
 	BreakawayGap    float64
 	BreakawayRiders map[int64]bool // riders in road groups ahead of the main group
 	SegmentKmLeft   float64        // distance to the end of the current course segment
+	// OnStep, when set (a watched race), is called after each step with the
+	// km ridden into the current segment. It must not change the race.
+	OnStep func(doneKm float64)
 	// Ahead lists riders in road groups ahead of the group being decided, with
 	// their lead over it in seconds (set per road group each step).
 	Ahead map[*RiderState]float64

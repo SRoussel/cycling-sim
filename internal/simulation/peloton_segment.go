@@ -154,6 +154,9 @@ func SimulateSegment(riders []*RiderState, segment *model.Segment, isTT bool, di
 			setWindComponents(&step, stepHeading(segment, i))
 		}
 		simulateStep(riders, &step, isTT, distanceRemaining-float64(i)*step.DistanceKm, rng, state, params, incidentsEnabled...)
+		if state != nil && state.OnStep != nil {
+			state.OnStep(float64(i+1) * step.DistanceKm)
+		}
 	}
 }
 
@@ -179,6 +182,9 @@ func simulateFine(riders []*RiderState, segment *model.Segment, coarseKm float64
 		}
 		simulateStep(riders, &step, isTT, distanceRemaining-done, rng, state, params, incidentsEnabled...)
 		done += step.DistanceKm
+		if state.OnStep != nil {
+			state.OnStep(done)
+		}
 	}
 }
 

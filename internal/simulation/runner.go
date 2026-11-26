@@ -242,6 +242,10 @@ func leaderElapsed(states []*RiderState) float64 {
 	return leader
 }
 
+// frameEveryKm: inside a long segment, a watched race emits a frame (and
+// its director may stop the race) about this often.
+const frameEveryKm = 2.0
+
 func timelineStepsForSegment(distanceKm float64) int {
 	if distanceKm <= 0 {
 		return 1
@@ -345,11 +349,10 @@ func SimulateRoadRaceWithProgress(config RaceConfig, onProgress func(ProgressSna
 		if raceState != nil {
 			raceState.Course, raceState.SegIndex = segments, i
 		}
-		SimulateSegment(states, seg, false, totalDist-coveredDist, rng, raceState, &tacticsParams, config.IncidentsEnabled)
-		coveredDist += seg.DistanceKm
-		config.Shape.observe(raceState, totalDist-coveredDist)
-		endElapsed := leaderElapsed(states)
-		if onProgress != nil {
+		// emit sends the frames for the part of the segment ridden since
+		// the last emit (segDone km into it, up to upTo km).
+		segDone := 0.0
+		emit := func(upTo float64) {
 			events := []string{}
 			var rawEvents []TacticsEvent
 			if raceState != nil && eventIndex < len(raceState.Events) {
@@ -359,11 +362,14 @@ func SimulateRoadRaceWithProgress(config RaceConfig, onProgress func(ProgressSna
 				}
 				eventIndex = len(raceState.Events)
 			}
+			piece := *seg
+			piece.DistanceKm = upTo - segDone
+			endElapsed := leaderElapsed(states)
 			groups, riderGroups := buildProgressData(states, seg)
-			steps := timelineStepsForSegment(seg.DistanceKm)
+			steps := timelineStepsForSegment(piece.DistanceKm)
 			for step := 1; step <= steps; step++ {
 				frac := float64(step) / float64(steps)
-				km := segStartDist + seg.DistanceKm*frac
+				km := segStartDist + segDone + piece.DistanceKm*frac
 				kmRemaining := totalDist - km
 				if kmRemaining < 0 {
 					kmRemaining = 0
@@ -371,7 +377,7 @@ func SimulateRoadRaceWithProgress(config RaceConfig, onProgress func(ProgressSna
 				elapsed := startElapsed + (endElapsed-startElapsed)*frac
 				interpGroups := interpolateProgressGroups(prevGroups, groups, frac)
 				interpRiderGroups := interpolateRiderGroups(prevRiderGroups, riderGroups, frac)
-				riderTelemetry := buildRiderTelemetry(states, seg, segStartTimes, km, totalDist)
+				riderTelemetry := buildRiderTelemetry(states, &piece, segStartTimes, km, totalDist)
 				var teamState *TeamState
 				if raceState != nil && raceState.Overrides != nil {
 					teamState = raceState.Overrides.SprintTrainState(kmRemaining)
@@ -398,6 +404,26 @@ func SimulateRoadRaceWithProgress(config RaceConfig, onProgress func(ProgressSna
 			}
 			prevGroups = groups
 			prevRiderGroups = riderGroups
+			segDone, startElapsed, segStartTimes = upTo, endElapsed, segmentStartTimes(states)
+		}
+		// A long segment is shown (and can be decided on) every few km, not
+		// only at its end. Watching only: the CLI and validation (no
+		// onProgress) run without the hook.
+		if onProgress != nil && raceState != nil && seg.DistanceKm > 2*frameEveryKm {
+			raceState.OnStep = func(done float64) {
+				if done-segDone >= frameEveryKm && seg.DistanceKm-done >= frameEveryKm/2 {
+					emit(done)
+				}
+			}
+		}
+		SimulateSegment(states, seg, false, totalDist-coveredDist, rng, raceState, &tacticsParams, config.IncidentsEnabled)
+		if raceState != nil {
+			raceState.OnStep = nil
+		}
+		coveredDist += seg.DistanceKm
+		config.Shape.observe(raceState, totalDist-coveredDist)
+		if onProgress != nil {
+			emit(seg.DistanceKm)
 		}
 	}
 

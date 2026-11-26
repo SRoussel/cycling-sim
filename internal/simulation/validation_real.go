@@ -338,7 +338,7 @@ func RunRealRaceValidationFor(db *database.DB, allRiders []model.Rider, entries 
 			return SimulateRoadRace(cfg)
 		})
 		finish := FinishShape{Runs: len(allRuns)}
-		var margins []float64
+		var margins, gap10s []float64
 		runGaps := map[int64][]float64{}
 		for _, simResults := range allRuns {
 			gaps := make([]float64, 0, 20)
@@ -359,6 +359,12 @@ func RunRealRaceValidationFor(db *database.DB, allRiders []model.Rider, entries 
 			}
 			if len(gaps) > 1 {
 				margins = append(margins, gaps[1])
+			}
+			if len(gaps) >= 10 {
+				gap10s = append(gap10s, gaps[9])
+				if gaps[9] < finishSoloS {
+					finish.Together++
+				}
 			}
 			for _, res := range simResults {
 				if res.Position == 1 {
@@ -469,9 +475,13 @@ func RunRealRaceValidationFor(db *database.DB, allRiders []model.Rider, entries 
 		intruders := findIntruders(entry, top10Hits, wins, runs, avgPos, avgGap)
 		if n := float64(len(allRuns)); n > 0 {
 			finish.Solo, finish.Small, finish.Bunch = finish.Solo/n, finish.Small/n, finish.Bunch/n
+			finish.Together /= n
 		}
 		if len(margins) > 0 {
 			finish.Margin = medianOf(margins)
+		}
+		if len(gap10s) > 0 {
+			finish.Gap10 = medianOf(gap10s)
 		}
 		finish.RealMargin = entry.Top10GapSecs[1]
 		finish.RealKind = finishKind(entry.Top10GapSecs)

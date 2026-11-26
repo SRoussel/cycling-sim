@@ -940,6 +940,7 @@ func printHistory(results []simulation.SeedSetResult) {
 	fmt.Println("  ← only when the two ranges don't overlap: a clear difference, not noise.")
 	var simSolo, realSolo, nRaces float64
 	var simK, simN, realK, realN float64
+	var simTog, realTog float64
 	for _, r := range results {
 		h := hist[simulation.HistoryName(r.Name)]
 		if h == nil {
@@ -963,6 +964,22 @@ func printHistory(results []simulation.SeedSetResult) {
 			}
 			fmt.Printf("  %-26s solo %3.0f%% (%2.0f-%3.0f%%; history %3.0f%%, %d of %d: %2.0f-%3.0f%%)%-2s  margin %6s (history %s, %s-%s)%s\n",
 				simulation.HistoryName(r.Name), solo*100, sLo*100, sHi*100, float64(h.Solo)/n*100, h.Solo, len(h.Gap2), hLo*100, hHi*100, soloFlag, clk(margin), clk(med), clk(lo), clk(hi), flag(margin, lo, hi))
+			var together, gap10 float64
+			for _, f := range r.Finish {
+				together += f.Together / float64(len(r.Finish))
+				gap10 += f.Gap10 / float64(len(r.Finish))
+			}
+			tLo, tHi := simulation.Wilson95(together*float64(runs), float64(runs))
+			bLo, bHi := simulation.Wilson95(float64(h.Bunch), n)
+			togetherFlag := ""
+			if runs > 0 && (tHi < bLo || tLo > bHi) {
+				togetherFlag = " ←"
+			}
+			m10, lo10, hi10 := simulation.Range(h.Gap10)
+			fmt.Printf("  %-26s top 10 within 5 s %3.0f%% (%2.0f-%3.0f%%; history %3.0f%%, %d of %d: %2.0f-%3.0f%%)%-2s  10th %6s (history %s, %s-%s)%s\n",
+				"", together*100, tLo*100, tHi*100, float64(h.Bunch)/n*100, h.Bunch, len(h.Gap2), bLo*100, bHi*100, togetherFlag, clk(gap10), clk(m10), clk(lo10), clk(hi10), flag(gap10, lo10, hi10))
+			simTog += together * float64(runs)
+			realTog += float64(h.Bunch)
 			simSolo += solo
 			realSolo += float64(h.Solo) / n
 			nRaces++
@@ -987,5 +1004,8 @@ func printHistory(results []simulation.SeedSetResult) {
 		sLo, sHi := simulation.Wilson95(simK, simN)
 		hLo, hHi := simulation.Wilson95(realK, realN)
 		fmt.Printf("  %-26s solo %3.0f%% of races (%2.0f-%2.0f%%; history %3.0f%%, %.0f of %.0f editions: %2.0f-%2.0f%%)\n", "All one-day races", simSolo/nRaces*100, sLo*100, sHi*100, realSolo/nRaces*100, realK, realN, hLo*100, hHi*100)
+		tLo, tHi := simulation.Wilson95(simTog, simN)
+		bLo, bHi := simulation.Wilson95(realTog, realN)
+		fmt.Printf("  %-26s top 10 within 5 s %3.0f%% of runs (%2.0f-%2.0f%%; history %.0f of %.0f editions, %2.0f%%: %2.0f-%2.0f%%)\n", "", simTog/simN*100, tLo*100, tHi*100, realTog, realN, realTog/realN*100, bLo*100, bHi*100)
 	}
 }

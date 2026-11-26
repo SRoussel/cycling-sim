@@ -51,6 +51,9 @@ type FinishShape struct {
 	Runs               int // runs the shares are over (for their uncertainty)
 	Margin, RealMargin float64
 	RealKind           string
+	// Together: share of runs whose whole top 10 finished within 5 s of
+	// the winner (the history's "bunch"); Gap10: median gap of 10th place.
+	Together, Gap10 float64
 }
 
 // finishKind classifies a finish from the gaps of the riders behind the
